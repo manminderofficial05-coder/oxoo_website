@@ -25,6 +25,7 @@ import WebsiteDemoViewer from './demo/WebsiteDemoViewer';
 import ChooseAppsPage from './ChooseAppsPage';
 import AppDemoPage from './AppDemoPage';
 import PricingPage from './PricingPage';
+import CheckoutPage from './CheckoutPage';
 
 function useScrollTop() {
   const location = useLocation();
@@ -1781,6 +1782,8 @@ export default function App() {
       <Route path="/portal" element={<PrimeProPortal />} />
       <Route path="/industries" element={<IndustriesPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/buy" element={<CheckoutPage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/signin" element={<SignInPage />} />
       <Route path="/login" element={<SignInPage />} />
