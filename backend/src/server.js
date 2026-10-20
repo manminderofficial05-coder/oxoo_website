@@ -1124,6 +1124,10 @@ app.post('/api/payment/create-order', async (req, res, next) => {
     const calc = calculatePricing({ planId, selectedApps, userCount, billingCycle });
     const orderNumber = `OXOO-ORD-${Date.now().toString().slice(-6)}`;
 
+    const safeSubtotal = parseFloat(Number(calc.subtotal || 0).toFixed(2));
+    const safeTax = parseFloat(Number(calc.taxAmount || 0).toFixed(2));
+    const safeTotal = parseFloat(Number(calc.totalAmount || 0).toFixed(2));
+
     const order = {
       orderNumber,
       companyName,
@@ -1134,9 +1138,9 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       selectedApps,
       userCount: calc.userCount,
       billingCycle: calc.billingCycle,
-      subtotal: calc.subtotal,
-      taxAmount: calc.taxAmount,
-      totalAmount: calc.totalAmount,
+      subtotal: safeSubtotal,
+      taxAmount: safeTax,
+      totalAmount: safeTotal,
       totalAmountPaise: calc.totalAmountPaise,
       currency: 'INR',
       status: 'Created'
@@ -1156,9 +1160,9 @@ app.post('/api/payment/create-order', async (req, res, next) => {
           JSON.stringify(selectedApps),
           calc.userCount,
           calc.billingCycle,
-          calc.subtotal,
-          calc.taxAmount,
-          calc.totalAmount
+          safeSubtotal,
+          safeTax,
+          safeTotal
         ]
       );
     }
@@ -1191,6 +1195,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
       totalAmount = 560
     } = req.body || {};
 
+    const safeTotalAmount = parseFloat(Number(totalAmount || 0).toFixed(2));
     const verifiedPaymentId = paymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -1203,23 +1208,23 @@ app.post('/api/payment/verify', async (req, res, next) => {
       await query(
         `INSERT INTO subscriptions (company_name, plan, amount, currency, billing_cycle, status, start_date, renewal_date, active_apps)
          VALUES ($1, $2, $3, 'INR', $4, 'Active', NOW(), NOW() + INTERVAL '30 days', $5)`,
-        [companyName || 'My Organization', planName, totalAmount, billingCycle, JSON.stringify(selectedApps)]
+        [companyName || 'My Organization', planName, safeTotalAmount, billingCycle, JSON.stringify(selectedApps)]
       );
 
       await query(
         `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items)
          VALUES ($1, $2, $3, $4, 'INR', 'Paid', NOW(), $5)`,
-        [invoiceNumber, companyName || 'My Organization', planName, totalAmount, JSON.stringify(selectedApps)]
+        [invoiceNumber, companyName || 'My Organization', planName, safeTotalAmount, JSON.stringify(selectedApps)]
       );
 
       await query(
         `UPDATE organizations SET plan = $1, active_apps = $2, status = 'Active', mrr = $3, updated_at = NOW()
          WHERE name = $4 OR id = 1`,
-        [planName, JSON.stringify(selectedApps), totalAmount, companyName]
+        [planName, JSON.stringify(selectedApps), safeTotalAmount, companyName]
       );
 
       await logAudit('Payment Succeeded & Verified', `${orderNumber} (${invoiceNumber})`, customerEmail || customerName, req.ip, {
-        amount: totalAmount,
+        amount: safeTotalAmount,
         paymentId: verifiedPaymentId,
         paymentMethod
       });

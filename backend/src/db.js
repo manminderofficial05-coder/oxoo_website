@@ -160,7 +160,7 @@ async function initDb() {
         org_id INT,
         company_name VARCHAR(255) NOT NULL,
         plan VARCHAR(100) NOT NULL,
-        amount INT NOT NULL,
+        amount NUMERIC(12, 2) NOT NULL,
         currency VARCHAR(10) DEFAULT 'INR',
         billing_cycle VARCHAR(20) DEFAULT 'monthly',
         status VARCHAR(50) DEFAULT 'Active',
@@ -179,7 +179,7 @@ async function initDb() {
         invoice_number VARCHAR(100) NOT NULL UNIQUE,
         company_name VARCHAR(255) NOT NULL,
         plan VARCHAR(100) DEFAULT 'Business Pro',
-        amount INT NOT NULL,
+        amount NUMERIC(12, 2) NOT NULL,
         currency VARCHAR(10) DEFAULT 'INR',
         status VARCHAR(50) DEFAULT 'Paid',
         invoice_date TIMESTAMPTZ DEFAULT NOW(),
@@ -253,10 +253,10 @@ async function initDb() {
         selected_apps JSONB DEFAULT '[]'::jsonb,
         user_count INT DEFAULT 1,
         billing_cycle VARCHAR(20) DEFAULT 'monthly',
-        subtotal INT NOT NULL,
-        tax_amount INT DEFAULT 0,
-        discount_amount INT DEFAULT 0,
-        total_amount INT NOT NULL,
+        subtotal NUMERIC(12, 2) NOT NULL,
+        tax_amount NUMERIC(12, 2) DEFAULT 0,
+        discount_amount NUMERIC(12, 2) DEFAULT 0,
+        total_amount NUMERIC(12, 2) NOT NULL,
         currency VARCHAR(10) DEFAULT 'INR',
         payment_method VARCHAR(50) DEFAULT 'Razorpay',
         payment_id VARCHAR(100),
@@ -265,6 +265,22 @@ async function initDb() {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Schema Migrations: Ensure numeric columns allow decimals (e.g. 660.80)
+    try {
+      await client.query(`
+        ALTER TABLE subscriptions ALTER COLUMN amount TYPE NUMERIC(12, 2);
+        ALTER TABLE invoices ALTER COLUMN amount TYPE NUMERIC(12, 2);
+        ALTER TABLE organizations ALTER COLUMN mrr TYPE NUMERIC(12, 2);
+        ALTER TABLE orders ALTER COLUMN subtotal TYPE NUMERIC(12, 2);
+        ALTER TABLE orders ALTER COLUMN tax_amount TYPE NUMERIC(12, 2);
+        ALTER TABLE orders ALTER COLUMN discount_amount TYPE NUMERIC(12, 2);
+        ALTER TABLE orders ALTER COLUMN total_amount TYPE NUMERIC(12, 2);
+      `);
+      console.log('PostgreSQL numeric column migrations applied successfully.');
+    } catch (migErr) {
+      console.log('Migration check note:', migErr.message);
+    }
 
     console.log('Neon PostgreSQL tables schema verified & ready.');
   } finally {
