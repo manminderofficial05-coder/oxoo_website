@@ -1122,7 +1122,7 @@ app.post('/api/payment/create-order', async (req, res, next) => {
     }
 
     const calc = calculatePricing({ planId, selectedApps, userCount, billingCycle });
-    const orderNumber = `OXOO-ORD-${Date.now().toString().slice(-6)}`;
+    const orderNumber = `OXOO-ORD-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     const safeSubtotal = parseFloat(Number(calc.subtotal || 0).toFixed(2));
     const safeTax = parseFloat(Number(calc.taxAmount || 0).toFixed(2));
@@ -1149,7 +1149,12 @@ app.post('/api/payment/create-order', async (req, res, next) => {
     if (isDbConnected) {
       await query(
         `INSERT INTO orders (order_number, company_name, customer_name, customer_email, customer_phone, plan_name, selected_apps, user_count, billing_cycle, subtotal, tax_amount, total_amount, currency, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'INR', 'Created')`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'INR', 'Created')
+         ON CONFLICT (order_number) DO UPDATE
+         SET subtotal = EXCLUDED.subtotal,
+             tax_amount = EXCLUDED.tax_amount,
+             total_amount = EXCLUDED.total_amount,
+             updated_at = NOW()`,
         [
           orderNumber,
           companyName,
@@ -1192,14 +1197,22 @@ app.post('/api/payment/verify', async (req, res, next) => {
       selectedApps = [],
       planName = 'Single App',
       billingCycle = 'monthly',
-      totalAmount = 560
+      totalAmount = 560,
+      invoiceNumber: clientInvoiceNumber
     } = req.body || {};
 
     const safeTotalAmount = parseFloat(Number(totalAmount || 0).toFixed(2));
     const verifiedPaymentId = paymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const curYear = new Date().getFullYear();
+    let invoiceNumber = clientInvoiceNumber || `INV-${curYear}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
 
     if (isDbConnected) {
+      // Check if invoice_number already exists in database, and generate a new one if it does
+      const existingInv = await query(`SELECT id FROM invoices WHERE invoice_number = $1`, [invoiceNumber]);
+      if (existingInv.rows && existingInv.rows.length > 0) {
+        invoiceNumber = `INV-${curYear}-${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
       await query(
         `UPDATE orders SET status = 'Paid', payment_id = $1, payment_method = $2, updated_at = NOW() WHERE order_number = $3`,
         [verifiedPaymentId, paymentMethod, orderNumber]
@@ -1214,7 +1227,13 @@ app.post('/api/payment/verify', async (req, res, next) => {
 
       await query(
         `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items)
-         VALUES ($1, $2, $3, $4, 'INR', 'Paid', NOW(), $5)`,
+         VALUES ($1, $2, $3, $4, 'INR', 'Paid', NOW(), $5)
+         ON CONFLICT (invoice_number) DO UPDATE
+         SET status = 'Paid',
+             amount = EXCLUDED.amount,
+             company_name = EXCLUDED.company_name,
+             plan = EXCLUDED.plan,
+             items = EXCLUDED.items`,
         [invoiceNumber, companyName || 'My Organization', planName, safeTotalAmount, JSON.stringify(selectedApps)]
       );
 

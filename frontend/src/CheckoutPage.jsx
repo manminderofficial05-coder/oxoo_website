@@ -226,8 +226,9 @@ export default function CheckoutPage() {
         customerPhone: formData.phone
       });
 
-      const orderNumber = orderRes.order?.orderNumber || `OXOO-ORD-2025-${Date.now().toString().slice(-6)}`;
-      const invoiceNumber = `OXOO-INV-2025-${Date.now().toString().slice(-6)}`;
+      const curYear = new Date().getFullYear();
+      const orderNumber = orderRes.order?.orderNumber || `OXOO-ORD-${curYear}-${Date.now().toString().slice(-6)}`;
+      const invoiceNumber = `INV-${curYear}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
       const paymentId = `pay_rzp_${Date.now().toString().slice(-8)}`;
 
       // 2. Verify Payment on backend
@@ -241,7 +242,8 @@ export default function CheckoutPage() {
         selectedApps: selectedAppsNames,
         planName: planNameFormatted,
         billingCycle: isYearly ? 'yearly' : 'monthly',
-        totalAmount: totals.totalAmount
+        totalAmount: totals.totalAmount,
+        invoiceNumber
       });
 
       const today = new Date();
