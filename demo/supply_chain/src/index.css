@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-teal: #183F35;
+  --sidebar-green: #153B32;
+  --active-green: #2F7259;
+  --warm-bg: #F5F3EC;
+  --card-bg: #FCFBF7;
+  --sage-green: #CBD2B4;
+  --soft-amber: #EED89A;
+  --muted-coral: #D3ADA4;
+  --primary-text: #202D29;
+  --secondary-text: #7D8179;
+  --border-color: #E4E0D7;
+  --success-color: #2D9660;
+  --warning-color: #D49A30;
+  --error-color: #C85D52;
+  --info-color: #4875CF;
+}
+
+@layer base {
+  body {
+    background-color: var(--warm-bg);
+    color: var(--primary-text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+}
+
+/* Custom scrollbars for dense operational tables and sidebars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(125, 129, 121, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 129, 121, 0.5);
+}
+
+/* Print layout for barcode labels */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-barcode-area, .printable-barcode-area * {
+    visibility: visible;
+  }
+  .printable-barcode-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

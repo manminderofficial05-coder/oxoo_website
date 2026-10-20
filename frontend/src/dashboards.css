@@ -1,0 +1,1301 @@
+/* ==========================================================================
+   OXOO DASHBOARDS SHARED DESIGN SYSTEM
+   Customer Portal & Admin Governance Console
+   Colors: Navy, Royal Blue, Cyan, Teal, Gold, Soft White
+   ========================================================================== */
+
+:root {
+  --oxoo-navy-dark: #06101e;
+  --oxoo-navy-sidebar: #071326;
+  --oxoo-navy-card: #0a1b36;
+  --oxoo-blue-primary: #2563eb;
+  --oxoo-blue-glow: #0284c7;
+  --oxoo-cyan: #06b6d4;
+  --oxoo-cyan-bright: #00d2ff;
+  --oxoo-teal: #0d9488;
+  --oxoo-gold: #f59e0b;
+  --oxoo-gold-light: #fef3c7;
+  --oxoo-emerald: #10b981;
+  --oxoo-coral: #ef4444;
+  --oxoo-purple: #8b5cf6;
+  --oxoo-bg-light: #f4f7fb;
+  --oxoo-card-border: #e2e8f0;
+  --oxoo-text-dark: #0f172a;
+  --oxoo-text-muted: #64748b;
+  --oxoo-text-subtle: #94a3b8;
+  --oxoo-shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  --oxoo-shadow-hover: 0 10px 30px -4px rgba(15, 23, 42, 0.09);
+  --oxoo-gradient-blue: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  --oxoo-gradient-cyan: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+  --oxoo-gradient-gold: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  --oxoo-gradient-upgrade: linear-gradient(90deg, #1d4ed8 0%, #0284c7 100%);
+  --oxoo-font: 'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Master Layout Wrapper */
+.oxoo-dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--oxoo-bg-light);
+  font-family: var(--oxoo-font);
+  color: var(--oxoo-text-dark);
+  overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   SIDEBAR (Dark Navy, Logo, Navigation, Glowing Capsule, Profile)
+   -------------------------------------------------------------------------- */
+.oxoo-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--oxoo-navy-sidebar);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.oxoo-sidebar-top {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px 16px;
+  overflow-y: auto;
+}
+
+/* Brand Logo in Sidebar */
+.oxoo-brand-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 8px 24px;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 20px;
+}
+
+.oxoo-brand-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-brand-logo-img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.oxoo-logo-3d-text {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 50%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 12px rgba(0, 210, 255, 0.3);
+  line-height: 1;
+}
+
+.oxoo-tagline-text {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: #7dd3fc;
+  margin-top: 5px;
+  text-transform: none;
+}
+
+/* Navigation Menu */
+.oxoo-nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oxoo-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-decoration: none;
+  width: 100%;
+}
+
+.oxoo-nav-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.oxoo-nav-item.active {
+  background: linear-gradient(90deg, #0284c7 0%, #2563eb 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+}
+
+.oxoo-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 10%;
+  height: 80%;
+  width: 4px;
+  background: #38bdf8;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px #38bdf8;
+}
+
+.oxoo-nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Sidebar Bottom (Profile & Art) */
+.oxoo-sidebar-bottom {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.oxoo-fluid-waves-art {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  pointer-events: none;
+  background: radial-gradient(circle at 10% 100%, rgba(6, 182, 212, 0.35) 0%, transparent 55%),
+              radial-gradient(circle at 80% 100%, rgba(245, 158, 11, 0.25) 0%, transparent 50%),
+              radial-gradient(circle at 40% 100%, rgba(37, 99, 235, 0.3) 0%, transparent 60%);
+  filter: blur(8px);
+}
+
+.oxoo-sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.oxoo-sidebar-profile:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.oxoo-profile-avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+
+.oxoo-profile-meta {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.oxoo-profile-name {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.oxoo-profile-sub {
+  color: #94a3b8;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   MAIN CONTENT AREA & HEADER
+   -------------------------------------------------------------------------- */
+.oxoo-main-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+/* Top Header Bar */
+.oxoo-top-header {
+  height: 70px;
+  background: #ffffff;
+  border-bottom: 1px solid #eef2f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.oxoo-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  max-width: 520px;
+}
+
+.oxoo-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 9px 16px;
+  width: 100%;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.oxoo-search-box:focus-within {
+  background: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.oxoo-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--oxoo-text-dark);
+  width: 100%;
+}
+
+.oxoo-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.oxoo-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.oxoo-date-badge-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-date-badge-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.oxoo-header-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.oxoo-header-icon-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.oxoo-badge-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+}
+
+.oxoo-user-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.oxoo-user-dropdown-btn:hover {
+  background: #f8fafc;
+}
+
+.oxoo-user-info-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.oxoo-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--oxoo-text-dark);
+  line-height: 1.2;
+}
+
+.oxoo-user-org {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Switch Portal Button in Header */
+.oxoo-portal-switch-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-portal-switch-pill:hover {
+  background: #dbeafe;
+}
+
+/* --------------------------------------------------------------------------
+   CONTENT CANVAS (Customer Dashboard & Admin Dashboard)
+   -------------------------------------------------------------------------- */
+.oxoo-content-canvas {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Welcome Section Row */
+.oxoo-welcome-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.oxoo-welcome-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.oxoo-welcome-subtitle {
+  font-size: 14px;
+  color: var(--oxoo-text-muted);
+}
+
+/* Current Plan Card (Customer) */
+.oxoo-plan-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  padding: 12px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--oxoo-card-border);
+  box-shadow: var(--oxoo-shadow-card);
+}
+
+.oxoo-crown-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.oxoo-plan-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-plan-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-plan-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+  line-height: 1.2;
+}
+
+.oxoo-plan-billing-date {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.oxoo-upgrade-btn {
+  background: linear-gradient(90deg, #1d4ed8 0%, #0284c7 100%);
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+}
+
+.oxoo-upgrade-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   METRIC SUMMARY CARDS (4 Cards Grid)
+   -------------------------------------------------------------------------- */
+.oxoo-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.oxoo-metric-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--oxoo-card-border);
+  box-shadow: var(--oxoo-shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.oxoo-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--oxoo-shadow-hover);
+}
+
+.oxoo-metric-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.oxoo-metric-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-metric-icon-wrap.blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.oxoo-metric-icon-wrap.gold {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.oxoo-metric-icon-wrap.cyan {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.oxoo-metric-icon-wrap.purple {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.oxoo-metric-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.oxoo-metric-badge.green {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.oxoo-metric-badge.red {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.oxoo-metric-bottom-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.oxoo-metric-text-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-metric-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-metric-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--oxoo-text-dark);
+  letter-spacing: -0.5px;
+  margin: 2px 0;
+}
+
+.oxoo-metric-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.oxoo-metric-sparkline {
+  width: 90px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   MY APPLICATIONS & RECENT ACTIVITY (Customer 2-Column Section)
+   -------------------------------------------------------------------------- */
+.oxoo-apps-activity-row {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+}
+
+.oxoo-section-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid var(--oxoo-card-border);
+  box-shadow: var(--oxoo-shadow-card);
+  padding: 24px;
+}
+
+.oxoo-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.oxoo-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+}
+
+.oxoo-view-all-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0284c7;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.oxoo-view-all-link:hover {
+  color: #0369a1;
+}
+
+/* Applications Row / Grid */
+.oxoo-apps-horizontal-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+.oxoo-app-tile {
+  background: #ffffff;
+  border: 1px solid #eef2f6;
+  border-radius: 16px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+}
+
+.oxoo-app-tile:hover {
+  transform: translateY(-3px);
+  border-color: #cbd5e1;
+  box-shadow: var(--oxoo-shadow-hover);
+}
+
+.oxoo-app-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+}
+
+.oxoo-app-icon-box.gradient-blue {
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+}
+
+.oxoo-app-icon-box.peach {
+  background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+  color: #ea580c;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
+}
+
+.oxoo-app-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.oxoo-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.oxoo-status-pill.active {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.oxoo-status-pill.not-purchased {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.oxoo-status-pill.trial {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.oxoo-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.oxoo-app-action-btn {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.oxoo-app-action-btn.open {
+  background: linear-gradient(90deg, #0284c7 0%, #06b6d4 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.25);
+}
+
+.oxoo-app-action-btn.open:hover {
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+}
+
+.oxoo-app-action-btn.view-plans {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0284c7;
+}
+
+.oxoo-app-action-btn.view-plans:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Recent Activity List */
+.oxoo-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.oxoo-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.oxoo-activity-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.oxoo-activity-icon-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-activity-icon-circle.success {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.oxoo-activity-icon-circle.info {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.oxoo-activity-icon-circle.warning {
+  background: #fffbeb;
+  color: #f59e0b;
+}
+
+.oxoo-activity-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-activity-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--oxoo-text-dark);
+}
+
+.oxoo-activity-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.oxoo-activity-time {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   ADMIN DASHBOARD SPECIFIC COMPONENTS
+   System Status, Charts, Top Products, Tables
+   -------------------------------------------------------------------------- */
+.oxoo-admin-top-split {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* System Status Panel */
+.oxoo-system-status-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid var(--oxoo-card-border);
+  box-shadow: var(--oxoo-shadow-card);
+  padding: 18px 20px;
+}
+
+.oxoo-system-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.oxoo-status-services-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.oxoo-service-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.oxoo-service-row-name {
+  color: #334155;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oxoo-service-row-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #10b981;
+}
+
+/* 2-Column Charts Row */
+.oxoo-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.oxoo-chart-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid var(--oxoo-card-border);
+  box-shadow: var(--oxoo-shadow-card);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.oxoo-chart-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+}
+
+.oxoo-chart-dropdown {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* SVG Chart Container */
+.oxoo-svg-chart-wrap {
+  width: 100%;
+  height: 220px;
+  position: relative;
+}
+
+.oxoo-chart-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Bottom 3-Column Panels (Admin) */
+.oxoo-admin-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+
+/* Progress bar in Top Products */
+.oxoo-product-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.oxoo-product-progress-row:last-child {
+  border-bottom: none;
+}
+
+.oxoo-product-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-product-name-col {
+  width: 120px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--oxoo-text-dark);
+}
+
+.oxoo-progress-track {
+  flex: 1;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.oxoo-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #2563eb 100%);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.oxoo-product-amount-col {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+  text-align: right;
+  min-width: 80px;
+}
+
+.oxoo-product-percent-col {
+  font-size: 12px;
+  color: #64748b;
+  text-align: right;
+  min-width: 34px;
+}
+
+/* Tables (Customers & Tickets) */
+.oxoo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.oxoo-table th {
+  text-align: left;
+  padding: 8px 10px;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.oxoo-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f8fafc;
+  color: #334155;
+}
+
+.oxoo-table tr:hover td {
+  background: #f8fafc;
+}
+
+.oxoo-table-company {
+  font-weight: 600;
+  color: var(--oxoo-text-dark);
+}
+
+.oxoo-table-amount {
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+}
+
+.oxoo-status-tag {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.oxoo-status-tag.active, .oxoo-status-tag.resolved {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.oxoo-status-tag.trial, .oxoo-status-tag.in-progress {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.oxoo-status-tag.open, .oxoo-status-tag.suspended {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.oxoo-priority-pill {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.oxoo-priority-pill.high {
+  color: #dc2626;
+}
+
+.oxoo-priority-pill.medium {
+  color: #d97706;
+}
+
+.oxoo-priority-pill.low {
+  color: #059669;
+}
+
+/* --------------------------------------------------------------------------
+   MODAL / POPUP DIALOGS (Plan Upgrade, Invite, Ticket Create)
+   -------------------------------------------------------------------------- */
+.oxoo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.oxoo-modal-window {
+  background: #ffffff;
+  border-radius: 20px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+  animation: oxooModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes oxooModalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.oxoo-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oxoo-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--oxoo-text-dark);
+}
+
+.oxoo-modal-close-btn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.oxoo-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.oxoo-modal-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Form controls */
+.oxoo-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oxoo-form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.oxoo-form-input, .oxoo-form-select, .oxoo-form-textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+  background: #ffffff;
+}
+
+.oxoo-form-input:focus, .oxoo-form-select:focus, .oxoo-form-textarea:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE DESIGN (Tablets & Mobile)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1280px) {
+  .oxoo-apps-horizontal-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .oxoo-admin-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .oxoo-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .oxoo-apps-activity-row {
+    grid-template-columns: 1fr;
+  }
+  .oxoo-charts-row {
+    grid-template-columns: 1fr;
+  }
+  .oxoo-admin-top-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .oxoo-sidebar {
+    position: fixed;
+    transform: translateX(-100%);
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+  }
+  .oxoo-sidebar.open {
+    transform: translateX(0);
+  }
+  .oxoo-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .oxoo-apps-horizontal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .oxoo-content-canvas {
+    padding: 16px;
+    gap: 20px;
+  }
+  .oxoo-top-header {
+    padding: 0 16px;
+  }
+}

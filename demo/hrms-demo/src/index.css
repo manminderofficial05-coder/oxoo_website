@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #0b1220;
+  --color-brand: #0878c9;
+  --color-accent: #10b981;
+  --color-surface: #eef7ff;
+  --color-page: #f5f9fc;
+}
+
+/* "role" and "side" follow the logged-in user's role theme */
+@theme inline {
+  --color-role: var(--role-accent);
+  --color-side: var(--role-side);
+}
+
+:root {
+  --role-accent: #0878c9;
+  --role-side: #0b2942;
+}
+
+[data-role="manager"] {
+  --role-accent: #059669;
+  --role-side: #103b38;
+}
+
+[data-role="employee"] {
+  --role-accent: #0e9f9a;
+  --role-side: #103b45;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--color-page);
+  color: var(--color-ink);
+  letter-spacing: -0.005em;
+}
+
+/* Soft ambient glow behind the app, tinted by the role colour */
+[data-role] {
+  background-image:
+    radial-gradient(
+      900px 420px at 92% -8%,
+      color-mix(in srgb, var(--role-accent) 9%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      700px 380px at -5% 105%,
+      color-mix(in srgb, var(--color-accent) 6%, transparent),
+      transparent 70%
+    );
+  background-attachment: fixed;
+}
+
+/* Sidebar depth */
+aside {
+  background-image:
+    linear-gradient(180deg, rgb(255 255 255 / 0.06), transparent 40%),
+    radial-gradient(
+      260px 200px at 0% 100%,
+      color-mix(in srgb, var(--role-accent) 22%, transparent),
+      transparent 70%
+    );
+  box-shadow: 8px 0 32px -16px rgb(2 6 23 / 0.5);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Slim, quiet scrollbars elsewhere */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(0 0 0 / 0.15) transparent;
+}
+
+/* Page fade-in animation */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+main {
+  animation: rise 0.35s ease-out both;
+}
+
+/* Smooth UI interactions */
+button,
+a,
+select,
+input,
+textarea {
+  transition-property:
+    color,
+    background-color,
+    border-color,
+    box-shadow,
+    opacity,
+    transform;
+  transition-duration: 150ms;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Visible keyboard focus. Text fields are excluded: they draw their own
+   border + ring, and a second outline on top looked heavy. */
+:focus-visible:not(input):not(select):not(textarea) {
+  outline: 2px solid var(--role-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--role-accent) 22%, transparent);
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  main {
+    animation: none;
+  }
+
+  button:not(:disabled):active {
+    transform: none;
+  }
+}
+
+/* Browser autofill: keep light inputs light and the text readable (every page is light now) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0b1220;
+  caret-color: #0b1220;
+  box-shadow: 0 0 0 1000px #fff inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* Inside forms marked "light-fields", an autofilled field in focus also keeps its soft ring */
+.light-fields input:-webkit-autofill:focus {
+  box-shadow:
+    0 0 0 1000px #fff inset,
+    0 0 0 4px color-mix(in srgb, var(--role-accent) 15%, transparent);
+}
+
+/* Let pages use the full content width (still capped on ultra-wide screens) */
+main.max-w-7xl {
+  max-width: 1760px;
+}

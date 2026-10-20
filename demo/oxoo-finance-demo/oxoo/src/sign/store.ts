@@ -1,0 +1,12 @@
+import {useSyncExternalStore} from 'react';
+export type R=Record<string,any>;
+const K='ledgerly-sign-v1';
+const seed=():R=>({templates:[],docs:[],tags:[{id:'t1',name:'Contracts'},{id:'t2',name:'HR'},{id:'t3',name:'Sales'}],fields:[],settings:{expiry:30,reminder:'Weekly',link:'Yes',message:'Please review and sign this document.'}});
+let S:R=(()=>{try{const s=localStorage.getItem(K);return s?{...seed(),...JSON.parse(s)}:seed()}catch{return seed()}})();
+const subs=new Set<()=>void>();
+export const sset=(p:R)=>{S={...S,...p};try{localStorage.setItem(K,JSON.stringify(S))}catch{}subs.forEach(f=>f())};
+export const clearSign=()=>sset({templates:[],docs:[],tags:[],fields:[],settings:seed().settings});
+export const useSign=():R=>useSyncExternalStore(f=>{subs.add(f);return()=>subs.delete(f)},()=>S);
+export const upsert=(k:string,r:R)=>sset({[k]:S[k].some((x:R)=>x.id===r.id)?S[k].map((x:R)=>x.id===r.id?r:x):[r,...S[k]]});
+export const remove=(k:string,id:string)=>sset({[k]:S[k].filter((x:R)=>x.id!==id)});
+export const uid=()=>crypto.randomUUID();

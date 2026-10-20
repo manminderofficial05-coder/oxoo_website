@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Social Marketing logo">
+<defs><linearGradient id="bg_sm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9333EA" stop-opacity=".18"/><stop offset="1" stop-color="#9333EA" stop-opacity=".06"/></linearGradient><linearGradient id="fg_sm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9333EA"/><stop offset="1" stop-color="#7E22CE" stop-opacity=".85"/></linearGradient></defs>
+<rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bg_sm)"/><rect x="15" y="15" width="98" height="98" rx="24" fill="none" stroke="#9333EA" stroke-opacity=".16"/>
+<g transform="translate(32 32)" fill="none" stroke="url(#fg_sm)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.7 6.8-4.4M8.6 13.3 15.4 17.3"/></g></svg>

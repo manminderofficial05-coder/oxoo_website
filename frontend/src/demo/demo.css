@@ -1,0 +1,1424 @@
+/* ==========================================================================
+   OXOO FULL-TAB DEMO & INTERACTIVE SUITE STYLES
+   Exact Match to User Reference Mockup & Brand Guidelines
+   ========================================================================== */
+
+/* Root Layout */
+.oxoo-full-tab-root {
+  min-height: 100vh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #0f172a;
+}
+
+/* -------------------------------------------------------------
+   STICKY TOP NAVIGATION BAR
+   ------------------------------------------------------------- */
+.oxoo-tab-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.oxoo-tab-nav-inner {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 12px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oxoo-tab-brand-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.oxoo-tab-brand-img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* Nav Menu Links */
+.oxoo-tab-nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.oxoo-tab-nav-link {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #334155;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 0;
+  transition: color 0.15s ease;
+}
+
+.oxoo-tab-nav-link:hover,
+.oxoo-tab-nav-link.active {
+  color: #00bcd4;
+}
+
+.oxoo-caret {
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.oxoo-tab-nav-link.dropdown-btn:hover .oxoo-caret {
+  transform: translateY(1px);
+  color: #00bcd4;
+}
+
+/* Dropdown Popovers */
+.oxoo-tab-nav-dropdown-wrap {
+  position: relative;
+}
+
+.oxoo-nav-popover {
+  position: absolute;
+  top: 100%;
+  left: -20px;
+  margin-top: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  padding: 10px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 150;
+  animation: oxooFadeIn 0.18s ease-out;
+}
+
+.oxoo-popover-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.oxoo-popover-item strong {
+  font-size: 13.5px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.oxoo-popover-item span {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.oxoo-popover-item:hover {
+  background: #f0fdfa;
+}
+
+.oxoo-popover-item:hover strong {
+  color: #00bcd4;
+}
+
+/* Right Navigation Actions */
+.oxoo-tab-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.oxoo-tab-search-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.oxoo-tab-search-btn:hover {
+  background: #f1f5f9;
+}
+
+.oxoo-tab-signin-link {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #1e293b;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.oxoo-tab-signin-link:hover {
+  color: #00bcd4;
+}
+
+.oxoo-tab-purchase-btn {
+  background: linear-gradient(135deg, #00c6d7 0%, #00bcd4 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 188, 212, 0.35);
+  transition: all 0.2s ease;
+}
+
+.oxoo-tab-purchase-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 188, 212, 0.45);
+}
+
+/* -------------------------------------------------------------
+   MAIN VIEWPORT & BACKGROUND ARTWORK
+   ------------------------------------------------------------- */
+.oxoo-tab-main-viewport {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 34px 20px 80px;
+  min-height: calc(100vh - 65px);
+  background: #ffffff;
+  overflow: hidden;
+}
+
+/* Left Fluid Waves & Floating Bubbles */
+.oxoo-tab-art-left {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 290px;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* Right Fluid Waves & Floating Bubbles */
+.oxoo-tab-art-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 290px;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+.oxoo-art-layer {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.oxoo-tab-art-left .oxoo-art-layer {
+  object-position: left center;
+}
+
+.oxoo-tab-art-right .oxoo-art-layer {
+  object-position: right center;
+}
+
+/* Ambient Subtle Radial Glow in Center */
+.oxoo-ambient-glow {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 750px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Central Content Container */
+.oxoo-tab-content-container {
+  position: relative;
+  z-index: 10;
+  max-width: 660px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 auto;
+}
+
+/* Free Demo Badge */
+.oxoo-free-demo-badge-wrap {
+  margin-bottom: 14px;
+}
+
+.oxoo-free-demo-badge {
+  display: inline-block;
+  background: #e0f7fa;
+  color: #00bcd4;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 4px 16px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+/* Main Headline */
+.oxoo-tab-headline {
+  font-size: 42px;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: center;
+  line-height: 1.15;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.oxoo-headline-brand-anchor {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  padding: 0 2px;
+}
+
+.oxoo-headline-logo-img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+  display: inline-block;
+}
+
+.oxoo-headline-brush-stroke,
+.oxoo-headline-brush-svg {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin-top: 2px;
+  filter: drop-shadow(0 2px 4px rgba(0, 229, 255, 0.45));
+}
+
+.oxoo-tab-subtitle {
+  font-size: 15.5px;
+  color: #475569;
+  text-align: center;
+  margin: 0 0 26px;
+  font-weight: 400;
+}
+
+/* -------------------------------------------------------------
+   WHITE FORM CARD (Exact Proportions & Shadow)
+   ------------------------------------------------------------- */
+.oxoo-demo-form-card {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 20px 45px -10px rgba(0, 180, 216, 0.08), 0 4px 20px rgba(0, 0, 0, 0.04);
+  padding: 26px 32px 30px;
+}
+
+/* Suite Selection Header Box */
+.oxoo-suite-selection-box {
+  background: #f0fdfa;
+  border: 1px solid #cceef5;
+  border-radius: 12px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 14px;
+}
+
+.oxoo-suite-box-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-suite-icon-tile {
+  width: 42px;
+  height: 42px;
+  background: #e0f7fa;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00bcd4;
+  flex-shrink: 0;
+}
+
+.oxoo-suite-meta h3 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+}
+
+.oxoo-suite-meta p {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.oxoo-suite-change-btn {
+  background: none;
+  border: none;
+  color: #00bcd4;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+
+.oxoo-suite-change-btn:hover {
+  color: #0097a7;
+  text-decoration: underline;
+}
+
+/* Native Form */
+.oxoo-demo-native-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.oxoo-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oxoo-form-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.oxoo-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.oxoo-input-wrapper:focus-within {
+  border-color: #00bcd4;
+  box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.15);
+}
+
+.oxoo-input-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+
+.oxoo-text-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+}
+
+.oxoo-text-input::placeholder {
+  color: #94a3b8;
+}
+
+/* 2-Column Responsive Row */
+.oxoo-form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Phone Wrapper with Country Code */
+.oxoo-phone-wrapper {
+  padding-left: 10px;
+}
+
+.oxoo-phone-prefix-select {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+}
+
+.oxoo-input-divider {
+  width: 1px;
+  height: 20px;
+  background: #e2e8f0;
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.oxoo-phone-input {
+  letter-spacing: 0.5px;
+}
+
+/* Custom Select Wrappers */
+.oxoo-select-wrapper {
+  cursor: pointer;
+  padding-right: 12px;
+}
+
+.oxoo-select-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.oxoo-select-caret {
+  color: #64748b;
+  margin-left: auto;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* Terms Checkbox Row */
+.oxoo-terms-row {
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.oxoo-checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.oxoo-native-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.oxoo-custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: #00bcd4;
+  border: 1.5px solid #00bcd4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.oxoo-checkbox-container:hover .oxoo-custom-checkbox {
+  border-color: #0097a7;
+}
+
+.oxoo-terms-text {
+  font-size: 13.5px;
+  color: #475569;
+}
+
+.oxoo-privacy-link {
+  color: #00bcd4;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.oxoo-privacy-link:hover {
+  text-decoration: underline;
+}
+
+/* Big Request Demo Button */
+.oxoo-request-demo-cta {
+  width: 100%;
+  height: 48px;
+  background: #00c5db;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0, 197, 219, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-request-demo-cta:hover:not(:disabled) {
+  background: #00bcd4;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 197, 219, 0.45);
+}
+
+.oxoo-request-demo-cta:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+/* Card Footer */
+.oxoo-form-card-footer {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.oxoo-footer-signin-link {
+  color: #00bcd4;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.oxoo-footer-signin-link:hover {
+  text-decoration: underline;
+}
+
+/* -------------------------------------------------------------
+   MODALS: APP PICKER & PURCHASE MODALS
+   ------------------------------------------------------------- */
+.oxoo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.oxoo-app-picker-dialog {
+  background: #ffffff;
+  border-radius: 20px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.oxoo-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.oxoo-picker-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.oxoo-picker-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.oxoo-picker-close-btn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s ease;
+}
+
+.oxoo-picker-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.oxoo-picker-grid {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.oxoo-picker-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.oxoo-picker-tile:hover {
+  border-color: #00bcd4;
+  background: #f0fdfa;
+}
+
+.oxoo-picker-tile.selected {
+  border-color: #00bcd4;
+  background: #e0f7fa;
+}
+
+.oxoo-picker-tile-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-picker-tile-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-picker-tile-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.oxoo-picker-tile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.oxoo-picker-tile-cat {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.oxoo-picker-check-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #00bcd4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-picker-select-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #00bcd4;
+}
+
+/* Purchase Modal */
+.oxoo-purchase-dialog {
+  background: #ffffff;
+  border-radius: 20px;
+  max-width: 880px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  padding: 28px;
+  position: relative;
+}
+
+.oxoo-purchase-header {
+  text-align: center;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.oxoo-purchase-header .oxoo-picker-close-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.oxoo-purchase-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdfa;
+  color: #00bcd4;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  margin-bottom: 12px;
+}
+
+.oxoo-purchase-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.oxoo-purchase-desc {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.oxoo-purchase-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.oxoo-purchase-tile {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.oxoo-purchase-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
+
+.oxoo-purchase-tile.popular {
+  border-color: #00bcd4;
+  box-shadow: 0 10px 25px rgba(0, 188, 212, 0.15);
+}
+
+.oxoo-popular-ribbon {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #00bcd4;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.oxoo-plan-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 10px;
+}
+
+.oxoo-plan-price {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 14px;
+}
+
+.oxoo-plan-cycle {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.oxoo-plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.oxoo-plan-choose-btn {
+  width: 100%;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.oxoo-purchase-tile.popular .oxoo-plan-choose-btn {
+  background: #00bcd4;
+  color: #ffffff;
+}
+
+.oxoo-plan-choose-btn:hover {
+  background: #00bcd4;
+  color: #ffffff;
+}
+
+/* Search Modal */
+.oxoo-search-dialog {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  padding: 16px;
+}
+
+.oxoo-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.oxoo-search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.oxoo-search-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+}
+
+.oxoo-search-quick-links {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.oxoo-search-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.oxoo-search-chip {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.oxoo-search-chip:hover {
+  background: #e0f7fa;
+  color: #00bcd4;
+}
+
+/* Animations */
+@keyframes oxooFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1024px) {
+
+  .oxoo-tab-art-left,
+  .oxoo-tab-art-right {
+    width: 220px;
+  }
+
+  .oxoo-purchase-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .oxoo-tab-nav-menu {
+    display: none;
+  }
+
+  .oxoo-tab-art-left,
+  .oxoo-tab-art-right {
+    opacity: 0.35;
+    width: 140px;
+  }
+
+  .oxoo-tab-headline {
+    font-size: 30px;
+  }
+
+  .oxoo-demo-form-card {
+    padding: 20px;
+  }
+
+  .oxoo-form-row-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .oxoo-picker-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .oxoo-purchase-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   WEBSITE DEMO VIEWER (FULLSCREEN EMBEDDED INSTANCE)
+   ========================================================================== */
+.oxoo-demo-viewer-root {
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  background: #ffffff !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.oxoo-viewer-top-bar {
+  height: 58px !important;
+  min-height: 58px !important;
+  max-height: 58px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 24px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  z-index: 100 !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+.oxoo-viewer-brand-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.oxoo-viewer-app-badge {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 5px 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid #e2e8f0 !important;
+  letter-spacing: -0.2px !important;
+}
+
+.oxoo-viewer-timer-capsule {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 6px 16px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+.oxoo-timer-label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+}
+
+.oxoo-timer-digits {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: 0.5px !important;
+}
+
+.oxoo-timer-digits.urgent {
+  color: #ef4444 !important;
+  animation: oxooPulseUrgent 1s infinite !important;
+}
+
+@keyframes oxooPulseUrgent {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.oxoo-viewer-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.oxoo-viewer-btn-leave {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 7px 14px !important;
+  border-radius: 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.oxoo-viewer-btn-leave:hover {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+}
+
+.oxoo-viewer-btn-buy {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 7px 16px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: #00a3e0 !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 2px 6px rgba(0, 163, 224, 0.3) !important;
+}
+
+.oxoo-viewer-btn-buy:hover {
+  background: #0284c7 !important;
+  transform: translateY(-1px) !important;
+}
+
+.oxoo-viewer-progress-bar-track {
+  height: 3px !important;
+  background: #f1f5f9 !important;
+  width: 100% !important;
+  position: relative !important;
+  z-index: 101 !important;
+  flex-shrink: 0 !important;
+}
+
+.oxoo-viewer-progress-bar-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, #00a3e0, #10b981) !important;
+  transition: width 1s linear !important;
+}
+
+.oxoo-viewer-iframe-frame {
+  width: 100vw !important;
+  height: calc(100vh - 61px) !important;
+  min-height: calc(100vh - 61px) !important;
+  max-height: calc(100vh - 61px) !important;
+  border: none !important;
+  outline: none !important;
+  display: block !important;
+  flex: 1 1 auto !important;
+  background: #ffffff !important;
+  box-sizing: border-box !important;
+}
+
+/* Modal Dialogs */
+.oxoo-plans-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(8px) !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+}
+
+.oxoo-plans-modal-dialog {
+  background: #ffffff !important;
+  border-radius: 20px !important;
+  max-width: 900px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3) !important;
+  position: relative !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.oxoo-plans-modal-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%) !important;
+  padding: 30px 32px 24px !important;
+  color: #ffffff !important;
+  position: relative !important;
+}
+
+.oxoo-plans-close-btn {
+  position: absolute !important;
+  top: 18px !important;
+  right: 18px !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: none !important;
+  color: #ffffff !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+.oxoo-plans-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.oxoo-plans-header-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(0, 163, 224, 0.25) !important;
+  border: 1px solid #38bdf8 !important;
+  color: #bae6fd !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  padding: 4px 10px !important;
+  border-radius: 999px !important;
+  margin-bottom: 10px !important;
+}
+
+.oxoo-plans-header-title {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  margin: 0 0 8px 0 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.3px !important;
+}
+
+.oxoo-plans-header-subtitle {
+  font-size: 14px !important;
+  color: #cbd5e1 !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+  max-width: 680px !important;
+}
+
+.oxoo-plans-cards-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 16px !important;
+  padding: 24px 32px !important;
+  background: #f8fafc !important;
+}
+
+.oxoo-plan-tile {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  padding: 20px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  position: relative !important;
+  transition: all 0.2s ease !important;
+}
+
+.oxoo-plan-tile.highlight {
+  border-color: #00a3e0 !important;
+  box-shadow: 0 8px 24px rgba(0, 163, 224, 0.15) !important;
+}
+
+.oxoo-plan-badge-popular {
+  position: absolute !important;
+  top: -10px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: #00a3e0 !important;
+  color: #ffffff !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+  letter-spacing: 0.5px !important;
+}
+
+.oxoo-plan-tile-name {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin: 0 0 6px !important;
+}
+
+.oxoo-plan-tile-price {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin-bottom: 12px !important;
+}
+
+.oxoo-plan-tile-features {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 0 16px 0 !important;
+  font-size: 12px !important;
+  color: #475569 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.oxoo-plan-btn-choose {
+  width: 100% !important;
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+}
+
+.oxoo-plan-tile.highlight .oxoo-plan-btn-choose {
+  background: #00a3e0 !important;
+  color: #ffffff !important;
+}
+
+.oxoo-plan-btn-choose:hover {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.oxoo-plans-modal-footer {
+  padding: 16px 32px !important;
+  background: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.oxoo-plans-footer-left {
+  font-size: 12.5px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+}
+
+.oxoo-plans-footer-btns {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+/* Hide scrollbars cleanly on demo suite switcher */
+.oxoo-demo-suite-nav {
+  display: flex !important;
+  align-items: center !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  max-width: 100% !important;
+}
+
+.oxoo-demo-suite-nav::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.oxoo-viewer-top-bar {
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+}
