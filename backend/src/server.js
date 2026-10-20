@@ -1205,9 +1205,10 @@ app.post('/api/payment/verify', async (req, res, next) => {
         [verifiedPaymentId, paymentMethod, orderNumber]
       );
 
+      const renewalInterval = billingCycle === 'yearly' ? '1 year' : '1 month';
       await query(
         `INSERT INTO subscriptions (company_name, plan, amount, currency, billing_cycle, status, start_date, renewal_date, active_apps)
-         VALUES ($1, $2, $3, 'INR', $4, 'Active', NOW(), NOW() + INTERVAL '30 days', $5)`,
+         VALUES ($1, $2, $3, 'INR', $4, 'Active', NOW(), NOW() + INTERVAL '${renewalInterval}', $5)`,
         [companyName || 'My Organization', planName, safeTotalAmount, billingCycle, JSON.stringify(selectedApps)]
       );
 
@@ -1231,7 +1232,12 @@ app.post('/api/payment/verify', async (req, res, next) => {
     }
 
     const now = new Date();
-    const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+    const dueDate = new Date(now);
+    if (billingCycle === 'yearly') {
+      dueDate.setFullYear(dueDate.getFullYear() + 1);
+    } else {
+      dueDate.setMonth(dueDate.getMonth() + 1);
+    }
 
     res.json({
       success: true,
@@ -1247,7 +1253,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
       dueDate: dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       invoiceDateIso: now.toISOString(),
       dueDateIso: dueDate.toISOString(),
-      nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      nextBillingDate: dueDate.toISOString()
     });
   } catch (err) {
     next(err);

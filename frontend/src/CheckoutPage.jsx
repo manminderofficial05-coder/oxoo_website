@@ -245,9 +245,14 @@ export default function CheckoutPage() {
       });
 
       const today = new Date();
-      const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+      const calcDueDate = new Date(today);
+      if (isYearly) {
+        calcDueDate.setFullYear(calcDueDate.getFullYear() + 1);
+      } else {
+        calcDueDate.setMonth(calcDueDate.getMonth() + 1);
+      }
       const invoiceDateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-      const dueDateStr = dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const dueDateStr = calcDueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
       setPaymentSuccessData({
         orderNumber,
@@ -278,11 +283,21 @@ export default function CheckoutPage() {
     year: 'numeric'
   });
 
-  const dueDateFormatted = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
+  const getComputedDueDate = (yearly) => {
+    const d = new Date();
+    if (yearly) {
+      d.setFullYear(d.getFullYear() + 1);
+    } else {
+      d.setMonth(d.getMonth() + 1);
+    }
+    return d.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const computedDueDate = getComputedDueDate(isYearly);
 
   return (
     <>
@@ -975,17 +990,7 @@ export default function CheckoutPage() {
                         <div className="invoice-meta-row">
                           <span>Due Date</span>
                           <span>:</span>
-                          <b>{paymentSuccessData?.dueDate || dueDateFormatted}</b>
-                        </div>
-                        <div className="invoice-meta-row">
-                          <span>Order No</span>
-                          <span>:</span>
-                          <b>{paymentSuccessData?.orderNumber || 'OXOO-ORD-2025-000123'}</b>
-                        </div>
-                        <div className="invoice-meta-row">
-                          <span>Payment Date</span>
-                          <span>:</span>
-                          <b>{paymentSuccessData?.paymentDate || todayFormatted}</b>
+                          <b>{paymentSuccessData?.dueDate || computedDueDate}</b>
                         </div>
                         <div className="invoice-meta-row">
                           <span>Transaction ID</span>
