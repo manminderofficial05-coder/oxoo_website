@@ -454,19 +454,89 @@
   line-height: 1.3;
 }
 
+/* ==========================================================================
+   Section: Our Software Categories & Applications Showcase
+   ========================================================================== */
+.pricing-categories-full-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.pricing-cat-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.pricing-cat-header-wrap {
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.pricing-cat-heading {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.pricing-cat-apps-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.pricing-app-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 0.15s ease;
+}
+
+.pricing-app-item:hover {
+  transform: translateX(3px);
+}
+
+.pricing-app-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.pricing-app-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pricing-app-item:hover .pricing-app-title {
+  color: #0f172a;
+}
+
 /* Responsive adjustments */
 @media (max-width: 900px) {
   .pricing-cards-container {
     grid-template-columns: 1fr;
     max-width: 440px;
   }
-  .categories-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .pricing-categories-full-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
   }
 }
 
-@media (max-width: 600px) {
-  .categories-grid {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 580px) {
+  .pricing-categories-full-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
   }
 }

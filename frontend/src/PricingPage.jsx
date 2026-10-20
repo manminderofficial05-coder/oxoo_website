@@ -1,98 +1,29 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, ArrowRight, Grid } from 'lucide-react';
+import { Check, ArrowRight, Grid, Sparkles } from 'lucide-react';
 import { Header, Footer } from './components';
+import { ALL_APPS_CATEGORIES } from './AllAppsDirectory';
 import './pricing.css';
 
 // --------------------------------------------------------------------------
-// Core Software Catalog & Categories
+// Core Software Catalog & Categories (All 48 Apps Across 8 Categories)
 // --------------------------------------------------------------------------
-export const SOFTWARE_MODULES = [
-  {
-    id: 'finance',
-    name: 'Finance',
-    desc: 'Accounting, Invoicing, Expenses, Assets, Taxes',
-    iconSrc: '/apps/logo-accounting.png?v=clean',
+export const SOFTWARE_MODULES = ALL_APPS_CATEGORIES.flatMap((cat) =>
+  cat.apps.map((app) => ({
+    id: app.slug,
+    name: app.name,
+    desc: app.desc,
+    category: cat.name,
+    categoryId: cat.id,
+    iconSrc: app.icon,
+    color: cat.titleColor || '#2563eb',
+    bgColor: app.bgColor || '#eff6ff',
     priceMonthly: 740,
-    priceYearly: 560,
-    color: '#3b82f6'
-  },
-  {
-    id: 'hr',
-    name: 'Human Resources',
-    desc: 'HR, Payroll, Recruitment, Leaves',
-    iconSrc: '/apps/logo-hr.png?v=clean',
-    priceMonthly: 740,
-    priceYearly: 560,
-    color: '#8b5cf6'
-  },
-  {
-    id: 'sales',
-    name: 'Sales',
-    desc: 'CRM, Quotations, Orders, Invoicing',
-    iconSrc: '/apps/logo-sales.png?v=clean',
-    priceMonthly: 740,
-    priceYearly: 560,
-    color: '#ef4444'
-  },
-  {
-    id: 'supply-chain',
-    name: 'Supply Chain',
-    desc: 'Inventory, Purchase, Manufacturing, Quality',
-    iconSrc: '/apps/logo-inventory.png?v=clean',
-    priceMonthly: 740,
-    priceYearly: 560,
-    color: '#10b981'
-  },
-  {
-    id: 'productivity',
-    name: 'Productivity',
-    desc: 'Project, Tasks, Timesheets, Planning',
-    iconSrc: '/apps/logo-project.png?v=clean',
-    priceMonthly: 740,
-    priceYearly: 560,
-    color: '#f59e0b'
-  }
-];
+    priceYearly: 560
+  }))
+);
 
-export const SOFTWARE_CATEGORIES = [
-  {
-    name: 'Finance',
-    sub: 'Accounting, Invoicing, Expenses, Assets, Taxes',
-    icon: '/apps/logo-accounting.png?v=clean',
-    bg: '#eff6ff'
-  },
-  {
-    name: 'Human Resources',
-    sub: 'Employees, Payroll, Recruitment, Leaves',
-    icon: '/apps/logo-hr.png?v=clean',
-    bg: '#f5f3ff'
-  },
-  {
-    name: 'Sales',
-    sub: 'CRM, Quotations, Orders, Invoicing',
-    icon: '/apps/logo-sales.png?v=clean',
-    bg: '#fff1f2'
-  },
-  {
-    name: 'Supply Chain',
-    sub: 'Inventory, Purchase, Manufacturing, Quality',
-    icon: '/apps/logo-inventory.png?v=clean',
-    bg: '#ecfdf5'
-  },
-  {
-    name: 'Productivity',
-    sub: 'Projects, Tasks, Timesheets, Planning',
-    icon: '/apps/logo-project.png?v=clean',
-    bg: '#fffbeb'
-  },
-  {
-    name: 'All Apps Access',
-    sub: 'Get complete OXOO with all modules',
-    icon: '/apps/logo-dashboard.png?v=clean',
-    bg: '#f3e8ff'
-  }
-];
+export const SOFTWARE_CATEGORIES = ALL_APPS_CATEGORIES;
 
 export default function PricingPage() {
   const navigate = useNavigate();
@@ -341,18 +272,34 @@ export default function PricingPage() {
         </section>
 
         {/* ================================================================= */}
-        {/* 3. Section: Our Software Categories (Compact)                     */}
+        {/* 3. Section: Our Software Applications & Categories                */}
         {/* ================================================================= */}
         <section className="categories-showcase-section">
-          <h2 className="section-title-center">Our Software Categories</h2>
-          <div className="categories-grid">
-            {SOFTWARE_CATEGORIES.map((cat) => (
-              <div key={cat.name} className="category-card-item">
-                <div className="cat-icon-chip" style={{ background: cat.bg }}>
-                  <img src={cat.icon} alt={cat.name} />
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <h2 className="section-title-center" style={{ marginBottom: '4px' }}>
+              Explore All 48 Business Applications
+            </h2>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
+              Included across our Single Software and Custom Softwares packages.
+            </p>
+          </div>
+
+          <div className="pricing-categories-full-grid">
+            {ALL_APPS_CATEGORIES.map((cat) => (
+              <div key={cat.id} className="pricing-cat-column">
+                <div className="pricing-cat-header-wrap" style={{ borderBottom: `2.5px solid ${cat.underlineColor || '#2563eb'}` }}>
+                  <span className="pricing-cat-heading" style={{ color: cat.titleColor || '#2563eb' }}>
+                    {cat.headerTitle || cat.name.toUpperCase()}
+                  </span>
                 </div>
-                <h3 className="cat-card-name">{cat.name}</h3>
-                <p className="cat-card-sub">{cat.sub}</p>
+                <ul className="pricing-cat-apps-list">
+                  {cat.apps.map((app) => (
+                    <li key={app.slug} className="pricing-app-item">
+                      <img src={app.icon} alt={app.name} className="pricing-app-icon" />
+                      <span className="pricing-app-title">{app.name}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>

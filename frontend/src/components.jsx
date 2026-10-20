@@ -6,6 +6,7 @@ import {
   Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare
 } from 'lucide-react';
 import { categories, services, industries } from './data';
+import { getAppMeta } from './appMetaHelper';
 
 export function Logo({ light = false, withTagline = false, stacked = false, iconOnly = false, className = '' }) {
   let src = '/oxoo-logo.png';
@@ -394,23 +395,29 @@ export function Header() {
               {searchQuery ? (
                 <div className="mega-results">
                   {filtered.length > 0 ? (
-                    filtered.map((s) => (
-                      <Link
-                        key={s.slug}
-                        to={`/apps/${s.slug}`}
-                        onClick={closeAll}
-                        className="mega-result-card"
-                      >
-                        <span className={`result-icon icon-${s.color}`}>
-                          <s.icon size={18} />
-                        </span>
-                        <div>
-                          <b>{s.name}</b>
-                          <small>{s.category}</small>
-                        </div>
-                        <ArrowRight size={14} className="arr" />
-                      </Link>
-                    ))
+                    filtered.map((s) => {
+                      const meta = getAppMeta(s.name);
+                      return (
+                        <Link
+                          key={s.slug}
+                          to={`/apps/${s.slug || meta.slug}`}
+                          onClick={closeAll}
+                          className="mega-result-card"
+                        >
+                          <img
+                            src={meta.icon}
+                            alt={s.name}
+                            className="mega-app-icon-result"
+                            style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 4 }}
+                          />
+                          <div>
+                            <b>{s.name}</b>
+                            <small>{s.category}</small>
+                          </div>
+                          <ArrowRight size={14} className="arr" />
+                        </Link>
+                      );
+                    })
                   ) : (
                     <div className="mega-no-results">
                       <p>No apps or services found for "{searchQuery}".</p>
@@ -430,10 +437,12 @@ export function Header() {
                       <ul className="mega-list">
                         {cat.services.map((name) => {
                           const s = services.find((x) => x.name === name) || { slug: name.toLowerCase().replace(/\s+/g, '-') };
+                          const meta = getAppMeta(name);
                           return (
                             <li key={name}>
-                              <Link to={`/apps/${s.slug}`} onClick={closeAll}>
-                                {name}
+                              <Link to={`/apps/${s.slug || meta.slug}`} onClick={closeAll} className="mega-app-link">
+                                <img src={meta.icon} alt={name} className="mega-app-icon" />
+                                <span className="mega-app-name">{name}</span>
                               </Link>
                             </li>
                           );
