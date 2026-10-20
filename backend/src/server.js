@@ -1230,6 +1230,9 @@ app.post('/api/payment/verify', async (req, res, next) => {
       });
     }
 
+    const now = new Date();
+    const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+
     res.json({
       success: true,
       message: 'Payment verified and subscription activated successfully!',
@@ -1239,8 +1242,11 @@ app.post('/api/payment/verify', async (req, res, next) => {
       planName,
       selectedApps,
       status: 'Active',
-      amountPaid: totalAmount,
-      invoiceDate: new Date().toISOString(),
+      amountPaid: safeTotalAmount,
+      invoiceDate: now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      dueDate: dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      invoiceDateIso: now.toISOString(),
+      dueDateIso: dueDate.toISOString(),
       nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     });
   } catch (err) {
@@ -1263,6 +1269,9 @@ app.get('/api/payment/invoice/:orderNumber', async (req, res, next) => {
       if (invRes.rows.length > 0) invoice = invRes.rows[0];
     }
 
+    const now = new Date();
+    const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+
     res.json({
       success: true,
       order: order || {
@@ -1274,7 +1283,8 @@ app.get('/api/payment/invoice/:orderNumber', async (req, res, next) => {
       invoice: invoice || {
         invoice_number: `INV-2026-${Math.floor(100 + Math.random() * 900)}`,
         status: 'Paid',
-        invoice_date: new Date().toISOString()
+        invoice_date: now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        due_date: dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       }
     });
   } catch (err) {

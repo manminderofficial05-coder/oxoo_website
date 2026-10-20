@@ -240,13 +240,19 @@ export default function CheckoutPage() {
         totalAmount: totals.totalAmount
       });
 
+      const today = new Date();
+      const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+      const invoiceDateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const dueDateStr = dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
       setPaymentSuccessData({
         orderNumber,
         invoiceNumber,
         paymentId,
         planName: planNameFormatted,
-        paymentDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        invoiceDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        paymentDate: invoiceDateStr,
+        invoiceDate: invoiceDateStr,
+        dueDate: dueDateStr,
         ...verifyRes
       });
 
@@ -263,6 +269,12 @@ export default function CheckoutPage() {
   };
 
   const todayFormatted = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+
+  const dueDateFormatted = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
@@ -963,6 +975,11 @@ export default function CheckoutPage() {
                           <span>Invoice Date</span>
                           <span>:</span>
                           <b>{paymentSuccessData?.invoiceDate || todayFormatted}</b>
+                        </div>
+                        <div className="invoice-meta-row">
+                          <span>Due Date</span>
+                          <span>:</span>
+                          <b>{paymentSuccessData?.dueDate || dueDateFormatted}</b>
                         </div>
                         <div className="invoice-meta-row">
                           <span>Order No</span>
