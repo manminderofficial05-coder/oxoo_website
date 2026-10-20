@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Check, ArrowRight, ArrowLeft, ShieldCheck, Lock, CreditCard,
   Download, Printer, CheckCircle2, Building2, User, Mail, Phone,
-  FileText, QrCode, Sparkles, AlertCircle, Search
+  FileText, QrCode, Sparkles, AlertCircle
 } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { SOFTWARE_MODULES } from './PricingPage';
@@ -20,18 +20,6 @@ const INDIAN_STATES = [
 const COUNTRIES = [
   'India', 'United States', 'United Kingdom', 'United Arab Emirates',
   'Singapore', 'Canada', 'Australia', 'Germany', 'France', 'Japan'
-];
-
-const CHECKOUT_CATEGORIES = [
-  { id: 'all', label: 'All (48)' },
-  { id: 'finance', label: 'Finance' },
-  { id: 'sales', label: 'Sales' },
-  { id: 'websites', label: 'Websites' },
-  { id: 'supply-chain', label: 'Supply Chain' },
-  { id: 'human-resources', label: 'HR' },
-  { id: 'marketing', label: 'Marketing' },
-  { id: 'services', label: 'Services' },
-  { id: 'productivity', label: 'Productivity' }
 ];
 
 // Helper: Convert number to Indian Rupees words
@@ -85,18 +73,14 @@ export default function CheckoutPage() {
   // Selected Software(s)
   const paramApps = searchParams.get('apps');
   const initialApps = paramApps
-    ? paramApps.split(',').filter(Boolean)
+    ? paramApps.split(',').filter(Boolean).map((id) => (id === 'hr' ? 'human-resources' : id))
     : activePlan === 'custom'
-    ? ['hr', 'sales']
+    ? ['sales', 'finance']
     : ['sales'];
   const [selectedAppIds, setSelectedAppIds] = useState(initialApps);
 
   // Number of licensed users
   const [userCount, setUserCount] = useState(1);
-
-  // Software Category Filter & Search in Step 1
-  const [selectedCatFilter, setSelectedCatFilter] = useState('all');
-  const [appSearchQuery, setAppSearchQuery] = useState('');
 
   // Step 3: Company & Billing Details (Exact match to User Screenshot 5)
   const [formData, setFormData] = useState({
@@ -415,61 +399,18 @@ export default function CheckoutPage() {
               </div>
 
               {/* Software Selection Section Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
-                  Select Software Applications ({selectedAppIds.length} selected):
+                  Select Softwares ({selectedAppIds.length} selected):
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  Pick 1 app for Single Software, or 2+ for Custom Softwares
+                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                  Pick 1 software for Single Software, or 2+ for Custom Softwares
                 </span>
               </div>
 
-              {/* Category Filter Tabs & Live Search Bar */}
-              <div className="checkout-app-filters-bar">
-                <div className="checkout-cat-pills">
-                  {CHECKOUT_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      className={`checkout-cat-pill-btn ${selectedCatFilter === cat.id ? 'active' : ''}`}
-                      onClick={() => setSelectedCatFilter(cat.id)}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="checkout-search-wrap">
-                  <Search size={14} className="checkout-search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search software..."
-                    value={appSearchQuery}
-                    onChange={(e) => setAppSearchQuery(e.target.value)}
-                    className="checkout-search-input"
-                  />
-                  {appSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setAppSearchQuery('')}
-                      className="checkout-search-clear"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Filtered Software Applications Grid */}
+              {/* Software Selection Grid (8 Business Softwares) */}
               <div className="checkout-software-grid">
-                {SOFTWARE_MODULES.filter((mod) => {
-                  const matchCat = selectedCatFilter === 'all' || mod.categoryId === selectedCatFilter;
-                  const matchQuery = !appSearchQuery.trim() ||
-                    mod.name.toLowerCase().includes(appSearchQuery.toLowerCase()) ||
-                    mod.category.toLowerCase().includes(appSearchQuery.toLowerCase()) ||
-                    mod.desc.toLowerCase().includes(appSearchQuery.toLowerCase());
-                  return matchCat && matchQuery;
-                }).map((mod) => {
+                {SOFTWARE_MODULES.map((mod) => {
                   const isChecked = selectedAppIds.includes(mod.id);
                   return (
                     <div
@@ -485,19 +426,19 @@ export default function CheckoutPage() {
                       />
                       <img src={mod.iconSrc} alt={mod.name} className="checkout-software-icon" />
                       <div className="checkout-software-info">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                           <span className="checkout-software-name">{mod.name}</span>
                           <span
                             style={{
-                              fontSize: '0.65rem',
+                              fontSize: '0.68rem',
                               fontWeight: 700,
-                              padding: '1px 6px',
+                              padding: '1px 7px',
                               borderRadius: '4px',
-                              background: `${mod.color}18`,
+                              background: `${mod.color}15`,
                               color: mod.color
                             }}
                           >
-                            {mod.category}
+                            6 Apps Suite
                           </span>
                         </div>
                         <span className="checkout-software-desc">{mod.desc}</span>

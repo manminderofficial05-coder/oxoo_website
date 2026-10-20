@@ -6,22 +6,106 @@ import { ALL_APPS_CATEGORIES } from './AllAppsDirectory';
 import './pricing.css';
 
 // --------------------------------------------------------------------------
-// Core Software Catalog & Categories (All 48 Apps Across 8 Categories)
+// Core Software Packages (8 Business Softwares)
 // --------------------------------------------------------------------------
-export const SOFTWARE_MODULES = ALL_APPS_CATEGORIES.flatMap((cat) =>
-  cat.apps.map((app) => ({
-    id: app.slug,
-    name: app.name,
-    desc: app.desc,
-    category: cat.name,
-    categoryId: cat.id,
-    iconSrc: app.icon,
-    color: cat.titleColor || '#2563eb',
-    bgColor: app.bgColor || '#eff6ff',
+export const SOFTWARE_MODULES = [
+  {
+    id: 'finance',
+    name: 'Finance Software',
+    shortName: 'Finance',
+    desc: 'Accounting, Invoicing, Expenses, Sign, Spreadsheet, ESG',
+    appsCount: 6,
+    iconSrc: '/apps/logo-accounting.png?v=clean',
+    color: '#2563eb',
+    bgColor: '#eff6ff',
     priceMonthly: 740,
     priceYearly: 560
-  }))
-);
+  },
+  {
+    id: 'sales',
+    name: 'Sales Software',
+    shortName: 'Sales',
+    desc: 'CRM, Sales, Subscriptions, POS Shop, POS Restaurant, Rental',
+    appsCount: 6,
+    iconSrc: '/apps/logo-sales.png?v=clean',
+    color: '#ec4899',
+    bgColor: '#fdf2f8',
+    priceMonthly: 740,
+    priceYearly: 560
+  },
+  {
+    id: 'websites',
+    name: 'Websites Software',
+    shortName: 'Websites',
+    desc: 'Website Builder, eCommerce, Events, Blog, eLearning, Forum',
+    appsCount: 6,
+    iconSrc: '/apps/logo-website.png?v=clean',
+    color: '#0891b2',
+    bgColor: '#f0f9ff',
+    priceMonthly: 740,
+    priceYearly: 560
+  },
+  {
+    id: 'supply-chain',
+    name: 'Supply Chain Software',
+    shortName: 'Supply Chain',
+    desc: 'Inventory, Manufacturing, Maintenance, PLM, Quality, Purchase',
+    appsCount: 6,
+    iconSrc: '/apps/logo-inventory.png?v=clean',
+    color: '#ea580c',
+    bgColor: '#fff7ed',
+    priceMonthly: 740,
+    priceYearly: 560
+  },
+  {
+    id: 'human-resources',
+    name: 'Human Resources Software',
+    shortName: 'Human Resources',
+    desc: 'Employees, Payroll, Recruitment, Time Off, Appraisals, Fleet',
+    appsCount: 6,
+    iconSrc: '/apps/logo-hr.png?v=clean',
+    color: '#7c3aed',
+    bgColor: '#f5f3ff',
+    priceMonthly: 740,
+    priceYearly: 560
+  },
+  {
+    id: 'marketing',
+    name: 'Marketing Software',
+    shortName: 'Marketing',
+    desc: 'Social Marketing, Email, SMS, Marketing Automation, WhatsApp, Surveys',
+    appsCount: 6,
+    iconSrc: '/apps/logo-email-marketing.png?v=clean',
+    color: '#e11d48',
+    bgColor: '#fff1f2',
+    priceMonthly: 740,
+    priceYearly: 560
+  },
+  {
+    id: 'services',
+    name: 'Services Software',
+    shortName: 'Services',
+    desc: 'Project, Timesheets, Planning, Appointments, Live Chat, Helpdesk',
+    appsCount: 6,
+    iconSrc: '/apps/logo-project.png?v=clean',
+    color: '#059669',
+    bgColor: '#ecfdf5',
+    priceMonthly: 740,
+    priceYearly: 560
+  },
+  {
+    id: 'productivity',
+    name: 'Productivity Software',
+    shortName: 'Productivity',
+    desc: 'Artificial Intelligence, Discuss, VoIP, IoT, Documents, Knowledge',
+    appsCount: 6,
+    iconSrc: '/apps/logo-ai.png?v=clean',
+    color: '#6d28d9',
+    bgColor: '#faf5ff',
+    priceMonthly: 740,
+    priceYearly: 560
+  }
+];
 
 export const SOFTWARE_CATEGORIES = ALL_APPS_CATEGORIES;
 
