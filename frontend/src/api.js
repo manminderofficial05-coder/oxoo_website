@@ -222,5 +222,98 @@ export async function updateCustomerStatus(companyName, status) {
   return await r.json();
 }
 
+// -------------------------------------------------------------
+// Pricing & Payment APIs
+// -------------------------------------------------------------
+export async function getPricingPlans() {
+  try {
+    const r = await fetch(`${API_URL}/api/pricing/plans`);
+    if (!r.ok) throw new Error('Failed to load plans');
+    return await r.json();
+  } catch (err) {
+    console.warn('Fallback to local pricing plans:', err.message);
+    return null;
+  }
+}
+
+export async function calculatePricing(payload) {
+  try {
+    const r = await fetch(`${API_URL}/api/pricing/calculate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error('Calculation error');
+    return await r.json();
+  } catch (err) {
+    console.warn('Using client-side pricing fallback:', err.message);
+    const { planId = 'single', billingCycle = 'monthly', appCount = 1, userCount = 1 } = payload;
+    let ratePerUser = 0;
+    if (planId === 'free') {
+      ratePerUser = 0;
+    } else if (planId === 'single') {
+      ratePerUser = billingCycle === 'yearly' ? 448 : 560;
+    } else if (planId === 'custom') {
+      const baseApps = 2;
+      const baseMonthly = 980;
+      const extraMonthly = 560;
+      const monthlyPerUser = appCount <= 1 ? 560 : baseMonthly + Math.max(0, appCount - baseApps) * extraMonthly;
+      ratePerUser = billingCycle === 'yearly' ? Math.round(monthlyPerUser * 0.8) : monthlyPerUser;
+    }
+    const subtotal = ratePerUser * Math.max(1, userCount);
+    const taxAmount = Math.round(subtotal * 0.18);
+    const totalAmount = subtotal + taxAmount;
+    return {
+      success: true,
+      data: {
+        planId,
+        billingCycle,
+        appCount,
+        userCount,
+        ratePerUser,
+        subtotal,
+        taxAmount,
+        discountAmount: 0,
+        totalAmount,
+        currency: 'INR'
+      }
+    };
+  }
+}
+
+export async function createPaymentOrder(payload) {
+  const r = await fetch(`${API_URL}/api/payment/create-order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Unable to create order');
+  return data;
+}
+
+export async function verifyPayment(payload) {
+  const r = await fetch(`${API_URL}/api/payment/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Payment verification failed');
+  return data;
+}
+
+export async function getPaymentInvoice(orderNumber) {
+  try {
+    const r = await fetch(`${API_URL}/api/payment/invoice/${encodeURIComponent(orderNumber)}`);
+    if (!r.ok) throw new Error('Invoice not found');
+    return await r.json();
+  } catch (err) {
+    console.warn('Invoice fetch failed:', err.message);
+    return null;
+  }
+}
+
 export { API_URL };
+
 

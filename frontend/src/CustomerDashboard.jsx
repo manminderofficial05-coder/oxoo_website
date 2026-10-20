@@ -325,15 +325,8 @@ export default function CustomerDashboard() {
                       <span style={{ fontSize: '11px', color: '#0284c7', cursor: 'pointer' }} onClick={() => setNotifPopoverOpen(false)}>Close</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ fontSize: '12px', padding: '8px', background: '#f8fafc', borderRadius: '8px' }}>
-                        <div style={{ fontWeight: 600, color: '#059669' }}>Invoice INV-2026-081 Paid</div>
-                        <div style={{ color: '#64748b' }}>₹48,200 credited from Apex Logistics</div>
-                        <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>2 hours ago</div>
-                      </div>
-                      <div style={{ fontSize: '12px', padding: '8px', background: '#f8fafc', borderRadius: '8px' }}>
-                        <div style={{ fontWeight: 600, color: '#2563eb' }}>New Team Member</div>
-                        <div style={{ color: '#64748b' }}>Sarah Miller joined Finance team</div>
-                        <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>5 hours ago</div>
+                      <div style={{ fontSize: '12px', padding: '16px 8px', textAlign: 'center', color: '#94a3b8' }}>
+                        No new notifications
                       </div>
                     </div>
                   </motion.div>
@@ -469,7 +462,7 @@ export default function CustomerDashboard() {
               <div className="oxoo-welcome-row">
                 <div>
                   <h1 className="oxoo-welcome-title">
-                    Welcome back, {overview?.customerName?.split(' ')[0] || 'Alex'}!
+                    Welcome back, {overview?.customerName ? overview.customerName.split(' ')[0] : 'Customer'}!
                   </h1>
                   <p className="oxoo-welcome-subtitle">
                     Manage your business with Oxoo. Access all your purchased apps in one place.
@@ -483,8 +476,8 @@ export default function CustomerDashboard() {
                   </div>
                   <div className="oxoo-plan-details">
                     <span className="oxoo-plan-label">Current Plan</span>
-                    <span className="oxoo-plan-name">{overview?.currentPlan || 'Business Pro'}</span>
-                    <span className="oxoo-plan-billing-date">Next billing: {overview?.nextBillingDate || '12 Dec 2026'}</span>
+                    <span className="oxoo-plan-name">{overview?.currentPlan || 'Free Tier'}</span>
+                    <span className="oxoo-plan-billing-date">Next billing: {overview?.nextBillingDate || 'N/A'}</span>
                   </div>
                   <button
                     type="button"
@@ -505,16 +498,16 @@ export default function CustomerDashboard() {
                       <LayoutDashboard size={20} />
                     </div>
                     <span className="oxoo-metric-badge green">
-                      ↑ {overview?.activeAppsTrend || '25%'}
+                      ↑ {overview?.activeAppsTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Active Apps</span>
-                      <span className="oxoo-metric-value">{overview?.activeAppsCount || 5}</span>
-                      <span className="oxoo-metric-subtitle">of {overview?.totalPurchasedApps || 12} purchased</span>
+                      <span className="oxoo-metric-value">{overview?.activeAppsCount ?? 0}</span>
+                      <span className="oxoo-metric-subtitle">of {overview?.totalPurchasedApps ?? 0} purchased</span>
                     </div>
-                    {renderSparkline('#10b981', '0,24 20,22 40,20 60,10 80,6')}
+                    {renderSparkline('#10b981', '0,20 20,20 40,20 60,20 80,20')}
                   </div>
                 </div>
 
@@ -525,16 +518,16 @@ export default function CustomerDashboard() {
                       <Users size={20} />
                     </div>
                     <span className="oxoo-metric-badge green">
-                      ↑ {overview?.teamMembersTrend || '3%'}
+                      ↑ {overview?.teamMembersTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Team Members</span>
-                      <span className="oxoo-metric-value">{overview?.teamMembersCount || 12}</span>
+                      <span className="oxoo-metric-value">{overview?.teamMembersCount ?? 0}</span>
                       <span className="oxoo-metric-subtitle">active users</span>
                     </div>
-                    {renderSparkline('#10b981', '0,26 20,24 40,18 60,16 80,10')}
+                    {renderSparkline('#10b981', '0,20 20,20 40,20 60,20 80,20')}
                   </div>
                 </div>
 
@@ -545,16 +538,16 @@ export default function CustomerDashboard() {
                       <BarChart2 size={20} />
                     </div>
                     <span className="oxoo-metric-badge green">
-                      ↑ {overview?.monthlyUsageTrend || '18%'}
+                      ↑ {overview?.monthlyUsageTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Monthly Usage</span>
-                      <span className="oxoo-metric-value">{overview?.monthlyUsage?.toLocaleString('en-IN') || '2,845'}</span>
+                      <span className="oxoo-metric-value">{overview?.monthlyUsage ? overview.monthlyUsage.toLocaleString('en-IN') : 0}</span>
                       <span className="oxoo-metric-subtitle">total transactions</span>
                     </div>
-                    {renderSparkline('#06b6d4', '0,28 20,25 40,18 60,12 80,4')}
+                    {renderSparkline('#06b6d4', '0,20 20,20 40,20 60,20 80,20')}
                   </div>
                 </div>
 
@@ -565,16 +558,16 @@ export default function CustomerDashboard() {
                       <MessageSquare size={20} />
                     </div>
                     <span className="oxoo-metric-badge red">
-                      ↓ {overview?.openTicketsTrend || '50%'}
+                      ↓ {overview?.openTicketsTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Open Support Tickets</span>
-                      <span className="oxoo-metric-value">{overview?.openTicketsCount || 2}</span>
+                      <span className="oxoo-metric-value">{overview?.openTicketsCount ?? 0}</span>
                       <span className="oxoo-metric-subtitle">awaiting response</span>
                     </div>
-                    {renderSparkline('#ef4444', '0,8 20,12 40,16 60,22 80,26')}
+                    {renderSparkline('#ef4444', '0,20 20,20 40,20 60,20 80,20')}
                   </div>
                 </div>
               </div>
@@ -590,118 +583,43 @@ export default function CustomerDashboard() {
                     </span>
                   </div>
 
-                  <div className="oxoo-apps-horizontal-grid">
-                    {/* 1. Accounting */}
-                    <div className="oxoo-app-tile">
-                      <div className="oxoo-app-icon-box gradient-blue">
-                        <BarChart2 size={26} />
-                      </div>
-                      <span className="oxoo-app-name">Accounting</span>
-                      <span className="oxoo-status-pill active">
-                        <span className="oxoo-status-dot" /> Active
-                      </span>
+                  {overview?.purchasedApps && overview.purchasedApps.length > 0 ? (
+                    <div className="oxoo-apps-horizontal-grid">
+                      {overview.purchasedApps.map((app) => (
+                        <div key={app.id} className="oxoo-app-tile">
+                          <div className={`oxoo-app-icon-box ${app.entitled ? 'gradient-blue' : 'peach'}`}>
+                            <Layers size={26} />
+                          </div>
+                          <span className="oxoo-app-name">{app.name}</span>
+                          <span className={`oxoo-status-pill ${app.entitled ? 'active' : 'not-purchased'}`}>
+                            {app.entitled && <span className="oxoo-status-dot" />} {app.status || (app.entitled ? 'Active' : 'Not Purchased')}
+                          </span>
+                          <button
+                            type="button"
+                            className={`oxoo-app-action-btn ${app.entitled ? 'open' : 'view-plans'}`}
+                            onClick={() => handleOpenApp(app)}
+                          >
+                            {app.entitled ? 'Open App →' : 'View Plans'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                      <Layers size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+                      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>No Active Applications</h3>
+                      <p style={{ fontSize: '13px', maxWidth: '360px', margin: '0 auto 16px' }}>
+                        You haven't activated any application suites yet. Choose from our 24 enterprise apps to get started.
+                      </p>
                       <button
                         type="button"
-                        className="oxoo-app-action-btn open"
-                        onClick={() => handleOpenApp({ id: 'accounting', name: 'Accounting', entitled: true })}
+                        className="oxoo-upgrade-btn"
+                        onClick={() => navigate('/choose-apps')}
                       >
-                        Open App →
+                        Browse Applications Catalog →
                       </button>
                     </div>
-
-                    {/* 2. Invoicing */}
-                    <div className="oxoo-app-tile">
-                      <div className="oxoo-app-icon-box gradient-blue">
-                        <FileText size={26} />
-                      </div>
-                      <span className="oxoo-app-name">Invoicing</span>
-                      <span className="oxoo-status-pill active">
-                        <span className="oxoo-status-dot" /> Active
-                      </span>
-                      <button
-                        type="button"
-                        className="oxoo-app-action-btn open"
-                        onClick={() => handleOpenApp({ id: 'invoicing', name: 'Invoicing', entitled: true })}
-                      >
-                        Open App →
-                      </button>
-                    </div>
-
-                    {/* 3. Expenses */}
-                    <div className="oxoo-app-tile">
-                      <div className="oxoo-app-icon-box gradient-blue">
-                        <Receipt size={26} />
-                      </div>
-                      <span className="oxoo-app-name">Expenses</span>
-                      <span className="oxoo-status-pill active">
-                        <span className="oxoo-status-dot" /> Active
-                      </span>
-                      <button
-                        type="button"
-                        className="oxoo-app-action-btn open"
-                        onClick={() => handleOpenApp({ id: 'expenses', name: 'Expenses', entitled: true })}
-                      >
-                        Open App →
-                      </button>
-                    </div>
-
-                    {/* 4. HRMS */}
-                    <div className="oxoo-app-tile">
-                      <div className="oxoo-app-icon-box gradient-blue">
-                        <UserCheck size={26} />
-                      </div>
-                      <span className="oxoo-app-name">HRMS</span>
-                      <span className="oxoo-status-pill active">
-                        <span className="oxoo-status-dot" /> Active
-                      </span>
-                      <button
-                        type="button"
-                        className="oxoo-app-action-btn open"
-                        onClick={() => handleOpenApp({ id: 'hrms', name: 'HRMS', entitled: true })}
-                      >
-                        Open App →
-                      </button>
-                    </div>
-
-                    {/* 5. Website Builder */}
-                    <div className="oxoo-app-tile">
-                      <div className="oxoo-app-icon-box gradient-blue">
-                        <Globe size={26} />
-                      </div>
-                      <span className="oxoo-app-name">Website Builder</span>
-                      <span className="oxoo-status-pill active">
-                        <span className="oxoo-status-dot" /> Active
-                      </span>
-                      <button
-                        type="button"
-                        className="oxoo-app-action-btn open"
-                        onClick={() => handleOpenApp({ id: 'website', name: 'Website Builder', entitled: true })}
-                      >
-                        Open App →
-                      </button>
-                    </div>
-
-                    {/* 6. Marketing */}
-                    <div className="oxoo-app-tile">
-                      <div className="oxoo-app-icon-box peach">
-                        <Megaphone size={26} />
-                      </div>
-                      <span className="oxoo-app-name">Marketing</span>
-                      <span className="oxoo-status-pill not-purchased">
-                        Not Purchased
-                      </span>
-                      <button
-                        type="button"
-                        className="oxoo-app-action-btn view-plans"
-                        onClick={() => {
-                          setSelectedPlanToUpgrade('Enterprise');
-                          setUpgradeModalOpen(true);
-                        }}
-                      >
-                        View Plans
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Right Column: Recent Activity */}
@@ -713,67 +631,27 @@ export default function CustomerDashboard() {
                     </span>
                   </div>
 
-                  <div className="oxoo-activity-list">
-                    {/* Activity Item 1 */}
-                    <div className="oxoo-activity-item">
-                      <div className="oxoo-activity-icon-circle success">
-                        <Check size={16} />
-                      </div>
-                      <div className="oxoo-activity-content">
-                        <span className="oxoo-activity-title">Invoice INV-2026-081 paid</span>
-                        <span className="oxoo-activity-desc">₹48,200 received from Apex Logistics</span>
-                      </div>
-                      <span className="oxoo-activity-time">2 hours ago</span>
+                  {overview?.recentActivity && overview.recentActivity.length > 0 ? (
+                    <div className="oxoo-activity-list">
+                      {overview.recentActivity.map((act, i) => (
+                        <div key={i} className="oxoo-activity-item">
+                          <div className={`oxoo-activity-icon-circle ${act.type || 'info'}`}>
+                            <Check size={16} />
+                          </div>
+                          <div className="oxoo-activity-content">
+                            <span className="oxoo-activity-title">{act.title}</span>
+                            <span className="oxoo-activity-desc">{act.desc}</span>
+                          </div>
+                          <span className="oxoo-activity-time">{act.time}</span>
+                        </div>
+                      ))}
                     </div>
-
-                    {/* Activity Item 2 */}
-                    <div className="oxoo-activity-item">
-                      <div className="oxoo-activity-icon-circle info">
-                        <Users size={16} />
-                      </div>
-                      <div className="oxoo-activity-content">
-                        <span className="oxoo-activity-title">New team member added</span>
-                        <span className="oxoo-activity-desc">Sarah Miller joined your organization</span>
-                      </div>
-                      <span className="oxoo-activity-time">5 hours ago</span>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                      <Clock size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                      <p style={{ fontSize: '13px', margin: 0 }}>No recent activity recorded yet.</p>
                     </div>
-
-                    {/* Activity Item 3 */}
-                    <div className="oxoo-activity-item">
-                      <div className="oxoo-activity-icon-circle info">
-                        <Receipt size={16} />
-                      </div>
-                      <div className="oxoo-activity-content">
-                        <span className="oxoo-activity-title">Expense EXP-2026-034 submitted</span>
-                        <span className="oxoo-activity-desc">Office supplies expense</span>
-                      </div>
-                      <span className="oxoo-activity-time">1 day ago</span>
-                    </div>
-
-                    {/* Activity Item 4 */}
-                    <div className="oxoo-activity-item">
-                      <div className="oxoo-activity-icon-circle warning">
-                        <MessageSquare size={16} />
-                      </div>
-                      <div className="oxoo-activity-content">
-                        <span className="oxoo-activity-title">Support ticket #1245 updated</span>
-                        <span className="oxoo-activity-desc">Your issue has been resolved</span>
-                      </div>
-                      <span className="oxoo-activity-time">2 days ago</span>
-                    </div>
-
-                    {/* Activity Item 5 */}
-                    <div className="oxoo-activity-item">
-                      <div className="oxoo-activity-icon-circle success">
-                        <CheckCircle2 size={16} />
-                      </div>
-                      <div className="oxoo-activity-content">
-                        <span className="oxoo-activity-title">Subscription renewed</span>
-                        <span className="oxoo-activity-desc">Business Pro plan renewed successfully</span>
-                      </div>
-                      <span className="oxoo-activity-time">3 days ago</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </>
@@ -876,27 +754,35 @@ export default function CustomerDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(billingData?.invoices || []).map((inv) => (
-                        <tr key={inv.id || inv.invoice_number}>
-                          <td className="oxoo-table-company">{inv.invoice_number}</td>
-                          <td>{inv.company_name}</td>
-                          <td>{inv.plan}</td>
-                          <td className="oxoo-table-amount">₹{inv.amount?.toLocaleString('en-IN')}</td>
-                          <td>
-                            <span className="oxoo-status-tag active">{inv.status}</span>
-                          </td>
-                          <td>{new Date(inv.invoice_date).toLocaleDateString('en-GB')}</td>
-                          <td>
-                            <button
-                              type="button"
-                              style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
-                              onClick={() => showToast(`Downloading ${inv.invoice_number}.pdf`)}
-                            >
-                              <Download size={12} /> PDF
-                            </button>
+                      {billingData?.invoices && billingData.invoices.length > 0 ? (
+                        billingData.invoices.map((inv) => (
+                          <tr key={inv.id || inv.invoice_number}>
+                            <td className="oxoo-table-company">{inv.invoice_number}</td>
+                            <td>{inv.company_name}</td>
+                            <td>{inv.plan}</td>
+                            <td className="oxoo-table-amount">₹{inv.amount?.toLocaleString('en-IN')}</td>
+                            <td>
+                              <span className="oxoo-status-tag active">{inv.status}</span>
+                            </td>
+                            <td>{new Date(inv.invoice_date).toLocaleDateString('en-GB')}</td>
+                            <td>
+                              <button
+                                type="button"
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
+                                onClick={() => showToast(`Downloading ${inv.invoice_number}.pdf`)}
+                              >
+                                <Download size={12} /> PDF
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                            No invoices generated yet.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -911,7 +797,7 @@ export default function CustomerDashboard() {
                 <div>
                   <h2 className="oxoo-section-title">Team Management</h2>
                   <p style={{ fontSize: '13px', color: '#64748b' }}>
-                    Used seats: <strong>{teamMembers.length}</strong> of <strong>15 seats</strong> available in Business Pro.
+                    Used seats: <strong>{teamMembers.length}</strong> active.
                   </p>
                 </div>
                 <button
@@ -936,40 +822,48 @@ export default function CustomerDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {teamMembers.map((member) => (
-                      <tr key={member.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div className="oxoo-profile-avatar-circle" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
-                              {member.name.charAt(0)}
+                    {teamMembers && teamMembers.length > 0 ? (
+                      teamMembers.map((member) => (
+                        <tr key={member.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div className="oxoo-profile-avatar-circle" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                                {member.name.charAt(0)}
+                              </div>
+                              <strong>{member.name}</strong>
                             </div>
-                            <strong>{member.name}</strong>
-                          </div>
-                        </td>
-                        <td>{member.email}</td>
-                        <td>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e40af', background: '#dbeafe', padding: '2px 8px', borderRadius: '6px' }}>
-                            {member.role}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: '12px', color: '#64748b' }}>Full Access (8 Apps)</td>
-                        <td>
-                          <span className="oxoo-status-tag active">Active</span>
-                        </td>
-                        <td>
-                          {member.role !== 'Organization Admin' && (
-                            <button
-                              type="button"
-                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                              onClick={() => handleRemoveMember(member.id, member.name)}
-                              title="Remove Member"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          )}
+                          </td>
+                          <td>{member.email}</td>
+                          <td>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e40af', background: '#dbeafe', padding: '2px 8px', borderRadius: '6px' }}>
+                              {member.role}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '12px', color: '#64748b' }}>Full Access</td>
+                          <td>
+                            <span className="oxoo-status-tag active">Active</span>
+                          </td>
+                          <td>
+                            {member.role !== 'Organization Admin' && (
+                              <button
+                                type="button"
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                onClick={() => handleRemoveMember(member.id, member.name)}
+                                title="Remove Member"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                          No team members added yet. Click "Invite Member" to add users.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1008,32 +902,40 @@ export default function CustomerDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tickets.map((t) => (
-                      <tr key={t.id}>
-                        <td className="oxoo-table-company">{t.ticket_number || `#${t.id}`}</td>
-                        <td style={{ fontWeight: 600 }}>{t.subject}</td>
-                        <td>
-                          <span className={`oxoo-priority-pill ${String(t.priority).toLowerCase()}`}>
-                            {t.priority}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`oxoo-status-tag ${String(t.status).toLowerCase().replace(' ', '-')}`}>
-                            {t.status}
-                          </span>
-                        </td>
-                        <td>{t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB') : 'Recently'}</td>
-                        <td>
-                          <button
-                            type="button"
-                            style={{ background: '#f1f5f9', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
-                            onClick={() => showToast(`Viewing ticket ${t.ticket_number || t.id}`)}
-                          >
-                            View Conversation
-                          </button>
+                    {tickets && tickets.length > 0 ? (
+                      tickets.map((t) => (
+                        <tr key={t.id}>
+                          <td className="oxoo-table-company">{t.ticket_number || `#${t.id}`}</td>
+                          <td style={{ fontWeight: 600 }}>{t.subject}</td>
+                          <td>
+                            <span className={`oxoo-priority-pill ${String(t.priority).toLowerCase()}`}>
+                              {t.priority}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`oxoo-status-tag ${String(t.status).toLowerCase().replace(' ', '-')}`}>
+                              {t.status}
+                            </span>
+                          </td>
+                          <td>{t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB') : 'Recently'}</td>
+                          <td>
+                            <button
+                              type="button"
+                              style={{ background: '#f1f5f9', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
+                              onClick={() => showToast(`Viewing ticket ${t.ticket_number || t.id}`)}
+                            >
+                              View Conversation
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                          No support tickets submitted yet.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1050,17 +952,17 @@ export default function CustomerDashboard() {
               <form onSubmit={(e) => { e.preventDefault(); showToast('Settings successfully updated!'); }} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 <div className="oxoo-form-group">
                   <label className="oxoo-form-label">Organization Legal Name</label>
-                  <input type="text" className="oxoo-form-input" defaultValue="ABC Technologies Pvt Ltd" />
+                  <input type="text" className="oxoo-form-input" defaultValue={overview?.company || "My Organization"} />
                 </div>
 
                 <div className="oxoo-form-group">
                   <label className="oxoo-form-label">Dedicated Oxoo Domain</label>
-                  <input type="text" className="oxoo-form-input" defaultValue="abctech.oxoo" disabled style={{ background: '#f8fafc' }} />
+                  <input type="text" className="oxoo-form-input" defaultValue="workspace.oxoo" disabled style={{ background: '#f8fafc' }} />
                 </div>
 
                 <div className="oxoo-form-group">
                   <label className="oxoo-form-label">Primary Administrator Email</label>
-                  <input type="email" className="oxoo-form-input" defaultValue="alex@abctech.com" />
+                  <input type="email" className="oxoo-form-input" defaultValue={overview?.email || "admin@organization.com"} />
                 </div>
 
                 <div className="oxoo-form-group">

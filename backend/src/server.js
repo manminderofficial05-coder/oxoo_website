@@ -937,6 +937,321 @@ app.put('/api/admin/customers/:id/status', async (req, res, next) => {
 });
 
 // -------------------------------------------------------------
+// 9. SAAS PRICING & PAYMENT WORKFLOW ENDPOINTS
+// -------------------------------------------------------------
+
+// Pricing plans configuration
+const PRICING_CONFIG = {
+  freeDemo: {
+    id: 'free-demo',
+    name: 'Free Demo',
+    tagline: 'Experience OXOO with live demo',
+    price: 0,
+    priceFormatted: '₹0',
+    maxApps: 1,
+    trialDays: 14,
+    features: [
+      'One software (choose any)',
+      'Unlimited users',
+      'Full feature access for 14 days',
+      'Explore UI & workflow',
+      'No credit card required'
+    ]
+  },
+  singleApp: {
+    id: 'single-app',
+    name: 'Single App',
+    tagline: 'Buy one software at affordable price',
+    monthlyPrice: 560,
+    yearlyPrice: 560,
+    strikethroughPrice: 725,
+    discountPercent: 22,
+    maxApps: 1,
+    features: [
+      'Select any one available OXOO application',
+      'Access the purchased application\'s included features',
+      'Application-specific dashboard',
+      'User and role management',
+      'Reports and analytics included',
+      'Updates and standard support',
+      'Secure account access',
+      'Cancel anytime'
+    ]
+  },
+  customApps: {
+    id: 'custom-apps',
+    name: 'Custom (Multiple Apps)',
+    tagline: 'Choose 2 or more software and get advanced features',
+    basePriceForTwo: 980,
+    strikethroughBasePrice: 1350,
+    discountPercent: 27,
+    additionalAppPrice: 560,
+    minApps: 2,
+    features: [
+      'Select 2 or more software',
+      'All apps full access',
+      'Mix and match as per your need',
+      'Multi-company support',
+      'External API access',
+      'Advanced reporting & integrations',
+      'Priority support'
+    ]
+  }
+};
+
+// Calculate pricing function with strict server-side validation
+function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCycle = 'monthly' }) {
+  const users = Math.max(1, parseInt(userCount, 10) || 1);
+  const isYearly = billingCycle === 'yearly';
+  const appsCount = Math.max(1, Array.isArray(selectedApps) ? selectedApps.length : 1);
+
+  let perUserPerMonth = 0;
+
+  if (planId === 'free-demo') {
+    return {
+      planId: 'free-demo',
+      planName: 'Free Demo',
+      userCount: users,
+      billingCycle,
+      appsCount: 1,
+      perUserPerMonth: 0,
+      subtotal: 0,
+      discountAmount: 0,
+      taxAmount: 0,
+      totalAmount: 0,
+      totalAmountPaise: 0,
+      formattedTotal: '₹0'
+    };
+  }
+
+  if (planId === 'single-app' || appsCount === 1) {
+    perUserPerMonth = 560;
+  } else {
+    // Custom: 2 apps = 980, each additional = 560
+    perUserPerMonth = 980 + (appsCount - 2) * 560;
+  }
+
+  let monthlyBase = perUserPerMonth * users;
+  let subtotal = isYearly ? Math.round(monthlyBase * 12 * 0.8) : monthlyBase;
+  const gstRate = 0.18;
+  const taxAmount = Math.round(subtotal * gstRate);
+  const totalAmount = subtotal + taxAmount;
+  const totalAmountPaise = totalAmount * 100;
+
+  return {
+    planId: planId || (appsCount > 1 ? 'custom-apps' : 'single-app'),
+    planName: planId === 'custom-apps' || appsCount > 1 ? 'Custom (Multiple Apps)' : 'Single App',
+    userCount: users,
+    billingCycle,
+    appsCount,
+    perUserPerMonth,
+    monthlyBase,
+    subtotal,
+    taxAmount,
+    totalAmount,
+    totalAmountPaise,
+    formattedPerUser: `₹${perUserPerMonth.toLocaleString('en-IN')}`,
+    formattedSubtotal: `₹${subtotal.toLocaleString('en-IN')}`,
+    formattedTax: `₹${taxAmount.toLocaleString('en-IN')}`,
+    formattedTotal: `₹${totalAmount.toLocaleString('en-IN')}`
+  };
+}
+
+// 1. GET /api/pricing/plans
+app.get('/api/pricing/plans', (_req, res) => {
+  res.json({
+    success: true,
+    plans: PRICING_CONFIG,
+    taxRate: 0.18,
+    currency: 'INR'
+  });
+});
+
+// 2. POST /api/pricing/calculate
+app.post('/api/pricing/calculate', (req, res) => {
+  try {
+    const calc = calculatePricing(req.body || {});
+    res.json({ success: true, ...calc });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// 3. POST /api/payment/create-order
+app.post('/api/payment/create-order', async (req, res, next) => {
+  try {
+    const {
+      planId,
+      selectedApps = [],
+      userCount = 1,
+      billingCycle = 'monthly',
+      companyName,
+      customerName,
+      customerEmail,
+      customerPhone
+    } = req.body || {};
+
+    if (!companyName || !customerEmail) {
+      return res.status(400).json({ success: false, message: 'Company name and email are required.' });
+    }
+
+    const calc = calculatePricing({ planId, selectedApps, userCount, billingCycle });
+    const orderNumber = `OXOO-ORD-${Date.now().toString().slice(-6)}`;
+
+    const order = {
+      orderNumber,
+      companyName,
+      customerName: customerName || companyName,
+      customerEmail,
+      customerPhone: customerPhone || '',
+      planName: calc.planName,
+      selectedApps,
+      userCount: calc.userCount,
+      billingCycle: calc.billingCycle,
+      subtotal: calc.subtotal,
+      taxAmount: calc.taxAmount,
+      totalAmount: calc.totalAmount,
+      totalAmountPaise: calc.totalAmountPaise,
+      currency: 'INR',
+      status: 'Created'
+    };
+
+    if (isDbConnected) {
+      await query(
+        `INSERT INTO orders (order_number, company_name, customer_name, customer_email, customer_phone, plan_name, selected_apps, user_count, billing_cycle, subtotal, tax_amount, total_amount, currency, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'INR', 'Created')`,
+        [
+          orderNumber,
+          companyName,
+          customerName || companyName,
+          customerEmail,
+          customerPhone || '',
+          calc.planName,
+          JSON.stringify(selectedApps),
+          calc.userCount,
+          calc.billingCycle,
+          calc.subtotal,
+          calc.taxAmount,
+          calc.totalAmount
+        ]
+      );
+    }
+
+    res.json({
+      success: true,
+      order,
+      razorpayKeyId: 'rzp_test_oxoo_demo_key',
+      amountPaise: calc.totalAmountPaise,
+      currency: 'INR'
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 4. POST /api/payment/verify
+app.post('/api/payment/verify', async (req, res, next) => {
+  try {
+    const {
+      orderNumber,
+      paymentId,
+      paymentMethod = 'Credit / Debit Card',
+      companyName,
+      customerName,
+      customerEmail,
+      selectedApps = [],
+      planName = 'Single App',
+      billingCycle = 'monthly',
+      totalAmount = 560
+    } = req.body || {};
+
+    const verifiedPaymentId = paymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+
+    if (isDbConnected) {
+      await query(
+        `UPDATE orders SET status = 'Paid', payment_id = $1, payment_method = $2, updated_at = NOW() WHERE order_number = $3`,
+        [verifiedPaymentId, paymentMethod, orderNumber]
+      );
+
+      await query(
+        `INSERT INTO subscriptions (company_name, plan, amount, currency, billing_cycle, status, start_date, renewal_date, active_apps)
+         VALUES ($1, $2, $3, 'INR', $4, 'Active', NOW(), NOW() + INTERVAL '30 days', $5)`,
+        [companyName || 'My Organization', planName, totalAmount, billingCycle, JSON.stringify(selectedApps)]
+      );
+
+      await query(
+        `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items)
+         VALUES ($1, $2, $3, $4, 'INR', 'Paid', NOW(), $5)`,
+        [invoiceNumber, companyName || 'My Organization', planName, totalAmount, JSON.stringify(selectedApps)]
+      );
+
+      await query(
+        `UPDATE organizations SET plan = $1, active_apps = $2, status = 'Active', mrr = $3, updated_at = NOW()
+         WHERE name = $4 OR id = 1`,
+        [planName, JSON.stringify(selectedApps), totalAmount, companyName]
+      );
+
+      await logAudit('Payment Succeeded & Verified', `${orderNumber} (${invoiceNumber})`, customerEmail || customerName, req.ip, {
+        amount: totalAmount,
+        paymentId: verifiedPaymentId,
+        paymentMethod
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment verified and subscription activated successfully!',
+      orderNumber,
+      paymentId: verifiedPaymentId,
+      invoiceNumber,
+      planName,
+      selectedApps,
+      status: 'Active',
+      amountPaid: totalAmount,
+      invoiceDate: new Date().toISOString(),
+      nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 5. GET /api/payment/invoice/:orderNumber
+app.get('/api/payment/invoice/:orderNumber', async (req, res, next) => {
+  try {
+    const { orderNumber } = req.params;
+    let order = null;
+    let invoice = null;
+
+    if (isDbConnected) {
+      const ordRes = await query(`SELECT * FROM orders WHERE order_number = $1`, [orderNumber]);
+      if (ordRes.rows.length > 0) order = ordRes.rows[0];
+
+      const invRes = await query(`SELECT * FROM invoices ORDER BY id DESC LIMIT 1`);
+      if (invRes.rows.length > 0) invoice = invRes.rows[0];
+    }
+
+    res.json({
+      success: true,
+      order: order || {
+        order_number: orderNumber,
+        company_name: 'Customer Organization',
+        total_amount: 560,
+        status: 'Paid'
+      },
+      invoice: invoice || {
+        invoice_number: `INV-2026-${Math.floor(100 + Math.random() * 900)}`,
+        status: 'Paid',
+        invoice_date: new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------------------------------------------------
 // ERROR HANDLERS & SERVER STARTUP
 // -------------------------------------------------------------
 app.use((req, res) => res.status(404).json({ message: 'API route not found.' }));

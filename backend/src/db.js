@@ -240,6 +240,32 @@ async function initDb() {
       );
     `);
 
+    // 13. Orders Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        order_number VARCHAR(100) NOT NULL UNIQUE,
+        company_name VARCHAR(255) NOT NULL,
+        customer_name VARCHAR(150),
+        customer_email VARCHAR(255),
+        customer_phone VARCHAR(50),
+        plan_name VARCHAR(100) NOT NULL,
+        selected_apps JSONB DEFAULT '[]'::jsonb,
+        user_count INT DEFAULT 1,
+        billing_cycle VARCHAR(20) DEFAULT 'monthly',
+        subtotal INT NOT NULL,
+        tax_amount INT DEFAULT 0,
+        discount_amount INT DEFAULT 0,
+        total_amount INT NOT NULL,
+        currency VARCHAR(10) DEFAULT 'INR',
+        payment_method VARCHAR(50) DEFAULT 'Razorpay',
+        payment_id VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'Created',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     console.log('Neon PostgreSQL tables schema verified & ready.');
   } finally {
     client.release();

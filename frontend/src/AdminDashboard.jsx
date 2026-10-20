@@ -28,6 +28,7 @@ export default function AdminDashboard() {
   const [topProducts, setTopProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [tickets, setTickets] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState('Monthly');
   const [dateRangePickerOpen, setDateRangePickerOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState('01 Oct 2026 - 31 Oct 2026');
@@ -367,8 +368,8 @@ export default function AdminDashboard() {
                       <span style={{ fontSize: '11px', color: '#0284c7', cursor: 'pointer' }} onClick={() => setNotifOpen(false)}>Close</span>
                     </div>
                     <div style={{ fontSize: '12px', padding: '10px', background: '#ecfdf5', borderRadius: '8px', border: '1px solid #d1fae5' }}>
-                      <div style={{ fontWeight: 600, color: '#065f46' }}>PostgreSQL Ledger Reconciled</div>
-                      <div style={{ color: '#047857' }}>All 2,856 active tenant subscriptions synced.</div>
+                      <div style={{ fontWeight: 600, color: '#065f46' }}>PostgreSQL Cluster Ready</div>
+                      <div style={{ color: '#047857' }}>All system services operational.</div>
                     </div>
                   </motion.div>
                 )}
@@ -539,14 +540,14 @@ export default function AdminDashboard() {
                       <Users size={20} />
                     </div>
                     <span className="oxoo-metric-badge green">
-                      ↑ {metrics?.totalCustomersTrend || '12%'}
+                      ↑ {metrics?.totalCustomersTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Total Customers</span>
-                      <span className="oxoo-metric-value">{metrics?.totalCustomers?.toLocaleString('en-IN') || '1,248'}</span>
-                      <span className="oxoo-metric-subtitle">{metrics?.totalCustomersChange || '+132 this month'}</span>
+                      <span className="oxoo-metric-value">{metrics?.totalCustomers?.toLocaleString('en-IN') ?? 0}</span>
+                      <span className="oxoo-metric-subtitle">{metrics?.totalCustomersChange || '0 total'}</span>
                     </div>
                   </div>
                 </div>
@@ -558,14 +559,14 @@ export default function AdminDashboard() {
                       <Package size={20} />
                     </div>
                     <span className="oxoo-metric-badge green">
-                      ↑ {metrics?.activeSubscriptionsTrend || '18%'}
+                      ↑ {metrics?.activeSubscriptionsTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Active Subscriptions</span>
-                      <span className="oxoo-metric-value">{metrics?.activeSubscriptions?.toLocaleString('en-IN') || '2,856'}</span>
-                      <span className="oxoo-metric-subtitle">{metrics?.activeSubscriptionsChange || '+436 this month'}</span>
+                      <span className="oxoo-metric-value">{metrics?.activeSubscriptions?.toLocaleString('en-IN') ?? 0}</span>
+                      <span className="oxoo-metric-subtitle">{metrics?.activeSubscriptionsChange || '0 active'}</span>
                     </div>
                   </div>
                 </div>
@@ -577,14 +578,14 @@ export default function AdminDashboard() {
                       <BarChart3 size={20} />
                     </div>
                     <span className="oxoo-metric-badge green">
-                      ↑ {metrics?.monthlyRevenueTrend || '24%'}
+                      ↑ {metrics?.monthlyRevenueTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Monthly Revenue</span>
-                      <span className="oxoo-metric-value">{metrics?.monthlyRevenueFormatted || '₹48,92,000'}</span>
-                      <span className="oxoo-metric-subtitle">MRR {metrics?.mrrFormatted || '₹42,10,000'}</span>
+                      <span className="oxoo-metric-value">{metrics?.monthlyRevenueFormatted || '₹0'}</span>
+                      <span className="oxoo-metric-subtitle">MRR {metrics?.mrrFormatted || '₹0'}</span>
                     </div>
                   </div>
                 </div>
@@ -596,14 +597,14 @@ export default function AdminDashboard() {
                       <ShieldCheck size={20} />
                     </div>
                     <span className="oxoo-metric-badge green">
-                      ↑ {metrics?.trialConversionsTrend || '6%'}
+                      ↑ {metrics?.trialConversionsTrend || '0%'}
                     </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Trial Conversions</span>
-                      <span className="oxoo-metric-value">{metrics?.trialConversions || 68}%</span>
-                      <span className="oxoo-metric-subtitle">{metrics?.trialConversionsConverted || '142 converted'}</span>
+                      <span className="oxoo-metric-value">{metrics?.trialConversions ?? 0}%</span>
+                      <span className="oxoo-metric-subtitle">{metrics?.trialConversionsConverted || '0 converted'}</span>
                     </div>
                   </div>
                 </div>
@@ -625,69 +626,39 @@ export default function AdminDashboard() {
                     </select>
                   </div>
 
-                  {/* SVG Line Chart with Gradient and Tooltip */}
                   <div className="oxoo-svg-chart-wrap">
-                    <svg className="oxoo-chart-svg" viewBox="0 0 500 180">
-                      <defs>
-                        <linearGradient id="oxooRevenueGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.35" />
-                          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-
-                      {/* Y-axis grid lines and labels */}
-                      {[
-                        { y: 25, label: '₹60L' },
-                        { y: 65, label: '₹45L' },
-                        { y: 105, label: '₹30L' },
-                        { y: 145, label: '₹15L' }
-                      ].map((grid) => (
-                        <g key={grid.label}>
-                          <line x1="40" y1={grid.y} x2="490" y2={grid.y} stroke="#f1f5f9" strokeDasharray="3 3" />
-                          <text x="30" y={grid.y + 4} fill="#94a3b8" fontSize="10" textAnchor="end">{grid.label}</text>
-                        </g>
-                      ))}
-
-                      {/* Area Fill */}
-                      <path
-                        d="M 50,140 Q 95,130 140,118 T 230,105 T 320,95 T 410,75 T 480,50 L 480,160 L 50,160 Z"
-                        fill="url(#oxooRevenueGradient)"
-                      />
-
-                      {/* Line Stroke */}
-                      <path
-                        d="M 50,140 Q 95,130 140,118 T 230,105 T 320,95 T 410,75 T 480,50"
-                        fill="none"
-                        stroke="#0284c7"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                      />
-
-                      {/* Dots on line */}
-                      {[
-                        { x: 50, y: 140 }, { x: 95, y: 130 }, { x: 140, y: 118 },
-                        { x: 185, y: 112 }, { x: 230, y: 105 }, { x: 275, y: 100 },
-                        { x: 320, y: 95 }, { x: 365, y: 88 }, { x: 410, y: 75 },
-                        { x: 480, y: 50 }
-                      ].map((pt, i) => (
-                        <circle key={i} cx={pt.x} cy={pt.y} r="3.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
-                      ))}
-
-                      {/* Highlighted Tooltip on Oct point (480, 50) */}
-                      <g transform="translate(370, 10)">
-                        <rect x="0" y="0" width="105" height="42" rx="8" fill="#0f172a" />
-                        <text x="52" y="18" fill="#ffffff" fontSize="12" fontWeight="700" textAnchor="middle">₹48,92,000</text>
-                        <text x="52" y="32" fill="#94a3b8" fontSize="10" textAnchor="middle">Oct 2026</text>
-                        <line x1="52" y1="42" x2="110" y2="40" stroke="#0f172a" strokeWidth="2" />
-                      </g>
-                    </svg>
-
-                    {/* X-axis Month Labels */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '45px', paddingRight: '15px', marginTop: '6px' }}>
-                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'].map((m) => (
-                        <span key={m} style={{ fontSize: '11px', color: '#94a3b8' }}>{m}</span>
-                      ))}
-                    </div>
+                    {revenueData && revenueData.length > 0 ? (
+                      <svg className="oxoo-chart-svg" viewBox="0 0 500 180">
+                        <defs>
+                          <linearGradient id="oxooRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        {[
+                          { y: 25, label: '₹10K' },
+                          { y: 65, label: '₹7.5K' },
+                          { y: 105, label: '₹5K' },
+                          { y: 145, label: '₹2.5K' }
+                        ].map((grid) => (
+                          <g key={grid.label}>
+                            <line x1="40" y1={grid.y} x2="490" y2={grid.y} stroke="#f1f5f9" strokeDasharray="3 3" />
+                            <text x="30" y={grid.y + 4} fill="#94a3b8" fontSize="10" textAnchor="end">{grid.label}</text>
+                          </g>
+                        ))}
+                        <path
+                          d="M 50,150 L 480,150"
+                          fill="none"
+                          stroke="#0284c7"
+                          strokeWidth="2.5"
+                        />
+                      </svg>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+                        <BarChart3 size={36} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                        <p style={{ fontSize: '13px', margin: 0 }}>No revenue transactions recorded yet.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -715,64 +686,27 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* SVG Bar Chart for Customer Growth */}
                   <div className="oxoo-svg-chart-wrap">
-                    <svg className="oxoo-chart-svg" viewBox="0 0 500 180">
-                      {/* Y-axis grid lines */}
-                      {[
-                        { y: 25, label: '1.6K' },
-                        { y: 65, label: '1.2K' },
-                        { y: 105, label: '800' },
-                        { y: 145, label: '400' }
-                      ].map((grid) => (
-                        <g key={grid.label}>
-                          <line x1="40" y1={grid.y} x2="490" y2={grid.y} stroke="#f1f5f9" strokeDasharray="3 3" />
-                          <text x="30" y={grid.y + 4} fill="#94a3b8" fontSize="10" textAnchor="end">{grid.label}</text>
-                        </g>
-                      ))}
-
-                      {/* Bars for 10 months */}
-                      {[
-                        { x: 55, newH: 20, totH: 55 },
-                        { x: 98, newH: 26, totH: 64 },
-                        { x: 141, newH: 32, totH: 74 },
-                        { x: 184, newH: 36, totH: 82 },
-                        { x: 227, newH: 42, totH: 92 },
-                        { x: 270, newH: 48, totH: 100 },
-                        { x: 313, newH: 54, totH: 110 },
-                        { x: 356, newH: 58, totH: 118 },
-                        { x: 399, newH: 64, totH: 126 },
-                        { x: 442, newH: 72, totH: 136 }
-                      ].map((bar, i) => (
-                        <g key={i}>
-                          {/* New Customers bar (Cyan) */}
-                          <rect
-                            x={bar.x}
-                            y={160 - bar.newH}
-                            width="9"
-                            height={bar.newH}
-                            rx="3"
-                            fill="#38bdf8"
-                          />
-                          {/* Total Customers bar (Royal Blue) */}
-                          <rect
-                            x={bar.x + 12}
-                            y={160 - bar.totH}
-                            width="9"
-                            height={bar.totH}
-                            rx="3"
-                            fill="#2563eb"
-                          />
-                        </g>
-                      ))}
-                    </svg>
-
-                    {/* X-axis Month Labels */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '50px', paddingRight: '20px', marginTop: '6px' }}>
-                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'].map((m) => (
-                        <span key={m} style={{ fontSize: '11px', color: '#94a3b8' }}>{m}</span>
-                      ))}
-                    </div>
+                    {growthData && growthData.length > 0 ? (
+                      <svg className="oxoo-chart-svg" viewBox="0 0 500 180">
+                        {[
+                          { y: 25, label: '10' },
+                          { y: 65, label: '7' },
+                          { y: 105, label: '5' },
+                          { y: 145, label: '2' }
+                        ].map((grid) => (
+                          <g key={grid.label}>
+                            <line x1="40" y1={grid.y} x2="490" y2={grid.y} stroke="#f1f5f9" strokeDasharray="3 3" />
+                            <text x="30" y={grid.y + 4} fill="#94a3b8" fontSize="10" textAnchor="end">{grid.label}</text>
+                          </g>
+                        ))}
+                      </svg>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+                        <Users size={36} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                        <p style={{ fontSize: '13px', margin: 0 }}>No customer growth recorded yet.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -786,28 +720,28 @@ export default function AdminDashboard() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {(topProducts.length ? topProducts : [
-                      { product_name: 'Finance Suite', revenue: 1840000, revenue_percent: 38 },
-                      { product_name: 'HRMS', revenue: 1260000, revenue_percent: 26 },
-                      { product_name: 'Website Builder', revenue: 820000, revenue_percent: 17 },
-                      { product_name: 'Marketing Suite', revenue: 610000, revenue_percent: 12 },
-                      { product_name: 'Productivity Suite', revenue: 370000, revenue_percent: 7 }
-                    ]).map((prod) => (
-                      <div key={prod.product_name} className="oxoo-product-progress-row">
-                        <div className="oxoo-product-icon-wrap">
-                          <Package size={15} />
+                    {topProducts && topProducts.length > 0 ? (
+                      topProducts.map((prod) => (
+                        <div key={prod.product_name} className="oxoo-product-progress-row">
+                          <div className="oxoo-product-icon-wrap">
+                            <Package size={15} />
+                          </div>
+                          <span className="oxoo-product-name-col">{prod.product_name}</span>
+                          <div className="oxoo-progress-track">
+                            <div
+                              className="oxoo-progress-bar"
+                              style={{ width: `${prod.revenue_percent}%` }}
+                            />
+                          </div>
+                          <span className="oxoo-product-amount-col">₹{prod.revenue?.toLocaleString('en-IN')}</span>
+                          <span className="oxoo-product-percent-col">{prod.revenue_percent}%</span>
                         </div>
-                        <span className="oxoo-product-name-col">{prod.product_name}</span>
-                        <div className="oxoo-progress-track">
-                          <div
-                            className="oxoo-progress-bar"
-                            style={{ width: `${prod.revenue_percent}%` }}
-                          />
-                        </div>
-                        <span className="oxoo-product-amount-col">₹{prod.revenue?.toLocaleString('en-IN')}</span>
-                        <span className="oxoo-product-percent-col">{prod.revenue_percent}%</span>
+                      ))
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '36px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                        No product sales recorded yet.
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -832,25 +766,27 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(customers.length ? customers.slice(0, 5) : [
-                          { company: 'Apex Logistics Ltd', plan: 'Business Pro', amount: '₹48,200', status: 'Active', date: '12 Oct 2026' },
-                          { company: 'Metro Retailers', plan: 'Growth', amount: '₹25,000', status: 'Active', date: '11 Oct 2026' },
-                          { company: 'BlueSky Cloud Corp', plan: 'Business Pro', amount: '₹1,24,000', status: 'Active', date: '10 Oct 2026' },
-                          { company: 'GreenLeaf Organics', plan: 'Starter', amount: '₹32,600', status: 'Trial', date: '09 Oct 2026' },
-                          { company: 'NovaTech Solutions', plan: 'Growth', amount: '₹78,400', status: 'Active', date: '08 Oct 2026' }
-                        ]).map((c, i) => (
-                          <tr key={i}>
-                            <td className="oxoo-table-company">{c.company}</td>
-                            <td>{c.plan}</td>
-                            <td className="oxoo-table-amount">{c.amount}</td>
-                            <td>
-                              <span className={`oxoo-status-tag ${String(c.status).toLowerCase()}`}>
-                                {c.status}
-                              </span>
+                        {customers && customers.length > 0 ? (
+                          customers.slice(0, 5).map((c, i) => (
+                            <tr key={i}>
+                              <td className="oxoo-table-company">{c.company}</td>
+                              <td>{c.plan}</td>
+                              <td className="oxoo-table-amount">{c.amount}</td>
+                              <td>
+                                <span className={`oxoo-status-tag ${String(c.status).toLowerCase()}`}>
+                                  {c.status}
+                                </span>
+                              </td>
+                              <td>{c.date}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                              No registered customers yet.
                             </td>
-                            <td>{c.date}</td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -877,29 +813,31 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(tickets.length ? tickets.slice(0, 5) : [
-                          { id: '#1245', subject: 'Login issue', status: 'Resolved', priority: 'Medium', date: '2 hours ago' },
-                          { id: '#1244', subject: 'Payment failed', status: 'Open', priority: 'High', date: '4 hours ago' },
-                          { id: '#1243', subject: 'Feature request', status: 'In Progress', priority: 'Low', date: '1 day ago' },
-                          { id: '#1242', subject: 'Integration error', status: 'Open', priority: 'High', date: '2 days ago' },
-                          { id: '#1241', subject: 'Account setup help', status: 'Resolved', priority: 'Low', date: '3 days ago' }
-                        ]).map((t, idx) => (
-                          <tr key={idx}>
-                            <td style={{ fontWeight: 600 }}>{t.id}</td>
-                            <td style={{ maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.subject}</td>
-                            <td>
-                              <span className={`oxoo-status-tag ${String(t.status).toLowerCase().replace(' ', '-')}`}>
-                                {t.status}
-                              </span>
+                        {tickets && tickets.length > 0 ? (
+                          tickets.slice(0, 5).map((t, idx) => (
+                            <tr key={idx}>
+                              <td style={{ fontWeight: 600 }}>{t.id}</td>
+                              <td style={{ maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.subject}</td>
+                              <td>
+                                <span className={`oxoo-status-tag ${String(t.status).toLowerCase().replace(' ', '-')}`}>
+                                  {t.status}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`oxoo-priority-pill ${String(t.priority).toLowerCase()}`}>
+                                  {t.priority}
+                                </span>
+                              </td>
+                              <td>{t.date}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                              No support tickets open.
                             </td>
-                            <td>
-                              <span className={`oxoo-priority-pill ${String(t.priority).toLowerCase()}`}>
-                                {t.priority}
-                              </span>
-                            </td>
-                            <td>{t.date}</td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1157,21 +1095,24 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: 'INV-2026-081', comp: 'Apex Logistics Ltd', amt: '₹48,200', method: 'Razorpay / Bank Transfer', stat: 'Reconciled', date: '12 Oct 2026' },
-                    { id: 'INV-2026-080', comp: 'Metro Retailers', amt: '₹25,000', method: 'Stripe Corporate Card', stat: 'Reconciled', date: '11 Oct 2026' },
-                    { id: 'INV-2026-079', comp: 'BlueSky Cloud Corp', amt: '₹1,24,000', method: 'NEFT / RTGS Wire', stat: 'Reconciled', date: '10 Oct 2026' },
-                    { id: 'INV-2026-078', comp: 'ABC Technologies', amt: '₹48,200', method: 'Corporate Card', stat: 'Reconciled', date: '09 Oct 2026' }
-                  ].map((inv) => (
-                    <tr key={inv.id}>
-                      <td className="oxoo-table-company">{inv.id}</td>
-                      <td>{inv.comp}</td>
-                      <td className="oxoo-table-amount">{inv.amt}</td>
-                      <td>{inv.method}</td>
-                      <td><span className="oxoo-status-tag active">{inv.stat}</span></td>
-                      <td>{inv.date}</td>
+                  {invoices && invoices.length > 0 ? (
+                    invoices.map((inv) => (
+                      <tr key={inv.id || inv.invoice_number}>
+                        <td className="oxoo-table-company">{inv.invoice_number || inv.id}</td>
+                        <td>{inv.company_name || inv.comp}</td>
+                        <td className="oxoo-table-amount">₹{(inv.amount || 0).toLocaleString('en-IN')}</td>
+                        <td>{inv.method || 'Razorpay Gateway'}</td>
+                        <td><span className="oxoo-status-tag active">{inv.status || 'Paid'}</span></td>
+                        <td>{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('en-GB') : inv.date}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '36px', color: '#94a3b8' }}>
+                        No payment transactions recorded yet.
+                      </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
