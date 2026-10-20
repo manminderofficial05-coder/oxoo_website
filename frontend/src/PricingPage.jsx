@@ -6,7 +6,7 @@ import { ALL_APPS_CATEGORIES } from './AllAppsDirectory';
 import './pricing.css';
 
 // --------------------------------------------------------------------------
-// Core Software Packages (8 Business Softwares)
+// Core Software Packages Available for Purchasing (5 Core Softwares)
 // --------------------------------------------------------------------------
 export const SOFTWARE_MODULES = [
   {
@@ -34,18 +34,6 @@ export const SOFTWARE_MODULES = [
     priceYearly: 560
   },
   {
-    id: 'websites',
-    name: 'Websites Software',
-    shortName: 'Websites',
-    desc: 'Website Builder, eCommerce, Events, Blog, eLearning, Forum',
-    appsCount: 6,
-    iconSrc: '/apps/logo-website.png?v=clean',
-    color: '#0891b2',
-    bgColor: '#f0f9ff',
-    priceMonthly: 740,
-    priceYearly: 560
-  },
-  {
     id: 'supply-chain',
     name: 'Supply Chain Software',
     shortName: 'Supply Chain',
@@ -66,30 +54,6 @@ export const SOFTWARE_MODULES = [
     iconSrc: '/apps/logo-hr.png?v=clean',
     color: '#7c3aed',
     bgColor: '#f5f3ff',
-    priceMonthly: 740,
-    priceYearly: 560
-  },
-  {
-    id: 'marketing',
-    name: 'Marketing Software',
-    shortName: 'Marketing',
-    desc: 'Social Marketing, Email, SMS, Marketing Automation, WhatsApp, Surveys',
-    appsCount: 6,
-    iconSrc: '/apps/logo-email-marketing.png?v=clean',
-    color: '#e11d48',
-    bgColor: '#fff1f2',
-    priceMonthly: 740,
-    priceYearly: 560
-  },
-  {
-    id: 'services',
-    name: 'Services Software',
-    shortName: 'Services',
-    desc: 'Project, Timesheets, Planning, Appointments, Live Chat, Helpdesk',
-    appsCount: 6,
-    iconSrc: '/apps/logo-project.png?v=clean',
-    color: '#059669',
-    bgColor: '#ecfdf5',
     priceMonthly: 740,
     priceYearly: 560
   },

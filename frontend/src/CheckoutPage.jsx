@@ -72,8 +72,13 @@ export default function CheckoutPage() {
 
   // Selected Software(s)
   const paramApps = searchParams.get('apps');
-  const initialApps = paramApps
-    ? paramApps.split(',').filter(Boolean).map((id) => (id === 'hr' ? 'human-resources' : id))
+  const validSoftwareIds = SOFTWARE_MODULES.map((m) => m.id);
+  const parsedApps = (paramApps ? paramApps.split(',').filter(Boolean) : [])
+    .map((id) => (id === 'hr' ? 'human-resources' : id))
+    .filter((id) => validSoftwareIds.includes(id));
+
+  const initialApps = parsedApps.length > 0
+    ? parsedApps
     : activePlan === 'custom'
     ? ['sales', 'finance']
     : ['sales'];
