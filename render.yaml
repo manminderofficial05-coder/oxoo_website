@@ -17,7 +17,7 @@ services:
 
   # 2. React + Vite Frontend & All Embedded Demos (Static Site)
   - type: web
-    name: oxoo-frontend
+    name: oxoo-website
     runtime: static
     plan: free
     rootDir: frontend
