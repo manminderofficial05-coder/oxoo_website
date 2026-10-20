@@ -1026,16 +1026,21 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
     };
   }
 
+  let regularRatePerUser = 0;
   if (planId === 'single-app' || planId === 'single' || appsCount === 1) {
     perUserPerMonth = isYearly ? 560 : 740;
+    regularRatePerUser = 740;
   } else {
     // Custom Softwares: 2 apps base (1280 monthly / 980 yearly), each additional (740 monthly / 560 yearly)
     const baseRate = isYearly ? 980 : 1280;
     const extraRate = isYearly ? 560 : 740;
     perUserPerMonth = baseRate + Math.max(0, appsCount - 2) * extraRate;
+    regularRatePerUser = 1280 + Math.max(0, appsCount - 2) * 740;
   }
 
   let subtotal = perUserPerMonth * users;
+  let regularTotal = regularRatePerUser * users;
+  let discountAmount = isYearly ? regularTotal - subtotal : 0;
   const gstRate = 0.18;
   const taxAmount = Math.round(subtotal * gstRate);
   const totalAmount = subtotal + taxAmount;
@@ -1048,12 +1053,17 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
     billingCycle,
     appsCount,
     perUserPerMonth,
+    regularRatePerUser,
+    regularTotal,
+    discountAmount,
+    discountPercent: isYearly ? 24 : 0,
     monthlyBase: subtotal,
     subtotal,
     taxAmount,
     totalAmount,
     totalAmountPaise,
     formattedPerUser: `₹${perUserPerMonth.toLocaleString('en-IN')}`,
+    formattedDiscount: `₹${discountAmount.toLocaleString('en-IN')}`,
     formattedSubtotal: `₹${subtotal.toLocaleString('en-IN')}`,
     formattedTax: `₹${taxAmount.toLocaleString('en-IN')}`,
     formattedTotal: `₹${totalAmount.toLocaleString('en-IN')}`

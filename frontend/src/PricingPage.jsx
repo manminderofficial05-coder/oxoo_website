@@ -289,7 +289,7 @@ export default function PricingPage() {
                 {isYearly && (
                   <div className="price-strike-wrap">
                     <span className="price-struck">Rs 1,280</span>
-                    <span className="discount-pill mint">23% OFF</span>
+                    <span className="discount-pill mint">24% OFF</span>
                   </div>
                 )}
               </div>
