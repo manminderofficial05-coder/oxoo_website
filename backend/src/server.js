@@ -18,9 +18,17 @@ let isDbConnected = false;
 // Middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
-  origin: process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map(x => x.trim())
-    : ['http://localhost:5173', 'http://127.0.0.1:5173']
+  origin: (origin, callback) => {
+    if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('.onrender.com')) {
+      return callback(null, true);
+    }
+    const allowed = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(x => x.trim()) : [];
+    if (allowed.includes(origin) || allowed.includes('*')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use('/api/', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: 'draft-7', legacyHeaders: false }));
