@@ -491,63 +491,44 @@ app.get('/api/admin/audit-logs', async (_req, res, next) => {
 app.get('/api/customer/overview', async (_req, res, next) => {
   try {
     let org = null;
-    let openTicketsCount = 2;
-    let teamCount = 12;
+    let openTicketsCount = 0;
+    let teamCount = 0;
 
     if (isDbConnected) {
       try {
-        const orgRes = await query(`SELECT * FROM organizations WHERE name = 'ABC Technologies' LIMIT 1`);
+        const orgRes = await query(`SELECT * FROM organizations ORDER BY id ASC LIMIT 1`);
         if (orgRes.rows.length > 0) org = orgRes.rows[0];
 
-        const ticketRes = await query(`SELECT COUNT(*) FROM support_tickets WHERE company_name = 'ABC Technologies' AND status != 'Resolved'`);
-        if (ticketRes.rows.length > 0) openTicketsCount = parseInt(ticketRes.rows[0].count, 10) || 2;
+        const ticketRes = await query(`SELECT COUNT(*) FROM support_tickets WHERE status != 'Resolved'`);
+        if (ticketRes.rows.length > 0) openTicketsCount = parseInt(ticketRes.rows[0].count, 10) || 0;
 
-        const teamRes = await query(`SELECT COUNT(*) FROM team_members WHERE company_name = 'ABC Technologies' AND status = 'Active'`);
-        if (teamRes.rows.length > 0) teamCount = parseInt(teamRes.rows[0].count, 10) || 12;
+        const teamRes = await query(`SELECT COUNT(*) FROM team_members WHERE status = 'Active'`);
+        if (teamRes.rows.length > 0) teamCount = parseInt(teamRes.rows[0].count, 10) || 0;
       } catch (err) {
         console.error('Error fetching customer DB overview:', err.message);
       }
     }
 
     res.json({
-      company: org?.name || 'ABC Technologies',
-      customerName: 'Alex Johnson',
-      email: 'alex@abctech.com',
-      avatar: 'A',
-      currentPlan: org?.plan || 'Business Pro',
+      company: org?.name || 'My Organization',
+      customerName: 'Customer Admin',
+      email: 'admin@organization.com',
+      avatar: 'C',
+      currentPlan: org?.plan || 'Free Tier',
       status: org?.status || 'Active',
-      nextBillingDate: '12 Dec 2026',
-      mrr: org?.mrr || 48200,
-      activeAppsCount: 5,
-      totalPurchasedApps: 12,
-      activeAppsTrend: '+25%',
+      nextBillingDate: 'N/A',
+      mrr: org?.mrr || 0,
+      activeAppsCount: 0,
+      totalPurchasedApps: 0,
+      activeAppsTrend: '0%',
       teamMembersCount: teamCount,
-      teamMembersTrend: '+3%',
-      monthlyUsage: 2845,
-      monthlyUsageTrend: '+18%',
+      teamMembersTrend: '0%',
+      monthlyUsage: 0,
+      monthlyUsageTrend: '0%',
       openTicketsCount: openTicketsCount,
-      openTicketsTrend: '-50%',
-      purchasedApps: [
-        { id: 'accounting', name: 'Accounting', icon: 'BarChart2', status: 'Active', entitled: true },
-        { id: 'invoicing', name: 'Invoicing', icon: 'FileText', status: 'Active', entitled: true },
-        { id: 'expenses', name: 'Expenses', icon: 'Receipt', status: 'Active', entitled: true },
-        { id: 'hrms', name: 'HRMS', icon: 'Users', status: 'Active', entitled: true },
-        { id: 'website', name: 'Website Builder', icon: 'Globe', status: 'Active', entitled: true },
-        { id: 'marketing', name: 'Marketing', icon: 'Megaphone', status: 'Not Purchased', entitled: false },
-        { id: 'productivity', name: 'Productivity', icon: 'CheckSquare', status: 'Active', entitled: true },
-        { id: 'projects', name: 'Project Management', icon: 'Layers', status: 'Active', entitled: true },
-        { id: 'support', name: 'Customer Support', icon: 'Headphones', status: 'Trial', entitled: true },
-        { id: 'crm', name: 'CRM Suite', icon: 'Briefcase', status: 'Not Purchased', entitled: false },
-        { id: 'inventory', name: 'Inventory', icon: 'Package', status: 'Not Purchased', entitled: false },
-        { id: 'pos', name: 'Point of Sale', icon: 'CreditCard', status: 'Not Purchased', entitled: false }
-      ],
-      recentActivity: [
-        { id: 1, type: 'invoice', title: 'Invoice INV-2026-081 paid', desc: '₹48,200 received from Apex Logistics', time: '2 hours ago', icon: 'check', status: 'success' },
-        { id: 2, type: 'member', title: 'New team member added', desc: 'Sarah Miller joined your organization', time: '5 hours ago', icon: 'user', status: 'info' },
-        { id: 3, type: 'expense', title: 'Expense EXP-2026-034 submitted', desc: 'Office supplies expense', time: '1 day ago', icon: 'receipt', status: 'info' },
-        { id: 4, type: 'ticket', title: 'Support ticket #1245 updated', desc: 'Your issue has been resolved', time: '2 days ago', icon: 'message', status: 'warning' },
-        { id: 5, type: 'subscription', title: 'Subscription renewed', desc: 'Business Pro plan renewed successfully', time: '3 days ago', icon: 'check', status: 'success' }
-      ]
+      openTicketsTrend: '0%',
+      purchasedApps: [],
+      recentActivity: []
     });
   } catch (e) {
     next(e);
@@ -565,30 +546,18 @@ app.get('/api/customer/billing', async (_req, res, next) => {
       } catch (e) {}
     }
 
-    if (!invoices.length) {
-      invoices = [
-        { id: 1, invoice_number: 'INV-2026-081', company_name: 'Apex Logistics Ltd', plan: 'Business Pro', amount: 48200, status: 'Paid', invoice_date: '2026-10-12' },
-        { id: 2, invoice_number: 'INV-2026-080', company_name: 'Metro Retailers', plan: 'Growth', amount: 25000, status: 'Paid', invoice_date: '2026-10-11' },
-        { id: 3, invoice_number: 'INV-2026-079', company_name: 'BlueSky Cloud Corp', plan: 'Business Pro', amount: 124000, status: 'Paid', invoice_date: '2026-10-10' },
-        { id: 4, invoice_number: 'INV-2026-078', company_name: 'ABC Technologies', plan: 'Business Pro', amount: 48200, status: 'Paid', invoice_date: '2026-10-09' }
-      ];
-    }
-
     res.json({
       currentPlan: {
-        name: 'Business Pro',
-        amount: 48200,
+        name: 'Starter',
+        amount: 0,
         currency: '₹',
         cycle: 'Monthly',
         status: 'Active',
-        nextBilling: '12 Dec 2026',
+        nextBilling: 'N/A',
         features: [
-          'Up to 15 Team Members',
-          'Access to 8 Core Business Apps',
-          'Unlimited Monthly Transactions',
-          'Priority 24/7 Dedicated Support',
-          'Automated GST & Tax Invoicing',
-          'SSO & Granular Security Roles'
+          'Access to Standard Applications',
+          'Team Workspace',
+          'Standard Community Support'
         ]
       },
       availablePlans: [
@@ -598,12 +567,7 @@ app.get('/api/customer/billing', async (_req, res, next) => {
         { name: 'Enterprise', price: 124000, cycle: '/mo', seats: 'Unlimited seats', apps: 'All 24 Apps included', popular: false }
       ],
       invoices,
-      paymentMethod: {
-        type: 'Mastercard',
-        last4: '8842',
-        expiry: '09/28',
-        isDefault: true
-      }
+      paymentMethod: null
     });
   } catch (e) {
     next(e);
@@ -642,27 +606,10 @@ app.get('/api/customer/team', async (_req, res, next) => {
       } catch (e) {}
     }
 
-    if (!members.length) {
-      members = [
-        { id: 1, name: 'Alex Johnson', email: 'alex@abctech.com', role: 'Organization Admin', status: 'Active' },
-        { id: 2, name: 'Sarah Miller', email: 'sarah.m@abctech.com', role: 'Finance Lead', status: 'Active' },
-        { id: 3, name: 'David Chen', email: 'david.c@abctech.com', role: 'HR Director', status: 'Active' },
-        { id: 4, name: 'Elena Rostova', email: 'elena.r@abctech.com', role: 'Web Developer', status: 'Active' },
-        { id: 5, name: 'Vikram Patel', email: 'vikram.p@abctech.com', role: 'Operations Manager', status: 'Active' },
-        { id: 6, name: 'Maria Garcia', email: 'maria.g@abctech.com', role: 'Staff Accountant', status: 'Active' },
-        { id: 7, name: 'James Wilson', email: 'james.w@abctech.com', role: 'Marketing Associate', status: 'Active' },
-        { id: 8, name: 'Priya Rao', email: 'priya.r@abctech.com', role: 'HR Specialist', status: 'Active' },
-        { id: 9, name: 'Thomas Wright', email: 'thomas.w@abctech.com', role: 'Billing Specialist', status: 'Active' },
-        { id: 10, name: 'Aisha Khan', email: 'aisha.k@abctech.com', role: 'Project Coordinator', status: 'Active' },
-        { id: 11, name: 'Robert Taylor', email: 'robert.t@abctech.com', role: 'Customer Support', status: 'Active' },
-        { id: 12, name: 'Siddharth Iyer', email: 'sid.i@abctech.com', role: 'Security Auditor', status: 'Active' }
-      ];
-    }
-
     res.json({
       members,
       seatsUsed: members.length,
-      seatsTotal: 15,
+      seatsTotal: 10,
       availableRoles: ['Organization Admin', 'Finance Lead', 'HR Director', 'Operations Manager', 'Member']
     });
   } catch (e) {
@@ -731,16 +678,6 @@ app.get('/api/customer/tickets', async (_req, res, next) => {
       } catch (e) {}
     }
 
-    if (!tickets.length) {
-      tickets = [
-        { id: 1, ticket_number: '#1245', subject: 'Login issue', status: 'Resolved', priority: 'Medium', created_at: '2 hours ago', company_name: 'ABC Technologies' },
-        { id: 2, ticket_number: '#1244', subject: 'Payment failed', status: 'Open', priority: 'High', created_at: '4 hours ago', company_name: 'Metro Retailers' },
-        { id: 3, ticket_number: '#1243', subject: 'Feature request', status: 'In Progress', priority: 'Low', created_at: '1 day ago', company_name: 'BlueSky Cloud Corp' },
-        { id: 4, ticket_number: '#1242', subject: 'Integration error', status: 'Open', priority: 'High', created_at: '2 days ago', company_name: 'GreenLeaf Organics' },
-        { id: 5, ticket_number: '#1241', subject: 'Account setup help', status: 'Resolved', priority: 'Low', created_at: '3 days ago', company_name: 'NovaTech Solutions' }
-      ];
-    }
-
     res.json({ tickets });
   } catch (e) {
     next(e);
@@ -794,21 +731,36 @@ app.post('/api/customer/tickets', async (req, res, next) => {
 // Admin Key Metrics & System Status
 app.get('/api/admin/metrics', async (_req, res, next) => {
   try {
+    let totalCustomers = 0;
+    let activeSubscriptions = 0;
+    let monthlyRevenue = 0;
+
+    if (isDbConnected) {
+      try {
+        const custRes = await query('SELECT COUNT(*) FROM subscriptions');
+        totalCustomers = parseInt(custRes.rows[0]?.count, 10) || 0;
+        const subRes = await query("SELECT COUNT(*) FROM subscriptions WHERE status = 'Active'");
+        activeSubscriptions = parseInt(subRes.rows[0]?.count, 10) || 0;
+        const revRes = await query("SELECT COALESCE(SUM(amount), 0) as total FROM invoices WHERE status = 'Paid'");
+        monthlyRevenue = parseInt(revRes.rows[0]?.total, 10) || 0;
+      } catch (err) {}
+    }
+
     res.json({
-      totalCustomers: 1248,
-      totalCustomersChange: '+132 this month',
-      totalCustomersTrend: '+12%',
-      activeSubscriptions: 2856,
-      activeSubscriptionsChange: '+436 this month',
-      activeSubscriptionsTrend: '+18%',
-      monthlyRevenue: 4892000,
-      monthlyRevenueFormatted: '₹48,92,000',
-      mrr: 4210000,
-      mrrFormatted: '₹42,10,000',
-      monthlyRevenueTrend: '+24%',
-      trialConversions: 68,
-      trialConversionsConverted: '142 converted',
-      trialConversionsTrend: '+6%',
+      totalCustomers,
+      totalCustomersChange: `${totalCustomers} total`,
+      totalCustomersTrend: '0%',
+      activeSubscriptions,
+      activeSubscriptionsChange: `${activeSubscriptions} active`,
+      activeSubscriptionsTrend: '0%',
+      monthlyRevenue,
+      monthlyRevenueFormatted: `₹${monthlyRevenue.toLocaleString('en-IN')}`,
+      mrr: monthlyRevenue,
+      mrrFormatted: `₹${monthlyRevenue.toLocaleString('en-IN')}`,
+      monthlyRevenueTrend: '0%',
+      trialConversions: 0,
+      trialConversionsConverted: '0 converted',
+      trialConversionsTrend: '0%',
       systemStatus: {
         overall: 'All Services Operational',
         status: 'Operational',
@@ -831,23 +783,28 @@ app.get('/api/admin/metrics', async (_req, res, next) => {
 app.get('/api/admin/revenue-chart', async (req, res, next) => {
   try {
     const period = req.query.period || 'monthly';
-    const monthlyData = [
-      { month: 'Jan', revenue: 1850000, formatted: '₹18.5L' },
-      { month: 'Feb', revenue: 2120000, formatted: '₹21.2L' },
-      { month: 'Mar', revenue: 2450000, formatted: '₹24.5L' },
-      { month: 'Apr', revenue: 2680000, formatted: '₹26.8L' },
-      { month: 'May', revenue: 2950000, formatted: '₹29.5L' },
-      { month: 'Jun', revenue: 3180000, formatted: '₹31.8L' },
-      { month: 'Jul', revenue: 3520000, formatted: '₹35.2L' },
-      { month: 'Aug', revenue: 3890000, formatted: '₹38.9L' },
-      { month: 'Sep', revenue: 4340000, formatted: '₹43.4L' },
-      { month: 'Oct', revenue: 4892000, formatted: '₹48,92,000', isCurrent: true }
-    ];
+    let monthlyData = [];
+
+    if (isDbConnected) {
+      try {
+        const invRes = await query(`
+          SELECT TO_CHAR(invoice_date, 'Mon') as month, COALESCE(SUM(amount), 0) as revenue
+          FROM invoices
+          WHERE status = 'Paid'
+          GROUP BY TO_CHAR(invoice_date, 'Mon')
+        `);
+        monthlyData = invRes.rows.map(r => ({
+          month: r.month,
+          revenue: parseInt(r.revenue, 10) || 0,
+          formatted: `₹${(parseInt(r.revenue, 10) || 0).toLocaleString('en-IN')}`
+        }));
+      } catch (e) {}
+    }
 
     res.json({
       period,
-      currentRevenueFormatted: '₹48,92,000',
-      currentMonth: 'Oct 2026',
+      currentRevenueFormatted: monthlyData.length ? monthlyData[monthlyData.length - 1].formatted : '₹0',
+      currentMonth: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
       data: monthlyData
     });
   } catch (e) {
@@ -856,20 +813,19 @@ app.get('/api/admin/revenue-chart', async (req, res, next) => {
 });
 
 // Customer Growth Chart Data
-app.get('/api/admin/growth-chart', async (req, res, next) => {
+app.get('/api/admin/growth-chart', async (_req, res, next) => {
   try {
-    const growthData = [
-      { month: 'Jan', newCustomers: 120, totalCustomers: 540 },
-      { month: 'Feb', newCustomers: 145, totalCustomers: 620 },
-      { month: 'Mar', newCustomers: 180, totalCustomers: 710 },
-      { month: 'Apr', newCustomers: 195, totalCustomers: 790 },
-      { month: 'May', newCustomers: 220, totalCustomers: 880 },
-      { month: 'Jun', newCustomers: 260, totalCustomers: 950 },
-      { month: 'Jul', newCustomers: 290, totalCustomers: 1040 },
-      { month: 'Aug', newCustomers: 320, totalCustomers: 1110 },
-      { month: 'Sep', newCustomers: 350, totalCustomers: 1180 },
-      { month: 'Oct', newCustomers: 380, totalCustomers: 1248 }
-    ];
+    let growthData = [];
+    if (isDbConnected) {
+      try {
+        const growRes = await query(`
+          SELECT TO_CHAR(created_at, 'Mon') as month, COUNT(*) as "newCustomers", COUNT(*) as "totalCustomers"
+          FROM subscriptions
+          GROUP BY TO_CHAR(created_at, 'Mon')
+        `);
+        growthData = growRes.rows;
+      } catch (e) {}
+    }
 
     res.json({ data: growthData });
   } catch (e) {
@@ -886,16 +842,6 @@ app.get('/api/admin/top-products', async (_req, res, next) => {
         const prodRes = await query(`SELECT * FROM products_plans ORDER BY revenue DESC`);
         products = prodRes.rows;
       } catch (e) {}
-    }
-
-    if (!products.length) {
-      products = [
-        { product_name: 'Finance Suite', revenue: 1840000, revenue_percent: 38, icon: 'Finance' },
-        { product_name: 'HRMS', revenue: 1260000, revenue_percent: 26, icon: 'HR' },
-        { product_name: 'Website Builder', revenue: 820000, revenue_percent: 17, icon: 'Web' },
-        { product_name: 'Marketing Suite', revenue: 610000, revenue_percent: 12, icon: 'Marketing' },
-        { product_name: 'Productivity Suite', revenue: 370000, revenue_percent: 7, icon: 'Productivity' }
-      ];
     }
 
     res.json(products);
@@ -921,16 +867,6 @@ app.get('/api/admin/customers', async (req, res, next) => {
       } catch (e) {}
     }
 
-    if (!customers.length) {
-      customers = [
-        { company: 'Apex Logistics Ltd', plan: 'Business Pro', amount: '₹48,200', status: 'Active', date: '12 Oct 2026' },
-        { company: 'Metro Retailers', plan: 'Growth', amount: '₹25,000', status: 'Active', date: '11 Oct 2026' },
-        { company: 'BlueSky Cloud Corp', plan: 'Business Pro', amount: '₹1,24,000', status: 'Active', date: '10 Oct 2026' },
-        { company: 'GreenLeaf Organics', plan: 'Starter', amount: '₹32,600', status: 'Trial', date: '09 Oct 2026' },
-        { company: 'NovaTech Solutions', plan: 'Growth', amount: '₹78,400', status: 'Active', date: '08 Oct 2026' }
-      ];
-    }
-
     res.json(customers);
   } catch (e) {
     next(e);
@@ -949,20 +885,10 @@ app.get('/api/admin/tickets', async (_req, res, next) => {
           subject: t.subject,
           status: t.status,
           priority: t.priority,
-          date: 'Recently',
+          date: new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
           company: t.company_name
         }));
       } catch (e) {}
-    }
-
-    if (!tickets.length) {
-      tickets = [
-        { id: '#1245', subject: 'Login issue', status: 'Resolved', priority: 'Medium', date: '2 hours ago', company: 'ABC Technologies' },
-        { id: '#1244', subject: 'Payment failed', status: 'Open', priority: 'High', date: '4 hours ago', company: 'Metro Retailers' },
-        { id: '#1243', subject: 'Feature request', status: 'In Progress', priority: 'Low', date: '1 day ago', company: 'BlueSky Cloud Corp' },
-        { id: '#1242', subject: 'Integration error', status: 'Open', priority: 'High', date: '2 days ago', company: 'GreenLeaf Organics' },
-        { id: '#1241', subject: 'Account setup help', status: 'Resolved', priority: 'Low', date: '3 days ago', company: 'NovaTech Solutions' }
-      ];
     }
 
     res.json(tickets);
