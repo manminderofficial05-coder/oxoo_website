@@ -960,16 +960,16 @@ const PRICING_CONFIG = {
   },
   singleApp: {
     id: 'single-app',
-    name: 'Single App',
+    name: 'Single Software',
     tagline: 'Buy one software at affordable price',
-    monthlyPrice: 560,
+    monthlyPrice: 740,
     yearlyPrice: 560,
-    strikethroughPrice: 725,
-    discountPercent: 22,
+    strikethroughPrice: 740,
+    discountPercent: 24,
     maxApps: 1,
     features: [
-      'Select any one available OXOO application',
-      'Access the purchased application\'s included features',
+      'Select any one available OXOO software',
+      'Access the purchased software\'s included features',
       'Application-specific dashboard',
       'User and role management',
       'Reports and analytics included',
@@ -980,12 +980,14 @@ const PRICING_CONFIG = {
   },
   customApps: {
     id: 'custom-apps',
-    name: 'Custom (Multiple Apps)',
+    name: 'Custom Softwares',
     tagline: 'Choose 2 or more software and get advanced features',
-    basePriceForTwo: 980,
-    strikethroughBasePrice: 1350,
-    discountPercent: 27,
-    additionalAppPrice: 560,
+    monthlyBasePrice: 1280,
+    yearlyBasePrice: 980,
+    monthlyAdditionalAppPrice: 740,
+    yearlyAdditionalAppPrice: 560,
+    strikethroughBasePrice: 1280,
+    discountPercent: 23,
     minApps: 2,
     features: [
       'Select 2 or more software',
@@ -1007,7 +1009,7 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
 
   let perUserPerMonth = 0;
 
-  if (planId === 'free-demo') {
+  if (planId === 'free-demo' || planId === 'free') {
     return {
       planId: 'free-demo',
       planName: 'Free Demo',
@@ -1024,15 +1026,16 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
     };
   }
 
-  if (planId === 'single-app' || appsCount === 1) {
-    perUserPerMonth = 560;
+  if (planId === 'single-app' || planId === 'single' || appsCount === 1) {
+    perUserPerMonth = isYearly ? 560 : 740;
   } else {
-    // Custom: 2 apps = 980, each additional = 560
-    perUserPerMonth = 980 + (appsCount - 2) * 560;
+    // Custom Softwares: 2 apps base (1280 monthly / 980 yearly), each additional (740 monthly / 560 yearly)
+    const baseRate = isYearly ? 980 : 1280;
+    const extraRate = isYearly ? 560 : 740;
+    perUserPerMonth = baseRate + Math.max(0, appsCount - 2) * extraRate;
   }
 
-  let monthlyBase = perUserPerMonth * users;
-  let subtotal = isYearly ? Math.round(monthlyBase * 12 * 0.8) : monthlyBase;
+  let subtotal = perUserPerMonth * users;
   const gstRate = 0.18;
   const taxAmount = Math.round(subtotal * gstRate);
   const totalAmount = subtotal + taxAmount;
@@ -1040,12 +1043,12 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
 
   return {
     planId: planId || (appsCount > 1 ? 'custom-apps' : 'single-app'),
-    planName: planId === 'custom-apps' || appsCount > 1 ? 'Custom (Multiple Apps)' : 'Single App',
+    planName: planId === 'custom-apps' || appsCount > 1 ? 'Custom Softwares' : 'Single Software',
     userCount: users,
     billingCycle,
     appsCount,
     perUserPerMonth,
-    monthlyBase,
+    monthlyBase: subtotal,
     subtotal,
     taxAmount,
     totalAmount,

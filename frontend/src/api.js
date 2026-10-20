@@ -249,16 +249,15 @@ export async function calculatePricing(payload) {
     console.warn('Using client-side pricing fallback:', err.message);
     const { planId = 'single', billingCycle = 'monthly', appCount = 1, userCount = 1 } = payload;
     let ratePerUser = 0;
-    if (planId === 'free') {
+    const isYearly = billingCycle === 'yearly';
+    if (planId === 'free' || planId === 'free-demo') {
       ratePerUser = 0;
-    } else if (planId === 'single') {
-      ratePerUser = billingCycle === 'yearly' ? 448 : 560;
-    } else if (planId === 'custom') {
-      const baseApps = 2;
-      const baseMonthly = 980;
-      const extraMonthly = 560;
-      const monthlyPerUser = appCount <= 1 ? 560 : baseMonthly + Math.max(0, appCount - baseApps) * extraMonthly;
-      ratePerUser = billingCycle === 'yearly' ? Math.round(monthlyPerUser * 0.8) : monthlyPerUser;
+    } else if (planId === 'single' || planId === 'single-app' || appCount === 1) {
+      ratePerUser = isYearly ? 560 : 740;
+    } else if (planId === 'custom' || planId === 'custom-apps') {
+      const baseRate = isYearly ? 980 : 1280;
+      const extraRate = isYearly ? 560 : 740;
+      ratePerUser = baseRate + Math.max(0, appCount - 2) * extraRate;
     }
     const subtotal = ratePerUser * Math.max(1, userCount);
     const taxAmount = Math.round(subtotal * 0.18);

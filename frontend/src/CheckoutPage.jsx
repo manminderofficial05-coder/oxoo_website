@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Check, ArrowRight, ArrowLeft, ShieldCheck, Lock, CreditCard,
   Download, Printer, CheckCircle2, Building2, User, Mail, Phone,
-  ChevronRight, RefreshCw, AlertCircle
+  FileText, QrCode, Sparkles, AlertCircle
 } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { SOFTWARE_MODULES } from './PricingPage';
@@ -22,6 +22,36 @@ const COUNTRIES = [
   'Singapore', 'Canada', 'Australia', 'Germany', 'France', 'Japan'
 ];
 
+// Helper: Convert number to Indian Rupees words
+function numberToWordsINR(amount) {
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function inWords(num) {
+    if ((num = num.toString()).length > 9) return 'Overflow';
+    const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    let str = '';
+    str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+    str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+    str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+    str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+    str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+    return str;
+  }
+
+  const parts = Number(amount).toFixed(2).split('.');
+  const wholePart = parseInt(parts[0], 10);
+  const decimalPart = parseInt(parts[1], 10);
+
+  let result = 'Rupees ' + inWords(wholePart);
+  if (decimalPart > 0) {
+    result += 'and ' + inWords(decimalPart) + 'Paise ';
+  }
+  result += 'Only';
+  return result.replace(/\s+/g, ' ').trim();
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -30,13 +60,13 @@ export default function CheckoutPage() {
   const initialStep = parseInt(searchParams.get('step') || '1', 10);
   const [currentStep, setCurrentStep] = useState(initialStep);
 
-  // Selected plan: 'free' | 'single' | 'custom'
+  // Selected plan: 'single' | 'custom' (Free demo redirects to /apps)
   const paramPlan = searchParams.get('plan');
   const [activePlan, setActivePlan] = useState(
-    paramPlan === 'free' ? 'free' : paramPlan === 'custom' ? 'custom' : 'single'
+    paramPlan === 'custom' ? 'custom' : 'single'
   );
 
-  // Billing Cycle
+  // Billing Cycle (Monthly / Yearly)
   const paramBilling = searchParams.get('billing');
   const [isYearly, setIsYearly] = useState(paramBilling === 'yearly');
 
@@ -54,16 +84,16 @@ export default function CheckoutPage() {
 
   // Step 3: Company & Billing Details (Exact match to User Screenshot 5)
   const [formData, setFormData] = useState({
-    yourName: '',
-    email: '',
-    phone: '',
-    companyName: '',
-    vat: '',
-    streetAndNumber: '',
-    city: '',
-    zipCode: '',
+    yourName: 'Rahul Sharma',
+    email: 'rahul@abc.com',
+    phone: '98765 43210',
+    companyName: 'ABC Pvt Ltd',
+    vat: '29ABCDE1234F1Z5',
+    streetAndNumber: '123, MG Road',
+    city: 'Bengaluru',
+    zipCode: '560001',
     country: 'India',
-    stateProvince: 'Gujarat'
+    stateProvince: 'Karnataka'
   });
 
   const [formErrors, setFormErrors] = useState({});
@@ -84,9 +114,7 @@ export default function CheckoutPage() {
   // Handle plan switcher in Step 1
   const handleSelectPlan = (plan) => {
     setActivePlan(plan);
-    if (plan === 'free') {
-      setSelectedAppIds([selectedAppIds[0] || 'finance']);
-    } else if (plan === 'single') {
+    if (plan === 'single') {
       setSelectedAppIds([selectedAppIds[0] || 'sales']);
     } else if (plan === 'custom') {
       if (selectedAppIds.length < 2) {
@@ -97,7 +125,7 @@ export default function CheckoutPage() {
 
   // Handle toggling software selection in Step 1
   const handleToggleSoftware = (appId) => {
-    if (activePlan === 'free' || activePlan === 'single') {
+    if (activePlan === 'single') {
       setSelectedAppIds([appId]);
       return;
     }
@@ -111,31 +139,36 @@ export default function CheckoutPage() {
     }
   };
 
-  // Pricing calculation
+  // Pricing calculation matching user's exact specification:
+  // Single Software: monthly 740, yearly 560
+  // Custom Softwares (for 2): monthly 1280, yearly 980, extra: monthly 740, yearly 560
   const calculateTotals = () => {
     let ratePerUser = 0;
     const count = selectedAppIds.length;
 
-    if (activePlan === 'free') {
-      ratePerUser = 0;
-    } else if (activePlan === 'single') {
-      ratePerUser = isYearly ? 448 : 560; // 20% off on yearly
+    if (activePlan === 'single') {
+      ratePerUser = isYearly ? 560 : 740;
     } else {
-      // Custom Softwares: 1 = 560, 2 = 980, 3+ = 980 + (count - 2) * 560
-      const baseMonthly = count <= 1 ? 560 : 980 + Math.max(0, count - 2) * 560;
-      ratePerUser = isYearly ? Math.round(baseMonthly * 0.8) : baseMonthly;
+      const baseRate = isYearly ? 980 : 1280;
+      const extraRate = isYearly ? 560 : 740;
+      ratePerUser = count <= 2 ? baseRate : baseRate + (count - 2) * extraRate;
     }
 
     const subtotal = ratePerUser * Math.max(1, userCount);
-    const taxAmount = Math.round(subtotal * 0.18);
-    const totalAmount = subtotal + taxAmount;
+    const cgstAmount = Number((subtotal * 0.09).toFixed(2));
+    const sgstAmount = Number((subtotal * 0.09).toFixed(2));
+    const totalTax = Number((cgstAmount + sgstAmount).toFixed(2));
+    const totalAmount = Number((subtotal + totalTax).toFixed(2));
 
     return {
       ratePerUser,
       subtotal,
-      taxAmount,
+      cgstAmount,
+      sgstAmount,
+      totalTax,
       totalAmount,
-      appCount: count
+      appCount: count,
+      unitPriceFormatted: isYearly ? '₹560.00' : '₹740.00'
     };
   };
 
@@ -175,15 +208,11 @@ export default function CheckoutPage() {
       ).map((m) => m.name);
 
       const planNameFormatted =
-        activePlan === 'free'
-          ? 'Free Demo'
-          : activePlan === 'single'
-          ? 'Single Software'
-          : 'Custom Softwares';
+        activePlan === 'single' ? 'Single Software' : 'Custom Softwares';
 
-      // 1. Create Order
+      // 1. Create Order on backend
       const orderRes = await createPaymentOrder({
-        planId: activePlan === 'free' ? 'free-demo' : activePlan === 'single' ? 'single-app' : 'custom-apps',
+        planId: activePlan === 'single' ? 'single-app' : 'custom-apps',
         selectedApps: selectedAppsNames,
         userCount,
         billingCycle: isYearly ? 'yearly' : 'monthly',
@@ -193,12 +222,14 @@ export default function CheckoutPage() {
         customerPhone: formData.phone
       });
 
-      const orderNumber = orderRes.order?.orderNumber || `OXOO-ORD-${Date.now().toString().slice(-6)}`;
+      const orderNumber = orderRes.order?.orderNumber || `OXOO-ORD-2025-${Date.now().toString().slice(-6)}`;
+      const invoiceNumber = `OXOO-INV-2025-${Date.now().toString().slice(-6)}`;
+      const paymentId = `pay_rzp_${Date.now().toString().slice(-8)}`;
 
-      // 2. Verify Payment
+      // 2. Verify Payment on backend
       const verifyRes = await verifyPayment({
         orderNumber,
-        paymentId: `pay_rzp_${Date.now().toString().slice(-8)}`,
+        paymentId,
         paymentMethod,
         companyName: formData.companyName || formData.yourName,
         customerName: formData.yourName,
@@ -209,7 +240,16 @@ export default function CheckoutPage() {
         totalAmount: totals.totalAmount
       });
 
-      setPaymentSuccessData(verifyRes);
+      setPaymentSuccessData({
+        orderNumber,
+        invoiceNumber,
+        paymentId,
+        planName: planNameFormatted,
+        paymentDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        invoiceDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        ...verifyRes
+      });
+
       setCurrentStep(5);
     } catch (err) {
       setPaymentError(err.message || 'Payment processing failed. Please try again.');
@@ -218,10 +258,15 @@ export default function CheckoutPage() {
     }
   };
 
-  // Print invoice receipt
   const handlePrintReceipt = () => {
     window.print();
   };
+
+  const todayFormatted = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
 
   return (
     <>
@@ -230,7 +275,7 @@ export default function CheckoutPage() {
         {/* ================================================================= */}
         {/* Top 5-Step Progress Stepper Bar                                   */}
         {/* ================================================================= */}
-        <div className="checkout-stepper-bar-wrap">
+        <div className="checkout-stepper-bar-wrap no-print">
           <div className="checkout-stepper-inner">
             {[
               { num: 1, title: 'Select Plan & Software', sub: 'Choose software package' },
@@ -243,7 +288,6 @@ export default function CheckoutPage() {
                 <div
                   className={`checkout-step-item ${currentStep === step.num ? 'active' : currentStep > step.num ? 'completed' : ''}`}
                   onClick={() => {
-                    // Only allow stepping back or going forward if validated
                     if (step.num < currentStep) {
                       setCurrentStep(step.num);
                     }
@@ -279,24 +323,15 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
-              {/* 3 Plan Selection Pills */}
-              <div className="checkout-plan-pills-row">
-                <div
-                  className={`checkout-plan-pill ${activePlan === 'free' ? 'active' : ''}`}
-                  onClick={() => handleSelectPlan('free')}
-                >
-                  <div className="checkout-pill-title">Free Demo</div>
-                  <div className="checkout-pill-price" style={{ color: '#0284c7' }}>₹0</div>
-                  <div className="checkout-pill-sub">1 software · 14 days access</div>
-                </div>
-
+              {/* 2 Plan Selection Pills */}
+              <div className="checkout-plan-pills-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <div
                   className={`checkout-plan-pill ${activePlan === 'single' ? 'active' : ''}`}
                   onClick={() => handleSelectPlan('single')}
                 >
                   <div className="checkout-pill-title">Single Software</div>
                   <div className="checkout-pill-price" style={{ color: '#ef4444' }}>
-                    ₹{isYearly ? '448' : '560'}
+                    ₹{isYearly ? '560' : '740'}
                   </div>
                   <div className="checkout-pill-sub">per user / month</div>
                 </div>
@@ -307,9 +342,9 @@ export default function CheckoutPage() {
                 >
                   <div className="checkout-pill-title">Custom Softwares</div>
                   <div className="checkout-pill-price" style={{ color: '#10b981' }}>
-                    ₹{isYearly ? '784' : '980'}
+                    ₹{isYearly ? '980' : '1,280'}
                   </div>
-                  <div className="checkout-pill-sub">Base 2 softwares (+₹560 addl)</div>
+                  <div className="checkout-pill-sub">Base 2 softwares (+₹{isYearly ? '560' : '740'} addl)</div>
                 </div>
               </div>
 
@@ -332,7 +367,7 @@ export default function CheckoutPage() {
                       style={{ padding: '6px 14px', fontSize: '0.85rem', background: isYearly ? '#2563eb' : '#ffffff', color: isYearly ? '#ffffff' : '#334155' }}
                       onClick={() => setIsYearly(true)}
                     >
-                      Yearly (Save 20%)
+                      Yearly (Save up to 24%)
                     </button>
                   </div>
                 </div>
@@ -385,7 +420,7 @@ export default function CheckoutPage() {
                         <span className="checkout-software-desc">{mod.desc}</span>
                       </div>
                       <span className="checkout-software-rate">
-                        {activePlan === 'free' ? '₹0' : '₹560'}
+                        ₹{isYearly ? '560' : '740'}
                       </span>
                     </div>
                   );
@@ -396,10 +431,10 @@ export default function CheckoutPage() {
               <div className="checkout-summary-bar">
                 <div>
                   <div className="checkout-summary-text">
-                    Plan: <b>{activePlan === 'free' ? 'Free Demo' : activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b> · {selectedAppIds.length} Software{selectedAppIds.length > 1 ? 's' : ''} · {userCount} User{userCount > 1 ? 's' : ''}
+                    Plan: <b>{activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b> · {selectedAppIds.length} Software{selectedAppIds.length > 1 ? 's' : ''} · {userCount} User{userCount > 1 ? 's' : ''}
                   </div>
                   <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
-                    Billing: {isYearly ? 'Yearly' : 'Monthly'}
+                    Billing: {isYearly ? 'Yearly (₹560/user)' : 'Monthly (₹740/user)'}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -407,7 +442,7 @@ export default function CheckoutPage() {
                     ₹{totals.subtotal.toLocaleString('en-IN')}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>
-                    + 18% GST (₹{totals.taxAmount})
+                    + 18% GST (₹{totals.totalTax})
                   </span>
                 </div>
               </div>
@@ -445,7 +480,7 @@ export default function CheckoutPage() {
                 <thead>
                   <tr>
                     <th>Software Application</th>
-                    <th>Category / Features</th>
+                    <th>Description</th>
                     <th>Billing Cycle</th>
                     <th>Rate / User</th>
                   </tr>
@@ -459,7 +494,7 @@ export default function CheckoutPage() {
                       </td>
                       <td style={{ color: '#64748b' }}>{app.desc}</td>
                       <td>{isYearly ? 'Yearly' : 'Monthly'}</td>
-                      <td><b>{activePlan === 'free' ? '₹0' : '₹560'}</b></td>
+                      <td><b>₹{isYearly ? '560' : '740'}</b></td>
                     </tr>
                   ))}
                 </tbody>
@@ -469,7 +504,7 @@ export default function CheckoutPage() {
               <div className="cart-review-breakdown">
                 <div className="cart-breakdown-row">
                   <span>Selected Plan:</span>
-                  <b>{activePlan === 'free' ? 'Free Demo' : activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b>
+                  <b>{activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b>
                 </div>
                 <div className="cart-breakdown-row">
                   <span>Licensed Users:</span>
@@ -477,16 +512,20 @@ export default function CheckoutPage() {
                 </div>
                 <div className="cart-breakdown-row">
                   <span>Subtotal ({selectedAppIds.length} Softwares):</span>
-                  <b>₹{totals.subtotal.toLocaleString('en-IN')}</b>
+                  <b>₹{totals.subtotal.toFixed(2)}</b>
                 </div>
                 <div className="cart-breakdown-row">
-                  <span>Applicable GST (18%):</span>
-                  <b>₹{totals.taxAmount.toLocaleString('en-IN')}</b>
+                  <span>CGST (9%):</span>
+                  <b>₹{totals.cgstAmount.toFixed(2)}</b>
+                </div>
+                <div className="cart-breakdown-row">
+                  <span>SGST (9%):</span>
+                  <b>₹{totals.sgstAmount.toFixed(2)}</b>
                 </div>
                 <div className="cart-breakdown-row total-row">
-                  <span>Final Amount Payable:</span>
+                  <span>Total Amount Payable:</span>
                   <span style={{ color: '#2563eb' }}>
-                    ₹{totals.totalAmount.toLocaleString('en-IN')}
+                    ₹{totals.totalAmount.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -532,7 +571,7 @@ export default function CheckoutPage() {
                       type="text"
                       className="form-field-input"
                       required
-                      placeholder="John Doe"
+                      placeholder="Rahul Sharma"
                       value={formData.yourName}
                       onChange={(e) => setFormData({ ...formData, yourName: e.target.value })}
                     />
@@ -548,7 +587,7 @@ export default function CheckoutPage() {
                       type="email"
                       className="form-field-input"
                       required
-                      placeholder="admin@company.com"
+                      placeholder="rahul@abc.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
@@ -581,7 +620,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       className="form-field-input"
-                      placeholder="ABC Technologies Pvt Ltd"
+                      placeholder="ABC Pvt Ltd"
                       value={formData.companyName}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     />
@@ -589,11 +628,11 @@ export default function CheckoutPage() {
 
                   {/* VAT */}
                   <div className="form-field-group">
-                    <label className="form-field-label">VAT / GSTIN</label>
+                    <label className="form-field-label">VAT</label>
                     <input
                       type="text"
                       className="form-field-input"
-                      placeholder="24ABCDE1234F1Z5"
+                      placeholder="29ABCDE1234F1Z5"
                       value={formData.vat}
                       onChange={(e) => setFormData({ ...formData, vat: e.target.value })}
                     />
@@ -606,7 +645,7 @@ export default function CheckoutPage() {
                       type="text"
                       className="form-field-input"
                       required
-                      placeholder="402, Business Hub, Ring Road"
+                      placeholder="123, MG Road"
                       value={formData.streetAndNumber}
                       onChange={(e) => setFormData({ ...formData, streetAndNumber: e.target.value })}
                     />
@@ -622,7 +661,7 @@ export default function CheckoutPage() {
                       type="text"
                       className="form-field-input"
                       required
-                      placeholder="Ahmedabad"
+                      placeholder="Bengaluru"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     />
@@ -638,7 +677,7 @@ export default function CheckoutPage() {
                       type="text"
                       className="form-field-input"
                       required
-                      placeholder="380015"
+                      placeholder="560001"
                       value={formData.zipCode}
                       onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                     />
@@ -717,15 +756,15 @@ export default function CheckoutPage() {
               {/* Order Recap Banner */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Paying For:</span>
+                  <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Plan:</span>
                   <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
-                    {activePlan === 'free' ? 'Free Demo' : activePlan === 'single' ? 'Single Software' : 'Custom Softwares'} ({userCount} User{userCount > 1 ? 's' : ''})
+                    {activePlan === 'single' ? 'Single Software' : 'Custom Softwares'} ({userCount} User{userCount > 1 ? 's' : ''})
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Total Payable:</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#16a34a' }}>
-                    ₹{totals.totalAmount.toLocaleString('en-IN')}
+                    ₹{totals.totalAmount.toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -761,7 +800,6 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Mock inputs based on selected method */}
               {paymentMethod === 'Credit / Debit Card' && (
                 <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
@@ -795,7 +833,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Security badges */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '14px 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9', marginBottom: '24px', fontSize: '0.8rem', color: '#64748b' }}>
                 <span>🔒 100% Secure Payment</span>
                 <span>•</span>
@@ -821,81 +858,292 @@ export default function CheckoutPage() {
                   disabled={isProcessing}
                   onClick={handleExecutePayment}
                 >
-                  {isProcessing ? 'Verifying Transaction...' : `Pay ₹${totals.totalAmount.toLocaleString('en-IN')} Securely →`}
+                  {isProcessing ? 'Verifying Transaction...' : `Pay ₹${totals.totalAmount.toFixed(2)} Securely →`}
                 </button>
               </div>
             </div>
           )}
 
           {/* =============================================================== */}
-          {/* STEP 5: Payment Success                                         */}
+          {/* STEP 5: Payment Success & TAX INVOICE (Exact match to Screenshot 2) */}
           {/* =============================================================== */}
           {currentStep === 5 && (
-            <div className="checkout-step-card">
-              <div className="payment-success-card-body">
-                <div className="success-check-big">
-                  <Check size={42} />
-                </div>
-                <h1 className="success-title-big">Payment Successful!</h1>
-                <p className="success-sub-big">
-                  Thank you for choosing OXOO. Your payment has been verified and your subscription is active.
-                </p>
-
-                {/* Receipt Details Card */}
-                <div className="success-details-receipt">
-                  <div className="receipt-line-item">
-                    <span>Order Number:</span>
-                    <b>{paymentSuccessData?.orderNumber || 'OXOO-ORD-774912'}</b>
-                  </div>
-                  <div className="receipt-line-item">
-                    <span>Invoice Reference:</span>
-                    <b>{paymentSuccessData?.invoiceNumber || 'INV-2026-928'}</b>
-                  </div>
-                  <div className="receipt-line-item">
-                    <span>Transaction ID:</span>
-                    <b style={{ fontFamily: 'monospace' }}>{paymentSuccessData?.paymentId || 'pay_rzp_91827481'}</b>
-                  </div>
-                  <div className="receipt-line-item">
-                    <span>Plan Subscribed:</span>
-                    <b>{paymentSuccessData?.planName || (activePlan === 'free' ? 'Free Demo' : activePlan === 'single' ? 'Single Software' : 'Custom Softwares')}</b>
-                  </div>
-                  <div className="receipt-line-item">
-                    <span>Activated Softwares:</span>
-                    <b>{SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((m) => m.name).join(', ')}</b>
-                  </div>
-                  <div className="receipt-line-item">
-                    <span>Licensed Users:</span>
-                    <b>{userCount} User{userCount > 1 ? 's' : ''}</b>
-                  </div>
-                  <div className="receipt-line-item">
-                    <span>Amount Paid:</span>
-                    <b style={{ color: '#16a34a', fontSize: '1.1rem' }}>
-                      ₹{totals.totalAmount.toLocaleString('en-IN')} (Paid via {paymentMethod})
-                    </b>
-                  </div>
-                  <div className="receipt-line-item">
-                    <span>Subscription Status:</span>
-                    <b style={{ color: '#16a34a' }}>● Active</b>
+            <div>
+              {/* Actions Banner */}
+              <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <CheckCircle2 size={24} style={{ color: '#16a34a' }} />
+                  <div>
+                    <b style={{ color: '#166534', fontSize: '1rem', display: 'block' }}>Payment Successful!</b>
+                    <span style={{ color: '#15803d', fontSize: '0.85rem' }}>Your subscription has been verified and activated.</span>
                   </div>
                 </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     type="button"
                     className="checkout-secondary-btn"
                     onClick={handlePrintReceipt}
                   >
-                    <Download size={16} /> Download Invoice / Receipt
+                    <Download size={15} /> Download / Print Invoice
                   </button>
                   <Link
                     to="/customer"
                     className="checkout-primary-btn btn-green"
-                    style={{ textDecoration: 'none' }}
+                    style={{ textDecoration: 'none', padding: '10px 18px', fontSize: '0.9rem' }}
                   >
-                    Go to Customer Dashboard <ArrowRight size={16} />
+                    Go to Dashboard →
                   </Link>
                 </div>
+              </div>
+
+              {/* =========================================================== */}
+              {/* Exact TAX INVOICE Sheet from Screenshot 2                   */}
+              {/* =========================================================== */}
+              <div className="tax-invoice-paper" id="printable-tax-invoice">
+                <div className="invoice-top-accent-bar" />
+
+                <div className="invoice-inner-body">
+                  {/* Top Header Row */}
+                  <div className="invoice-header-layout">
+                    {/* Left: Brand */}
+                    <div className="invoice-brand-col">
+                      <div className="invoice-brand-title">
+                        <Logo />
+                      </div>
+                      <div className="invoice-brand-sub">
+                        Business Software & Cloud Solutions
+                      </div>
+                      <div className="invoice-brand-tagline">
+                        One Platform. All Your Business Needs.
+                      </div>
+                    </div>
+
+                    {/* Right: TAX INVOICE + PAID Badge + Meta */}
+                    <div className="invoice-meta-col">
+                      <div className="invoice-main-title-wrap">
+                        <h2 className="invoice-main-title">TAX INVOICE</h2>
+                        <span className="invoice-paid-pill">
+                          <Check size={14} /> PAID
+                        </span>
+                      </div>
+
+                      <div className="invoice-meta-table">
+                        <div className="invoice-meta-row">
+                          <span>Invoice No</span>
+                          <span>:</span>
+                          <b>{paymentSuccessData?.invoiceNumber || 'OXOO-INV-2025-000123'}</b>
+                        </div>
+                        <div className="invoice-meta-row">
+                          <span>Invoice Date</span>
+                          <span>:</span>
+                          <b>{paymentSuccessData?.invoiceDate || todayFormatted}</b>
+                        </div>
+                        <div className="invoice-meta-row">
+                          <span>Order No</span>
+                          <span>:</span>
+                          <b>{paymentSuccessData?.orderNumber || 'OXOO-ORD-2025-000123'}</b>
+                        </div>
+                        <div className="invoice-meta-row">
+                          <span>Payment Date</span>
+                          <span>:</span>
+                          <b>{paymentSuccessData?.paymentDate || todayFormatted}</b>
+                        </div>
+                        <div className="invoice-meta-row">
+                          <span>Transaction ID</span>
+                          <span>:</span>
+                          <b style={{ fontFamily: 'monospace' }}>{paymentSuccessData?.paymentId || 'pay_rzp_82918291'}</b>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Billed To Box */}
+                  <div className="invoice-billed-section">
+                    <div className="billed-icon-chip">
+                      <Building2 size={20} />
+                    </div>
+                    <div className="billed-info-wrap">
+                      <span className="billed-label-title">Billed To</span>
+                      <span className="billed-company-name">
+                        {formData.companyName || 'ABC Pvt Ltd'}
+                      </span>
+                      <span>{formData.yourName || 'Rahul Sharma'}</span>
+                      <span>{formData.email || 'rahul@abc.com'}</span>
+                      <span>+91 {formData.phone || '98765 43210'}</span>
+                      <span>
+                        {formData.streetAndNumber || '123, MG Road'}, {formData.city || 'Bengaluru'}, {formData.stateProvince || 'Karnataka'} - {formData.zipCode || '560001'}, {formData.country || 'India'}
+                      </span>
+                      {formData.vat && (
+                        <span style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
+                          GSTIN: {formData.vat}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Invoice Items Table */}
+                  <table className="invoice-table-sheet">
+                    <thead>
+                      <tr>
+                        <th className="text-center" style={{ width: '40px' }}>#</th>
+                        <th>Application</th>
+                        <th>Description</th>
+                        <th className="text-center" style={{ width: '80px' }}>Users</th>
+                        <th className="text-right" style={{ width: '130px' }}>Unit Price (INR)</th>
+                        <th className="text-right" style={{ width: '130px' }}>Amount (INR)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((app, index) => {
+                        const itemAmount = (isYearly ? 560 : 740) * userCount;
+                        return (
+                          <tr key={app.id}>
+                            <td className="text-center">{index + 1}</td>
+                            <td>
+                              <div className="invoice-app-col-wrap">
+                                <div className="invoice-app-icon-badge">
+                                  <img src={app.iconSrc} alt={app.name} />
+                                </div>
+                                <span style={{ fontWeight: 700, color: '#0f172a' }}>{app.name}</span>
+                              </div>
+                            </td>
+                            <td style={{ color: '#475569', fontSize: '0.82rem' }}>{app.desc}</td>
+                            <td className="text-center">{userCount}</td>
+                            <td className="text-right">₹{(isYearly ? 560 : 740).toFixed(2)}</td>
+                            <td className="text-right" style={{ fontWeight: 800, color: '#0f172a' }}>
+                              ₹{itemAmount.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+
+                  {/* Subtotal Breakdown Box */}
+                  <div className="invoice-breakdown-wrapper">
+                    <div className="invoice-calc-table">
+                      <div className="invoice-calc-row">
+                        <span>Subtotal</span>
+                        <b>₹{totals.subtotal.toFixed(2)}</b>
+                      </div>
+                      <div className="invoice-calc-row">
+                        <span>Discount</span>
+                        <b>₹0.00</b>
+                      </div>
+                      <div className="invoice-calc-row">
+                        <span>CGST (9%)</span>
+                        <b>₹{totals.cgstAmount.toFixed(2)}</b>
+                      </div>
+                      <div className="invoice-calc-row">
+                        <span>SGST (9%)</span>
+                        <b>₹{totals.sgstAmount.toFixed(2)}</b>
+                      </div>
+                      <div className="invoice-total-highlight-row">
+                        <span>Total (INR)</span>
+                        <b>₹{totals.totalAmount.toFixed(2)}</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Amount in Words */}
+                  <div className="invoice-amount-words">
+                    <b>Amount in Words: </b>
+                    <span>{numberToWordsINR(totals.totalAmount)}</span>
+                  </div>
+
+                  {/* Two Column Notes */}
+                  <div className="invoice-two-col-notes">
+                    {/* Left: Terms & Conditions */}
+                    <div className="notes-block-item">
+                      <div className="notes-block-title">
+                        <FileText size={16} style={{ color: '#2563eb' }} />
+                        <span>Terms & Conditions</span>
+                      </div>
+                      <ol className="notes-list-ol">
+                        <li>This is a computer generated invoice.</li>
+                        <li>Payment has been received and verified.</li>
+                        <li>Subscription access is subject to applicable OXOO terms and conditions.</li>
+                        <li>Renewal and cancellation are governed by the selected billing plan.</li>
+                        <li>For support, contact support@oxoo.com.</li>
+                      </ol>
+                    </div>
+
+                    {/* Right: Company Details */}
+                    <div className="notes-block-item">
+                      <div className="notes-block-title">
+                        <Building2 size={16} style={{ color: '#2563eb' }} />
+                        <span>Company Details</span>
+                      </div>
+                      <div style={{ lineHeight: 1.5 }}>
+                        <b>OXOO Technologies Pvt Ltd</b><br />
+                        #123, Tech Park, MG Road,<br />
+                        Bengaluru - 560001, Karnataka, India<br />
+                        GSTIN: 29ABCDE1234F1Z5<br />
+                        CIN: U72900KA2020PTC123456<br />
+                        <span style={{ color: '#2563eb' }}>www.oxoo.com</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Signatures & QR Code Footer */}
+                  <div className="invoice-signatures-row">
+                    <div className="signatory-col">
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>
+                        Authorized Signatory
+                      </span>
+                      <div className="signature-script-mock">
+                        OxooSign
+                      </div>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
+                        OXOO Technologies Pvt Ltd
+                      </span>
+                    </div>
+
+                    <div className="qr-verify-col">
+                      <div className="qr-box-mock">
+                        <svg viewBox="0 0 100 100" fill="currentColor">
+                          <rect x="0" y="0" width="30" height="30" />
+                          <rect x="5" y="5" width="20" height="20" fill="#fff" />
+                          <rect x="10" y="10" width="10" height="10" fill="#000" />
+                          <rect x="70" y="0" width="30" height="30" />
+                          <rect x="75" y="5" width="20" height="20" fill="#fff" />
+                          <rect x="80" y="10" width="10" height="10" fill="#000" />
+                          <rect x="0" y="70" width="30" height="30" />
+                          <rect x="5" y="75" width="20" height="20" fill="#fff" />
+                          <rect x="10" y="80" width="10" height="10" fill="#000" />
+                          <rect x="40" y="10" width="20" height="10" />
+                          <rect x="40" y="30" width="10" height="20" />
+                          <rect x="60" y="40" width="20" height="20" />
+                          <rect x="35" y="65" width="15" height="15" />
+                          <rect x="60" y="70" width="25" height="10" />
+                          <rect x="75" y="85" width="15" height="15" />
+                        </svg>
+                      </div>
+                      <div className="qr-text-meta">
+                        <span>Scan to verify invoice</span>
+                        <b>{paymentSuccessData?.invoiceNumber || 'OXOO-INV-2025-000123'}</b>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Buttons */}
+              <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginTop: '28px' }}>
+                <button
+                  type="button"
+                  className="checkout-secondary-btn"
+                  onClick={handlePrintReceipt}
+                >
+                  <Printer size={16} /> Print / Save Tax Invoice
+                </button>
+                <Link
+                  to="/customer"
+                  className="checkout-primary-btn btn-green"
+                  style={{ textDecoration: 'none' }}
+                >
+                  Go to Customer Dashboard <ArrowRight size={16} />
+                </Link>
               </div>
             </div>
           )}
