@@ -125,17 +125,16 @@ export default function CheckoutPage() {
 
   // Handle toggling software selection in Step 1
   const handleToggleSoftware = (appId) => {
-    if (activePlan === 'single') {
-      setSelectedAppIds([appId]);
-      return;
-    }
-
     if (selectedAppIds.includes(appId)) {
-      if (selectedAppIds.length > 2) {
-        setSelectedAppIds(selectedAppIds.filter((id) => id !== appId));
+      if (selectedAppIds.length > 1) {
+        const next = selectedAppIds.filter((id) => id !== appId);
+        setSelectedAppIds(next);
+        setActivePlan(next.length <= 1 ? 'single' : 'custom');
       }
     } else {
-      setSelectedAppIds([...selectedAppIds, appId]);
+      const next = [...selectedAppIds, appId];
+      setSelectedAppIds(next);
+      setActivePlan(next.length <= 1 ? 'single' : 'custom');
     }
   };
 
@@ -146,7 +145,7 @@ export default function CheckoutPage() {
     let ratePerUser = 0;
     const count = selectedAppIds.length;
 
-    if (activePlan === 'single') {
+    if (count <= 1) {
       ratePerUser = isYearly ? 560 : 740;
     } else {
       const baseRate = isYearly ? 980 : 1280;
@@ -335,69 +334,48 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
-              {/* 2 Plan Selection Pills */}
+              {/* Only Monthly Plan and Yearly Plan */}
               <div className="checkout-plan-pills-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 <div
-                  className={`checkout-plan-pill ${activePlan === 'single' ? 'active' : ''}`}
-                  onClick={() => handleSelectPlan('single')}
+                  className={`checkout-plan-pill ${!isYearly ? 'active' : ''}`}
+                  onClick={() => setIsYearly(false)}
                 >
-                  <div className="checkout-pill-title">Single Software</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
-                    <span className="checkout-pill-price" style={{ color: '#ef4444' }}>
-                      ₹{isYearly ? '560' : '740'}
-                    </span>
-                    <span style={{ fontSize: '0.82rem', textDecoration: 'line-through', color: '#94a3b8' }}>
-                      ₹{isYearly ? '740' : '975'}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                      24% OFF
-                    </span>
+                  <div className="checkout-pill-title">Monthly Plan</div>
+                  <div className="checkout-pill-price" style={{ color: '#2563eb' }}>
+                    {selectedAppIds.length <= 1 ? '₹740' : '₹1,280'}
                   </div>
-                  <div className="checkout-pill-sub">per user / month</div>
+                  <div className="checkout-pill-sub">
+                    {selectedAppIds.length <= 1
+                      ? 'per user / month (Single Software)'
+                      : `for ${selectedAppIds.length} softwares (+₹740 each addl)`}
+                  </div>
                 </div>
 
                 <div
-                  className={`checkout-plan-pill ${activePlan === 'custom' ? 'active' : ''}`}
-                  onClick={() => handleSelectPlan('custom')}
+                  className={`checkout-plan-pill ${isYearly ? 'active' : ''}`}
+                  onClick={() => setIsYearly(true)}
                 >
-                  <div className="checkout-pill-title">Custom Softwares</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
-                    <span className="checkout-pill-price" style={{ color: '#10b981' }}>
-                      ₹{isYearly ? '980' : '1,280'}
-                    </span>
-                    <span style={{ fontSize: '0.82rem', textDecoration: 'line-through', color: '#94a3b8' }}>
-                      ₹{isYearly ? '1,280' : '1,660'}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                      23% OFF
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className="checkout-pill-title">Yearly Plan</div>
+                    <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
+                      Save up to 24%
                     </span>
                   </div>
-                  <div className="checkout-pill-sub">Base 2 softwares (+₹{isYearly ? '560' : '740'} addl)</div>
+                  <div className="checkout-pill-price" style={{ color: '#16a34a' }}>
+                    {selectedAppIds.length <= 1 ? '₹560' : '₹980'}
+                  </div>
+                  <div className="checkout-pill-sub">
+                    {selectedAppIds.length <= 1
+                      ? 'per user / month (Single Software)'
+                      : `for ${selectedAppIds.length} softwares (+₹560 each addl)`}
+                  </div>
                 </div>
               </div>
 
-              {/* Configuration Row: Billing Cycle & Users */}
-              <div className="checkout-config-row">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Billing Cycle:</span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      type="button"
-                      className={`checkout-secondary-btn ${!isYearly ? 'active' : ''}`}
-                      style={{ padding: '6px 14px', fontSize: '0.85rem', background: !isYearly ? '#2563eb' : '#ffffff', color: !isYearly ? '#ffffff' : '#334155' }}
-                      onClick={() => setIsYearly(false)}
-                    >
-                      Monthly (24% OFF)
-                    </button>
-                    <button
-                      type="button"
-                      className={`checkout-secondary-btn ${isYearly ? 'active' : ''}`}
-                      style={{ padding: '6px 14px', fontSize: '0.85rem', background: isYearly ? '#2563eb' : '#ffffff', color: isYearly ? '#ffffff' : '#334155' }}
-                      onClick={() => setIsYearly(true)}
-                    >
-                      Yearly (Save up to 24%)
-                    </button>
-                  </div>
+              {/* Configuration Row: Licensed Users & Current Selected Package */}
+              <div className="checkout-config-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.9rem', color: '#334155' }}>
+                  Selected: <b>{selectedAppIds.length <= 1 ? 'Single Software' : 'Custom Softwares'}</b> ({selectedAppIds.length} application{selectedAppIds.length > 1 ? 's' : ''})
                 </div>
 
                 <div className="checkout-counter-group">
@@ -422,9 +400,7 @@ export default function CheckoutPage() {
 
               {/* Software Selection Grid */}
               <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '14px' }}>
-                {activePlan === 'custom'
-                  ? 'Select Softwares (Choose 2 or more):'
-                  : 'Select One Software:'}
+                Select Software Applications:
               </h3>
 
               <div className="checkout-software-grid">
@@ -437,8 +413,7 @@ export default function CheckoutPage() {
                       onClick={() => handleToggleSoftware(mod.id)}
                     >
                       <input
-                        type={activePlan === 'custom' ? 'checkbox' : 'radio'}
-                        name="software-choice-radio"
+                        type="checkbox"
                         checked={isChecked}
                         onChange={() => handleToggleSoftware(mod.id)}
                       />
@@ -451,14 +426,9 @@ export default function CheckoutPage() {
                         <span className="checkout-software-rate" style={{ display: 'block' }}>
                           ₹{isYearly ? '560' : '740'}
                         </span>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                          <span style={{ textDecoration: 'line-through', marginRight: '3px' }}>
-                            ₹{isYearly ? '740' : '975'}
-                          </span>
-                          <span style={{ color: '#ef4444', fontWeight: 700 }}>
-                            24% OFF
-                          </span>
-                        </div>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                          / user / mo
+                        </span>
                       </div>
                     </div>
                   );
