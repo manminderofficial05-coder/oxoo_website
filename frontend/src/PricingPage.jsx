@@ -220,12 +220,10 @@ export default function PricingPage() {
               <div className="card-price-row">
                 <span className="price-currency coral">Rs</span>
                 <span className="price-val coral">{isYearly ? '560' : '740'}</span>
-                {isYearly && (
-                  <div className="price-strike-wrap">
-                    <span className="price-struck">Rs 740</span>
-                    <span className="discount-pill coral">24% OFF</span>
-                  </div>
-                )}
+                <div className="price-strike-wrap">
+                  <span className="price-struck">{isYearly ? 'Rs 740' : 'Rs 975'}</span>
+                  <span className="discount-pill coral">24% OFF</span>
+                </div>
               </div>
               <div className="price-unit-caption">/ user / month</div>
 
@@ -286,12 +284,10 @@ export default function PricingPage() {
               <div className="card-price-row">
                 <span className="price-currency mint">Rs</span>
                 <span className="price-val mint">{isYearly ? '980' : '1,280'}</span>
-                {isYearly && (
-                  <div className="price-strike-wrap">
-                    <span className="price-struck">Rs 1,280</span>
-                    <span className="discount-pill mint">24% OFF</span>
-                  </div>
-                )}
+                <div className="price-strike-wrap">
+                  <span className="price-struck">{isYearly ? 'Rs 1,280' : 'Rs 1,660'}</span>
+                  <span className="discount-pill mint">23% OFF</span>
+                </div>
               </div>
               <div className="price-unit-caption">/ user / month (for 2 softwares)</div>
               <div className="price-extra-note">

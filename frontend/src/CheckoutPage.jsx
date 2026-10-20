@@ -330,8 +330,16 @@ export default function CheckoutPage() {
                   onClick={() => handleSelectPlan('single')}
                 >
                   <div className="checkout-pill-title">Single Software</div>
-                  <div className="checkout-pill-price" style={{ color: '#ef4444' }}>
-                    ₹{isYearly ? '560' : '740'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
+                    <span className="checkout-pill-price" style={{ color: '#ef4444' }}>
+                      ₹{isYearly ? '560' : '740'}
+                    </span>
+                    <span style={{ fontSize: '0.82rem', textDecoration: 'line-through', color: '#94a3b8' }}>
+                      ₹{isYearly ? '740' : '975'}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                      24% OFF
+                    </span>
                   </div>
                   <div className="checkout-pill-sub">per user / month</div>
                 </div>
@@ -341,8 +349,16 @@ export default function CheckoutPage() {
                   onClick={() => handleSelectPlan('custom')}
                 >
                   <div className="checkout-pill-title">Custom Softwares</div>
-                  <div className="checkout-pill-price" style={{ color: '#10b981' }}>
-                    ₹{isYearly ? '980' : '1,280'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
+                    <span className="checkout-pill-price" style={{ color: '#10b981' }}>
+                      ₹{isYearly ? '980' : '1,280'}
+                    </span>
+                    <span style={{ fontSize: '0.82rem', textDecoration: 'line-through', color: '#94a3b8' }}>
+                      ₹{isYearly ? '1,280' : '1,660'}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                      23% OFF
+                    </span>
                   </div>
                   <div className="checkout-pill-sub">Base 2 softwares (+₹{isYearly ? '560' : '740'} addl)</div>
                 </div>
@@ -359,7 +375,7 @@ export default function CheckoutPage() {
                       style={{ padding: '6px 14px', fontSize: '0.85rem', background: !isYearly ? '#2563eb' : '#ffffff', color: !isYearly ? '#ffffff' : '#334155' }}
                       onClick={() => setIsYearly(false)}
                     >
-                      Monthly
+                      Monthly (24% OFF)
                     </button>
                     <button
                       type="button"
@@ -419,9 +435,19 @@ export default function CheckoutPage() {
                         <span className="checkout-software-name">{mod.name}</span>
                         <span className="checkout-software-desc">{mod.desc}</span>
                       </div>
-                      <span className="checkout-software-rate">
-                        ₹{isYearly ? '560' : '740'}
-                      </span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span className="checkout-software-rate" style={{ display: 'block' }}>
+                          ₹{isYearly ? '560' : '740'}
+                        </span>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                          <span style={{ textDecoration: 'line-through', marginRight: '3px' }}>
+                            ₹{isYearly ? '740' : '975'}
+                          </span>
+                          <span style={{ color: '#ef4444', fontWeight: 700 }}>
+                            24% OFF
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

@@ -964,7 +964,8 @@ const PRICING_CONFIG = {
     tagline: 'Buy one software at affordable price',
     monthlyPrice: 740,
     yearlyPrice: 560,
-    strikethroughPrice: 740,
+    monthlyStrikethroughPrice: 975,
+    yearlyStrikethroughPrice: 740,
     discountPercent: 24,
     maxApps: 1,
     features: [
@@ -986,7 +987,8 @@ const PRICING_CONFIG = {
     yearlyBasePrice: 980,
     monthlyAdditionalAppPrice: 740,
     yearlyAdditionalAppPrice: 560,
-    strikethroughBasePrice: 1280,
+    monthlyStrikethroughBasePrice: 1660,
+    yearlyStrikethroughBasePrice: 1280,
     discountPercent: 23,
     minApps: 2,
     features: [
@@ -1017,11 +1019,18 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
       billingCycle,
       appsCount: 1,
       perUserPerMonth: 0,
-      subtotal: 0,
+      regularRatePerUser: 0,
+      regularTotal: 0,
       discountAmount: 0,
+      discountPercent: 0,
+      subtotal: 0,
       taxAmount: 0,
       totalAmount: 0,
       totalAmountPaise: 0,
+      formattedPerUser: '₹0',
+      formattedDiscount: '₹0',
+      formattedSubtotal: '₹0',
+      formattedTax: '₹0',
       formattedTotal: '₹0'
     };
   }
@@ -1029,22 +1038,26 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
   let regularRatePerUser = 0;
   if (planId === 'single-app' || planId === 'single' || appsCount === 1) {
     perUserPerMonth = isYearly ? 560 : 740;
-    regularRatePerUser = 740;
+    regularRatePerUser = isYearly ? 740 : 975;
   } else {
     // Custom Softwares: 2 apps base (1280 monthly / 980 yearly), each additional (740 monthly / 560 yearly)
     const baseRate = isYearly ? 980 : 1280;
     const extraRate = isYearly ? 560 : 740;
     perUserPerMonth = baseRate + Math.max(0, appsCount - 2) * extraRate;
-    regularRatePerUser = 1280 + Math.max(0, appsCount - 2) * 740;
+
+    const regularBase = isYearly ? 1280 : 1660;
+    const regularExtra = isYearly ? 740 : 975;
+    regularRatePerUser = regularBase + Math.max(0, appsCount - 2) * regularExtra;
   }
 
   let subtotal = perUserPerMonth * users;
   let regularTotal = regularRatePerUser * users;
-  let discountAmount = isYearly ? regularTotal - subtotal : 0;
+  let discountAmount = Math.max(0, regularTotal - subtotal);
   const gstRate = 0.18;
   const taxAmount = Math.round(subtotal * gstRate);
   const totalAmount = subtotal + taxAmount;
   const totalAmountPaise = totalAmount * 100;
+  const discountPercent = planId === 'custom-apps' || appsCount > 1 ? 23 : 24;
 
   return {
     planId: planId || (appsCount > 1 ? 'custom-apps' : 'single-app'),
@@ -1056,7 +1069,7 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
     regularRatePerUser,
     regularTotal,
     discountAmount,
-    discountPercent: isYearly ? 24 : 0,
+    discountPercent,
     monthlyBase: subtotal,
     subtotal,
     taxAmount,

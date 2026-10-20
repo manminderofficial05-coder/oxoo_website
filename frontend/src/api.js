@@ -256,16 +256,20 @@ export async function calculatePricing(payload) {
       regularRatePerUser = 0;
     } else if (planId === 'single' || planId === 'single-app' || appCount === 1) {
       ratePerUser = isYearly ? 560 : 740;
-      regularRatePerUser = 740;
+      regularRatePerUser = isYearly ? 740 : 975;
     } else if (planId === 'custom' || planId === 'custom-apps') {
       const baseRate = isYearly ? 980 : 1280;
       const extraRate = isYearly ? 560 : 740;
       ratePerUser = baseRate + Math.max(0, appCount - 2) * extraRate;
-      regularRatePerUser = 1280 + Math.max(0, appCount - 2) * 740;
+
+      const regularBase = isYearly ? 1280 : 1660;
+      const regularExtra = isYearly ? 740 : 975;
+      regularRatePerUser = regularBase + Math.max(0, appCount - 2) * regularExtra;
     }
     const subtotal = ratePerUser * Math.max(1, userCount);
     const regularTotal = regularRatePerUser * Math.max(1, userCount);
-    const discountAmount = isYearly ? regularTotal - subtotal : 0;
+    const discountAmount = Math.max(0, regularTotal - subtotal);
+    const discountPercent = planId === 'custom' || planId === 'custom-apps' || appCount > 1 ? 23 : 24;
     const taxAmount = Math.round(subtotal * 0.18);
     const totalAmount = subtotal + taxAmount;
     return {
@@ -276,9 +280,10 @@ export async function calculatePricing(payload) {
         appCount,
         userCount,
         ratePerUser,
+        regularRatePerUser,
         regularTotal,
         discountAmount,
-        discountPercent: isYearly ? 24 : 0,
+        discountPercent,
         subtotal,
         taxAmount,
         totalAmount,
