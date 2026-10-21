@@ -204,7 +204,14 @@ export default function PricingPage() {
                   <span className="discount-pill coral">24% OFF</span>
                 </div>
               </div>
-              <div className="price-unit-caption">/ user / month</div>
+              <div className="price-unit-caption">
+                / user / month
+                {isYearly && (
+                  <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
+                    Billed annually (12 months payment)
+                  </span>
+                )}
+              </div>
 
               <ul className="card-features-list">
                 <li className="feature-check-item">
@@ -268,7 +275,14 @@ export default function PricingPage() {
                   <span className="discount-pill mint">23% OFF</span>
                 </div>
               </div>
-              <div className="price-unit-caption">/ user / month (for 2 softwares)</div>
+              <div className="price-unit-caption">
+                / user / month (for 2 softwares)
+                {isYearly && (
+                  <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
+                    Billed annually (12 months payment)
+                  </span>
+                )}
+              </div>
               <div className="price-extra-note">
                 Additional software: + Rs {isYearly ? '560' : '740'} each / user / month
               </div>

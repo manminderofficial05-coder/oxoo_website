@@ -191,8 +191,8 @@ export default function CheckoutPage() {
   };
 
   // Pricing calculation matching user's exact specification:
-  // Single Software: monthly 740, yearly 560
-  // Custom Softwares (for 2): monthly 1280, yearly 980, extra: monthly 740, yearly 560
+  // Single Software: monthly 740, yearly 560/mo (billed 12 months = 6,720)
+  // Custom Softwares (for 2): monthly 1280, yearly 980/mo (billed 12 months = 11,760), extra: monthly 740, yearly 560/mo (billed 12 months = 6,720)
   const calculateTotals = () => {
     let ratePerUser = 0;
     const count = selectedAppIds.length;
@@ -205,7 +205,8 @@ export default function CheckoutPage() {
       ratePerUser = count <= 2 ? baseRate : baseRate + (count - 2) * extraRate;
     }
 
-    const subtotal = ratePerUser * Math.max(1, userCount);
+    const months = isYearly ? 12 : 1;
+    const subtotal = ratePerUser * Math.max(1, userCount) * months;
     const cgstAmount = Number((subtotal * 0.09).toFixed(2));
     const sgstAmount = Number((subtotal * 0.09).toFixed(2));
     const totalTax = Number((cgstAmount + sgstAmount).toFixed(2));
@@ -213,13 +214,14 @@ export default function CheckoutPage() {
 
     return {
       ratePerUser,
+      months,
       subtotal,
       cgstAmount,
       sgstAmount,
       totalTax,
       totalAmount,
       appCount: count,
-      unitPriceFormatted: isYearly ? '₹560.00' : '₹740.00'
+      unitPriceFormatted: isYearly ? `₹${(560 * 12).toFixed(2)}` : '₹740.00'
     };
   };
 
@@ -504,18 +506,19 @@ export default function CheckoutPage() {
                   onClick={() => setIsYearly(true)}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div className="checkout-pill-title">Yearly Plan</div>
+                    <div className="checkout-pill-title">Yearly Plan (12 Months)</div>
                     <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
                       Save up to 24%
                     </span>
                   </div>
                   <div className="checkout-pill-price" style={{ color: '#16a34a' }}>
                     {selectedAppIds.length <= 1 ? '₹560' : '₹980'}
+                    <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#475569' }}> / user / mo</span>
                   </div>
                   <div className="checkout-pill-sub">
                     {selectedAppIds.length <= 1
-                      ? 'per user / month (Single Software)'
-                      : `for ${selectedAppIds.length} softwares (+₹560 each addl)`}
+                      ? 'Billed annually: ₹6,720 / user (12 months payment)'
+                      : `Billed annually for ${selectedAppIds.length} softwares (12 months payment)`}
                   </div>
                 </div>
               </div>
@@ -611,7 +614,7 @@ export default function CheckoutPage() {
                     Plan: <b>{activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b> · {selectedAppIds.length} Software{selectedAppIds.length > 1 ? 's' : ''} · {userCount} User{userCount > 1 ? 's' : ''}
                   </div>
                   <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
-                    Billing: {isYearly ? 'Yearly (₹560/user)' : 'Monthly (₹740/user)'}
+                    Billing: {isYearly ? `Yearly (12 Months at ₹${totals.ratePerUser}/user/mo)` : `Monthly (1 Month at ₹${totals.ratePerUser}/user/mo)`}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -619,7 +622,7 @@ export default function CheckoutPage() {
                     ₹{totals.subtotal.toLocaleString('en-IN')}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>
-                    + 18% GST (₹{totals.totalTax})
+                    + 18% GST (₹{totals.totalTax.toLocaleString('en-IN')}) = ₹{totals.totalAmount.toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
@@ -671,8 +674,18 @@ export default function CheckoutPage() {
                           <b>{app.name}</b>
                         </td>
                         <td style={{ color: '#64748b' }}>{app.desc}</td>
-                        <td>{isYearly ? 'Yearly' : 'Monthly'}</td>
-                        <td><b>₹{isYearly ? '560' : '740'}</b></td>
+                        <td>{isYearly ? 'Yearly (12 Months)' : 'Monthly (1 Month)'}</td>
+                        <td>
+                          <b>
+                            {isYearly ? (
+                              <span>
+                                ₹{(560 * 12).toLocaleString('en-IN')} <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(₹560/mo × 12)</span>
+                              </span>
+                            ) : (
+                              '₹740 / mo'
+                            )}
+                          </b>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -686,11 +699,15 @@ export default function CheckoutPage() {
                   <b>{activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b>
                 </div>
                 <div className="cart-breakdown-row">
+                  <span>Billing Period:</span>
+                  <b>{isYearly ? '12 Months (Annual Subscription)' : '1 Month (Monthly Subscription)'}</b>
+                </div>
+                <div className="cart-breakdown-row">
                   <span>Licensed Users:</span>
                   <b>{userCount} User{userCount > 1 ? 's' : ''}</b>
                 </div>
                 <div className="cart-breakdown-row">
-                  <span>Subtotal ({selectedAppIds.length} Softwares):</span>
+                  <span>Subtotal ({selectedAppIds.length} Software{selectedAppIds.length > 1 ? 's' : ''}{isYearly ? ' × 12 Months' : ''}):</span>
                   <b>₹{totals.subtotal.toFixed(2)}</b>
                 </div>
                 <div className="cart-breakdown-row">
@@ -1283,7 +1300,9 @@ export default function CheckoutPage() {
                       </thead>
                       <tbody>
                         {SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((app, index) => {
-                          const itemAmount = (isYearly ? 560 : 740) * userCount;
+                          const months = isYearly ? 12 : 1;
+                          const unitPrice = isYearly ? 560 * 12 : 740;
+                          const itemAmount = unitPrice * userCount;
                           return (
                             <tr key={app.id}>
                               <td className="text-center">{index + 1}</td>
@@ -1292,12 +1311,28 @@ export default function CheckoutPage() {
                                   <div className="invoice-app-icon-badge">
                                     <img src={app.iconSrc} alt={app.name} />
                                   </div>
-                                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{app.name}</span>
+                                  <div>
+                                    <span style={{ fontWeight: 700, color: '#0f172a' }}>{app.name}</span>
+                                    {isYearly && (
+                                      <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>
+                                        12 Months Annual License (₹560/mo × 12)
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
                               <td style={{ color: '#475569', fontSize: '0.82rem' }}>{app.desc}</td>
                               <td className="text-center">{userCount}</td>
-                              <td className="text-right">₹{(isYearly ? 560 : 740).toFixed(2)}</td>
+                              <td className="text-right">
+                                {isYearly ? (
+                                  <div>
+                                    <b>₹{(560 * 12).toFixed(2)}</b>
+                                    <div style={{ fontSize: '10.5px', color: '#64748b' }}>₹560/mo × 12</div>
+                                  </div>
+                                ) : (
+                                  `₹${(740).toFixed(2)}`
+                                )}
+                              </td>
                               <td className="text-right" style={{ fontWeight: 800, color: '#0f172a' }}>
                                 ₹{itemAmount.toFixed(2)}
                               </td>

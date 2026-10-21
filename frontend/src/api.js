@@ -306,8 +306,9 @@ export async function calculatePricing(payload) {
       const regularExtra = isYearly ? 740 : 975;
       regularRatePerUser = regularBase + Math.max(0, appCount - 2) * regularExtra;
     }
-    const subtotal = ratePerUser * Math.max(1, userCount);
-    const regularTotal = regularRatePerUser * Math.max(1, userCount);
+    const months = isYearly ? 12 : 1;
+    const subtotal = ratePerUser * Math.max(1, userCount) * months;
+    const regularTotal = regularRatePerUser * Math.max(1, userCount) * months;
     const discountAmount = Math.max(0, regularTotal - subtotal);
     const discountPercent = planId === 'custom' || planId === 'custom-apps' || appCount > 1 ? 23 : 24;
     const taxAmount = Math.round(subtotal * 0.18);

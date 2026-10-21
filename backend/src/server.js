@@ -1162,8 +1162,9 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
     regularRatePerUser = regularBase + Math.max(0, appsCount - 2) * regularExtra;
   }
 
-  let subtotal = perUserPerMonth * users;
-  let regularTotal = regularRatePerUser * users;
+  const months = isYearly ? 12 : 1;
+  let subtotal = perUserPerMonth * users * months;
+  let regularTotal = regularRatePerUser * users * months;
   let discountAmount = Math.max(0, regularTotal - subtotal);
   const gstRate = 0.18;
   const taxAmount = Math.round(subtotal * gstRate);
