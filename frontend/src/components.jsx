@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight, Search, ChevronDown, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
-  Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare
+  LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare
 } from 'lucide-react';
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
@@ -152,11 +152,44 @@ export function Header() {
   const [openApps, setOpenApps] = useState(false);
   const [appsPinned, setAppsPinned] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [mobile, setMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const readUser = () => {
+      try {
+        const stored = localStorage.getItem('oxoo_user');
+        const token = localStorage.getItem('oxoo_token');
+        if (stored && token) {
+          setCurrentUser(JSON.parse(stored));
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (e) {
+        setCurrentUser(null);
+      }
+    };
+    readUser();
+    window.addEventListener('storage', readUser);
+    window.addEventListener('oxoo_auth_change', readUser);
+    return () => {
+      window.removeEventListener('storage', readUser);
+      window.removeEventListener('oxoo_auth_change', readUser);
+    };
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('oxoo_token');
+    localStorage.removeItem('oxoo_user');
+    setCurrentUser(null);
+    setProfileOpen(false);
+    window.dispatchEvent(new Event('oxoo_auth_change'));
+    navigate('/');
+  };
 
   const closeTimeoutRef = useRef(null);
   const appsBtnRef = useRef(null);
@@ -200,7 +233,7 @@ export function Header() {
         setOpenApps(false);
         setAppsPinned(false);
       }
-      if (profileOpen && !e.target.closest('.nav-profile-wrap')) {
+      if (profileOpen && !e.target.closest('.nav-profile-dropdown')) {
         setProfileOpen(false);
       }
     };
@@ -306,25 +339,128 @@ export function Header() {
 
         </nav>
 
-        {/* Right Action Items: Customer Login & Admin Login */}
+        {/* Right Action Items: Customer Login & Admin Login OR Logged-in Profile */}
         <div className="nav-actions">
-          <Link
-            to="/customer/login"
-            className="nav-customer-login-btn"
-            title="Customer Portal Login"
-          >
-            <User size={15} />
-            <span>Customer Login</span>
-          </Link>
+          {currentUser ? (
+            <div className="nav-profile-dropdown">
+              <button
+                type="button"
+                className={`nav-profile-btn ${currentUser.role === 'admin' ? 'is-admin' : 'is-customer'}`}
+                onClick={() => setProfileOpen(!profileOpen)}
+                aria-expanded={profileOpen}
+              >
+                <div className="nav-profile-avatar">
+                  {currentUser.role === 'admin' ? <ShieldCheck size={15} /> : <User size={15} />}
+                  <span className="nav-profile-status-dot" />
+                </div>
+                <div className="nav-profile-info">
+                  <span className="nav-profile-name">{currentUser.name || 'Account'}</span>
+                  <span className="nav-profile-badge">
+                    {currentUser.role === 'admin' ? 'Admin' : 'Customer'}
+                  </span>
+                </div>
+                <ChevronDown size={14} className={`nav-profile-caret ${profileOpen ? 'rotate' : ''}`} />
+              </button>
 
-          <Link
-            to="/admin/login"
-            className="nav-admin-login-btn"
-            title="Admin Console Login"
-          >
-            <ShieldCheck size={15} />
-            <span>Admin Login</span>
-          </Link>
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    className="nav-profile-menu"
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{ duration: 0.16 }}
+                  >
+                    <div className="nav-profile-menu-header">
+                      <div className="nav-profile-menu-avatar">
+                        {currentUser.role === 'admin' ? '🛡️' : '👤'}
+                      </div>
+                      <div className="nav-profile-menu-meta">
+                        <div className="nav-profile-menu-name">{currentUser.name}</div>
+                        <div className="nav-profile-menu-email">{currentUser.email}</div>
+                        <div className="nav-profile-menu-org">
+                          {currentUser.organization || (currentUser.role === 'admin' ? 'Oxoo Core Platform' : 'Client Organization')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="nav-profile-menu-divider" />
+
+                    {currentUser.role === 'admin' ? (
+                      <>
+                        <Link
+                          to="/admin"
+                          className="nav-profile-menu-item"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          <LayoutDashboard size={15} />
+                          <span>Admin Governance Console</span>
+                        </Link>
+                        <Link
+                          to="/dashboard"
+                          className="nav-profile-menu-item"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          <User size={15} />
+                          <span>View Customer Portal</span>
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          to="/dashboard"
+                          className="nav-profile-menu-item"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          <LayoutDashboard size={15} />
+                          <span>Customer Portal Dashboard</span>
+                        </Link>
+                        <Link
+                          to="/dashboard"
+                          className="nav-profile-menu-item"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          <CreditCard size={15} />
+                          <span>Billing & Subscriptions</span>
+                        </Link>
+                      </>
+                    )}
+
+                    <div className="nav-profile-menu-divider" />
+
+                    <button
+                      type="button"
+                      className="nav-profile-menu-item nav-profile-logout-btn"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={15} />
+                      <span>Sign Out</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <>
+              <Link
+                to="/customer/login"
+                className="nav-customer-login-btn"
+                title="Customer Portal Login"
+              >
+                <User size={15} />
+                <span>Customer Login</span>
+              </Link>
+
+              <Link
+                to="/admin/login"
+                className="nav-admin-login-btn"
+                title="Admin Console Login"
+              >
+                <ShieldCheck size={15} />
+                <span>Admin Login</span>
+              </Link>
+            </>
+          )}
 
           <button
             className="mobile-toggle"
@@ -487,13 +623,43 @@ export function Header() {
                 }}
               />
             </div>
+            {/* Mobile Logged-in User Profile Card */}
+            {currentUser && (
+              <div className="mobile-profile-card">
+                <div className="mobile-profile-avatar">
+                  {currentUser.role === 'admin' ? <ShieldCheck size={18} /> : <User size={18} />}
+                </div>
+                <div className="mobile-profile-text">
+                  <b>{currentUser.name}</b>
+                  <small>{currentUser.email}</small>
+                  <span className={`mobile-role-tag ${currentUser.role === 'admin' ? 'admin' : 'customer'}`}>
+                    {currentUser.role === 'admin' ? '🛡️ Administrator' : '🏢 Customer'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="mobile-logout-btn"
+                  onClick={() => { closeAll(); handleLogout(); }}
+                  title="Sign Out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            )}
+
             {[
               ['Home', '/'],
               ['All Apps & Services', '/services'],
               ['Industries We Serve', '/industries'],
               ['Pricing Plans', '/pricing'],
-              ['Customer Login', '/customer/login'],
-              ['Admin Login', '/admin/login'],
+              ...(currentUser
+                ? [
+                    [currentUser.role === 'admin' ? 'Admin Console' : 'Customer Dashboard', currentUser.role === 'admin' ? '/admin' : '/dashboard']
+                  ]
+                : [
+                    ['Customer Login', '/customer/login'],
+                    ['Admin Login', '/admin/login']
+                  ]),
               ['Book a Demo / Contact', '/contact']
             ].map(([n, p]) => (
               <Link key={n} to={p} onClick={closeAll} className="mobile-link">

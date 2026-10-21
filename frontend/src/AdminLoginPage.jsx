@@ -31,6 +31,7 @@ export default function AdminLoginPage() {
       if (res && res.token) {
         localStorage.setItem('oxoo_token', res.token);
         localStorage.setItem('oxoo_user', JSON.stringify(res.user));
+        window.dispatchEvent(new Event('oxoo_auth_change'));
         setSuccessMsg(`Welcome, ${res.user?.name || 'Administrator'}! Authorizing console...`);
         setTimeout(() => {
           navigate('/admin');

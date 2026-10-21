@@ -448,6 +448,329 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 4px 12px rgba(113, 75, 103, 0.28);
 }
 
+/* =========================================================
+   USER PROFILE DROPDOWN (Shown after Login)
+   ========================================================= */
+.nav-profile-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 5px 13px 5px 6px;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.nav-profile-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.nav-profile-btn.is-admin {
+  border-color: #ddd6fe;
+  background: linear-gradient(180deg, #ffffff, #faf5ff);
+}
+.nav-profile-btn.is-admin:hover {
+  border-color: #c4b5fd;
+  box-shadow: 0 4px 14px rgba(113, 75, 103, 0.18);
+}
+
+.nav-profile-btn.is-customer {
+  border-color: #bae6fd;
+  background: linear-gradient(180deg, #ffffff, #f0f9ff);
+}
+.nav-profile-btn.is-customer:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.18);
+}
+
+.nav-profile-avatar {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.is-admin .nav-profile-avatar {
+  background: linear-gradient(135deg, #714b67, #5c3854);
+}
+
+.is-customer .nav-profile-avatar {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+}
+
+.nav-profile-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border: 1.5px solid #ffffff;
+  border-radius: 50%;
+}
+
+.nav-profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.nav-profile-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-profile-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.is-admin .nav-profile-badge {
+  color: #714b67;
+}
+
+.is-customer .nav-profile-badge {
+  color: #0284c7;
+}
+
+.nav-profile-caret {
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.nav-profile-caret.rotate {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Menu */
+.nav-profile-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 270px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  padding: 8px;
+  z-index: 120;
+  backdrop-filter: blur(8px);
+}
+
+.nav-profile-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 12px;
+}
+
+.nav-profile-menu-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.nav-profile-menu-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-profile-menu-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-profile-menu-email {
+  font-size: 11.5px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.nav-profile-menu-org {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #0284c7;
+  background: #f0f9ff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.nav-profile-menu-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 6px 0;
+}
+
+.nav-profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.nav-profile-menu-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.nav-profile-menu-item svg {
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.nav-profile-menu-item:hover svg {
+  color: #0284c7;
+}
+
+.nav-profile-logout-btn {
+  color: #dc2626;
+}
+
+.nav-profile-logout-btn:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.nav-profile-logout-btn svg {
+  color: #dc2626;
+}
+
+.nav-profile-logout-btn:hover svg {
+  color: #b91c1c;
+}
+
+/* Mobile Profile Card in Drawer */
+.mobile-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0 16px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.mobile-profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobile-profile-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-profile-text b {
+  font-size: 13px;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-profile-text small {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-role-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.mobile-role-tag.admin {
+  color: #714b67;
+}
+
+.mobile-role-tag.customer {
+  color: #0284c7;
+}
+
+.mobile-logout-btn {
+  background: none;
+  border: none;
+  color: #dc2626;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.mobile-logout-btn:hover {
+  background: #fee2e2;
+}
+
 .mobile-toggle {
   display: none;
   color: #1f2937;
