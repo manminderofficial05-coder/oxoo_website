@@ -13,22 +13,16 @@ const aiChunksDir = path.join(publicDir, 'ai-demo/_next/static/chunks');
 const layoutChunkPath = path.join(aiChunksDir, 'app/dashboard/layout-318123991376069f.js');
 if (fs.existsSync(layoutChunkPath)) {
   let content = fs.readFileSync(layoutChunkPath, 'utf8');
-  // Replace DemoGate function body so it directly renders children without checking auth or redirecting
-  const demoGateRegex = /21530:\s*\((?:[a-zA-Z0-9_,\s]+)\)\s*=>\s*\{"use strict";[\s\S]*?DemoGate:\s*\(\)\s*=>\s*([a-zA-Z0-9_]+)[\s\S]*?function\s+\1\s*\([a-zA-Z0-9_]+\)\s*\{[\s\S]*?minHeight:\s*"100vh",background:\s*"#0a0a0f"\}\)\)\}\}/;
-  if (demoGateRegex.test(content)) {
-    content = content.replace(demoGateRegex, (match, fnName) => {
-      return `21530:(e,t,n)=>{"use strict";n.d(t,{DemoGate:()=>s});var a=n(95155);function s(e){return (0,a.jsx)(a.Fragment,{children:e.children})}}`;
-    });
+  const targetRedirect = '(0,o.e8)()?s(!0):window.location.replace("/sign-in?redirect=".concat(encodeURIComponent(l||"/dashboard")))';
+  if (content.includes(targetRedirect)) {
+    content = content.replace(targetRedirect, 's(!0)');
     fs.writeFileSync(layoutChunkPath, content, 'utf8');
-    console.log('✓ Successfully patched DemoGate in layout chunk to allow immediate demo access');
-  } else if (!content.includes('children:e.children')) {
-    // Fallback direct string replacement
-    const targetPattern = 'window.location.replace("/sign-in?redirect=';
-    if (content.includes(targetPattern)) {
-      content = content.replace(/window\.location\.replace\("\/sign-in\?redirect=.*?\)/g, 's(!0)');
-      fs.writeFileSync(layoutChunkPath, content, 'utf8');
-      console.log('✓ Replaced window.location.replace in layout chunk');
-    }
+    console.log('✓ Successfully patched DemoGate redirect in layout chunk');
+  } else if (content.includes('window.location.replace("/sign-in?redirect=')) {
+    // Exact safe regex matching the full statement including .concat(...)
+    content = content.replace(/window\.location\.replace\("\/sign-in\?redirect="\.concat\(encodeURIComponent\([^)]+\)\)\)/g, 's(!0)');
+    fs.writeFileSync(layoutChunkPath, content, 'utf8');
+    console.log('✓ Replaced window.location.replace in layout chunk via regex');
   }
 }
 
