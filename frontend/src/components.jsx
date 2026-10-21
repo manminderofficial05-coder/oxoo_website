@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowRight, Search, ChevronDown, Menu, X, Globe2, Sparkles, Layers3, User,
+  ArrowRight, Search, ChevronDown, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
   Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare
 } from 'lucide-react';
 import { categories, services, industries } from './data';
@@ -304,35 +304,26 @@ export function Header() {
             Pricing
           </NavLink>
 
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            to="/dashboard"
-            style={{ fontWeight: 600, color: '#0284c7' }}
-          >
-            Dashboard
-          </NavLink>
-
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            to="/admin"
-            style={{ fontWeight: 600, color: '#1e40af' }}
-          >
-            Admin
-          </NavLink>
         </nav>
 
-        {/* Right Action Items: 'Sign in' Text Link & 'Try it free' Button */}
+        {/* Right Action Items: Customer Login & Admin Login */}
         <div className="nav-actions">
-          <Link className="nav-signin-link" to="/dashboard">
-            Customer Portal
+          <Link
+            to="/signin?role=customer"
+            className="nav-customer-login-btn"
+            title="Customer Portal Login"
+          >
+            <User size={15} />
+            <span>Customer Login</span>
           </Link>
 
-          {/* 'Try it free' Button -> Opens Full-Tab Demo Experience */}
           <Link
-            to="/demo"
-            className="nav-try-free-btn"
+            to="/signin?role=admin"
+            className="nav-admin-login-btn"
+            title="Admin Console Login"
           >
-            Try it free
+            <ShieldCheck size={15} />
+            <span>Admin Login</span>
           </Link>
 
           <button
@@ -501,10 +492,9 @@ export function Header() {
               ['All Apps & Services', '/services'],
               ['Industries We Serve', '/industries'],
               ['Pricing Plans', '/pricing'],
-              ['Customer Portal', '/dashboard'],
-              ['Admin Console', '/admin'],
-              ['Book a Demo / Contact', '/contact'],
-              ['Sign In', '/signin']
+              ['Customer Login', '/signin?role=customer'],
+              ['Admin Login', '/signin?role=admin'],
+              ['Book a Demo / Contact', '/contact']
             ].map(([n, p]) => (
               <Link key={n} to={p} onClick={closeAll} className="mobile-link">
                 <span>{n}</span>

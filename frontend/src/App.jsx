@@ -1578,13 +1578,32 @@ function ContactPage() {
 // SIGN IN PAGE (/signin)
 // -------------------------------------------------------------
 function SignInPage() {
-  const [mode, setMode] = useState('customer');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const requestedRole = searchParams.get('role');
+  const initialRole = requestedRole === 'admin' ? 'admin' : 'customer';
+
+  const [mode, setMode] = useState(initialRole);
+  const [email, setEmail] = useState(initialRole === 'admin' ? 'admin@oxoo.ai' : 'priya@retailmart.in');
+  const [password, setPassword] = useState('oxoo123');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const role = params.get('role');
+    if (role === 'admin') {
+      setMode('admin');
+      setEmail('admin@oxoo.ai');
+      setPassword('oxoo123');
+    } else if (role === 'customer') {
+      setMode('customer');
+      setEmail('priya@retailmart.in');
+      setPassword('oxoo123');
+    }
+  }, [location.search]);
 
   const handleQuickFill = (userType) => {
     setErrorMsg('');
@@ -1617,7 +1636,7 @@ function SignInPage() {
           if (mode === 'admin' || res.user?.role === 'superadmin') {
             navigate('/admin');
           } else {
-            navigate('/apps/dashboard');
+            navigate('/dashboard');
           }
         }, 700);
       }
@@ -1721,6 +1740,15 @@ function SignInPage() {
           <small style={{ display: 'block', marginTop: '16px', color: '#64748b' }}>
             Oxoo.ai Enterprise SSO with Google Workspace and Microsoft Azure AD enabled.
           </small>
+
+          <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+            <Link to="/dashboard" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}>
+              Direct Customer Portal ➔
+            </Link>
+            <Link to="/admin" style={{ color: '#714b67', fontWeight: 600, textDecoration: 'none' }}>
+              Direct Admin Console ➔
+            </Link>
+          </div>
         </div>
       </main>
       <Footer />
