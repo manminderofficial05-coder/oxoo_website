@@ -228,6 +228,13 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
 
   const timerRef = useRef(null);
 
+  // Auto-authenticate any embedded demo sessions (e.g. AI / Productivity Hospital Cart demo)
+  useEffect(() => {
+    try {
+      localStorage.setItem('hospital-cart-demo:session', '1');
+    } catch (e) {}
+  }, []);
+
   // 2-Minute Countdown Timer
   useEffect(() => {
     if (!isTimerRunning) return;
@@ -578,6 +585,14 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
         title={demoTitle}
         src={demoSrc}
         className="oxoo-viewer-iframe-frame"
+        onLoad={(e) => {
+          try {
+            const cw = e.currentTarget?.contentWindow;
+            if (cw && cw.localStorage) {
+              cw.localStorage.setItem('hospital-cart-demo:session', '1');
+            }
+          } catch (err) {}
+        }}
         style={{
           width: '100vw',
           height: 'calc(100vh - 65px)',

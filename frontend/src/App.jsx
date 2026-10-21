@@ -1790,6 +1790,18 @@ export default function App() {
       <Route path="/dashboard/patient-crm" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
       <Route path="/dashboard/agents" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
       <Route path="/dashboard/leads" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/conversations" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/sequences" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/settings" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/billing" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/profile" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/notifications" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/assignment" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/sign-in" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/sign-in/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/sign-up" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/sign-up/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
       <Route path="/ai-demo/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
       <Route path="/sales-demo/*" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
       <Route path="/hrms-demo/*" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
