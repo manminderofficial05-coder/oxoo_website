@@ -87,19 +87,66 @@ export default function CheckoutPage() {
   // Number of licensed users
   const [userCount, setUserCount] = useState(1);
 
-  // Step 3: Company & Billing Details (Exact match to User Screenshot 5)
-  const [formData, setFormData] = useState({
-    yourName: 'Rahul Sharma',
-    email: 'rahul@abc.com',
-    phone: '98765 43210',
-    companyName: 'ABC Pvt Ltd',
-    vat: '29ABCDE1234F1Z5',
-    streetAndNumber: '123, MG Road',
-    city: 'Bengaluru',
-    zipCode: '560001',
-    country: 'India',
-    stateProvince: 'Karnataka'
+  // Logged-in user state
+  const [loggedInUser, setLoggedInUser] = useState(() => {
+    try {
+      const u = localStorage.getItem('oxoo_user');
+      return u ? JSON.parse(u) : null;
+    } catch (e) {
+      return null;
+    }
   });
+
+  // Step 3: Company & Billing Details - Auto-fill from logged-in user if available
+  const [formData, setFormData] = useState(() => {
+    let user = null;
+    try {
+      const u = localStorage.getItem('oxoo_user');
+      if (u) user = JSON.parse(u);
+    } catch (e) {}
+
+    let profile = null;
+    try {
+      const p = localStorage.getItem('oxoo_customer_profile');
+      if (p) profile = JSON.parse(p);
+    } catch (e) {}
+
+    return {
+      yourName: user?.name || profile?.yourName || 'Rahul Sharma',
+      email: user?.email || profile?.email || 'rahul@abc.com',
+      phone: user?.phone || profile?.phone || '98765 43210',
+      companyName: user?.organization || profile?.companyName || (user?.name ? `${user.name} Workspace` : 'ABC Pvt Ltd'),
+      vat: user?.vat || profile?.vat || '29ABCDE1234F1Z5',
+      streetAndNumber: user?.streetAndNumber || profile?.streetAndNumber || '123, MG Road',
+      city: user?.city || profile?.city || 'Bengaluru',
+      zipCode: user?.zipCode || profile?.zipCode || '560001',
+      country: user?.country || profile?.country || 'India',
+      stateProvince: user?.stateProvince || profile?.stateProvince || 'Karnataka'
+    };
+  });
+
+  // Listen for login/auth changes to automatically sync user details into formData
+  useEffect(() => {
+    const handleAuthSync = () => {
+      try {
+        const u = localStorage.getItem('oxoo_user');
+        const user = u ? JSON.parse(u) : null;
+        setLoggedInUser(user);
+        if (user) {
+          setFormData((prev) => ({
+            ...prev,
+            yourName: user.name || prev.yourName,
+            email: user.email || prev.email,
+            companyName: user.organization || prev.companyName,
+            phone: user.phone || prev.phone
+          }));
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('oxoo_auth_change', handleAuthSync);
+    return () => window.removeEventListener('oxoo_auth_change', handleAuthSync);
+  }, []);
 
   const [formErrors, setFormErrors] = useState({});
 
@@ -255,6 +302,85 @@ export default function CheckoutPage() {
       }
       const invoiceDateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
       const dueDateStr = calcDueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+      // Prepare purchased app modules
+      const purchasedModules = SOFTWARE_MODULES
+        .filter((m) => selectedAppIds.includes(m.id))
+        .map((m) => ({
+          id: m.id,
+          name: m.name,
+          category: m.category || 'Business Suite',
+          entitled: true,
+          status: 'Active',
+          demoUrl: m.demoUrl || `/apps/${m.id}`,
+          iconSrc: m.iconSrc
+        }));
+
+      // Store in localStorage for instant synchronization across Customer and Admin Dashboards
+      let existingApps = [];
+      try {
+        const ea = localStorage.getItem('oxoo_purchased_apps');
+        if (ea) existingApps = JSON.parse(ea);
+      } catch (e) {}
+
+      const appMap = new Map();
+      existingApps.forEach((a) => appMap.set(a.id, a));
+      purchasedModules.forEach((a) => appMap.set(a.id, a));
+      const combinedPurchasedApps = Array.from(appMap.values());
+      localStorage.setItem('oxoo_purchased_apps', JSON.stringify(combinedPurchasedApps));
+
+      // Build customer order record for Admin Dashboard & Customer Dashboard
+      const orderRecord = {
+        orderNumber,
+        invoiceNumber,
+        paymentId,
+        company: formData.companyName || formData.yourName,
+        companyName: formData.companyName || formData.yourName,
+        customerName: formData.yourName,
+        email: formData.email,
+        phone: formData.phone,
+        plan: planNameFormatted,
+        billingCycle: isYearly ? 'yearly' : 'monthly',
+        amount: `₹${totals.totalAmount.toLocaleString('en-IN')}`,
+        rawAmount: totals.totalAmount,
+        currency: 'INR',
+        status: 'Active',
+        date: invoiceDateStr,
+        timestamp: new Date().toISOString(),
+        apps: selectedAppsNames,
+        purchasedApps: combinedPurchasedApps
+      };
+
+      // Store in oxoo_recent_customers for Admin Dashboard
+      let adminCustomers = [];
+      try {
+        const ac = localStorage.getItem('oxoo_recent_customers');
+        if (ac) adminCustomers = JSON.parse(ac);
+      } catch (e) {}
+      const updatedAdminCustomers = [orderRecord, ...adminCustomers.filter((c) => c.company !== orderRecord.company)];
+      localStorage.setItem('oxoo_recent_customers', JSON.stringify(updatedAdminCustomers));
+      localStorage.setItem('oxoo_last_order', JSON.stringify(orderRecord));
+
+      // Also ensure user session has active purchasedApps
+      try {
+        let userObj = loggedInUser || {
+          id: Date.now(),
+          name: formData.yourName,
+          email: formData.email,
+          role: 'customer'
+        };
+        userObj = {
+          ...userObj,
+          organization: formData.companyName || userObj.organization || 'My Organization',
+          purchasedApps: combinedPurchasedApps,
+          plan: planNameFormatted
+        };
+        localStorage.setItem('oxoo_user', JSON.stringify(userObj));
+      } catch (e) {}
+
+      // Trigger global events for immediate UI reactivity
+      window.dispatchEvent(new Event('oxoo_auth_change'));
+      window.dispatchEvent(new Event('oxoo_order_placed'));
 
       setPaymentSuccessData({
         orderNumber,
@@ -614,6 +740,119 @@ export default function CheckoutPage() {
                   Enter your contact and organization details to create your OXOO business workspace.
                 </p>
               </div>
+
+              {/* Logged in auto-fill banner */}
+              {loggedInUser ? (
+                <div
+                  className="checkout-logged-in-banner"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
+                    border: '1.5px solid #86efac',
+                    borderRadius: '12px',
+                    padding: '14px 18px',
+                    marginBottom: '22px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: '#16a34a',
+                        color: '#ffffff',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 800,
+                        fontSize: '17px',
+                        flexShrink: 0,
+                        boxShadow: '0 4px 10px rgba(22, 163, 74, 0.25)'
+                      }}
+                    >
+                      {loggedInUser.name ? loggedInUser.name.charAt(0).toUpperCase() : '✓'}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#166534' }}>
+                          Account Active: {loggedInUser.name || 'Registered Customer'}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            background: '#dcfce7',
+                            color: '#15803d',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            border: '1px solid #bbf7d0'
+                          }}
+                        >
+                          ✓ Auto-Filled with Account Data
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '2px' }}>
+                        {loggedInUser.email} &bull; {formData.companyName || loggedInUser.organization || 'Business Workspace'} &bull; Details loaded from your account.
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleProceedFromStep3}
+                    className="checkout-primary-btn"
+                    style={{
+                      padding: '9px 18px',
+                      fontSize: '13px',
+                      borderRadius: '8px',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    Use Account Details & Continue <ArrowRight size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    marginBottom: '20px',
+                    fontSize: '13px',
+                    color: '#475569'
+                  }}
+                >
+                  <span>
+                    Already have an OXOO customer or enterprise account?
+                  </span>
+                  <Link
+                    to="/customer/login"
+                    style={{
+                      color: '#2563eb',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    Log in to auto-fill this form &rarr;
+                  </Link>
+                </div>
+              )}
 
               <form onSubmit={handleProceedFromStep3}>
                 <div className="company-details-form-grid">

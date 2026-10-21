@@ -47,6 +47,7 @@ export default function AdminDashboard() {
   };
 
   // Load all admin data from backend/PostgreSQL
+  // Load all admin data from backend/PostgreSQL and sync latest checkout orders
   useEffect(() => {
     async function fetchAdminData() {
       setLoading(true);
@@ -64,8 +65,56 @@ export default function AdminDashboard() {
         if (rRes?.data) setRevenueData(rRes.data);
         if (gRes?.data) setGrowthData(gRes.data);
         if (pRes) setTopProducts(pRes);
-        if (cRes) setCustomers(cRes);
         if (tRes) setTickets(tRes);
+
+        // Merge backend customers with locally saved checkout orders for immediate reflection
+        let localCusts = [];
+        try {
+          const lc = localStorage.getItem('oxoo_recent_customers');
+          if (lc) localCusts = JSON.parse(lc);
+        } catch (e) {}
+
+        try {
+          const lo = localStorage.getItem('oxoo_last_order');
+          if (lo) {
+            const parsedLo = JSON.parse(lo);
+            if (!localCusts.some(c => (c.company || c.companyName) === (parsedLo.company || parsedLo.companyName))) {
+              localCusts.unshift(parsedLo);
+            }
+          }
+        } catch (e) {}
+
+        const backendCusts = Array.isArray(cRes) ? cRes : [];
+        const mergedMap = new Map();
+
+        localCusts.forEach((c) => {
+          const key = (c.company || c.companyName || '').toLowerCase().trim();
+          if (key) {
+            mergedMap.set(key, {
+              company: c.company || c.companyName,
+              customerName: c.customerName || 'Customer Admin',
+              email: c.email || c.customerEmail || 'customer@oxoo.ai',
+              phone: c.phone || c.customerPhone || '',
+              plan: c.plan || c.planName || 'Single App',
+              amount: c.amount || `₹${Number(c.rawAmount || 0).toLocaleString('en-IN')}`,
+              status: c.status || 'Active',
+              date: c.date || new Date().toLocaleDateString('en-GB'),
+              apps: Array.isArray(c.apps) ? c.apps : (Array.isArray(c.purchasedApps) ? c.purchasedApps.map(a => a.name) : []),
+              orderNumber: c.orderNumber || '',
+              paymentId: c.paymentId || ''
+            });
+          }
+        });
+
+        backendCusts.forEach((c) => {
+          const key = (c.company || '').toLowerCase().trim();
+          if (key && !mergedMap.has(key)) {
+            mergedMap.set(key, c);
+          }
+        });
+
+        const finalCustomers = Array.from(mergedMap.values());
+        setCustomers(finalCustomers);
       } catch (err) {
         console.error('Error fetching admin dashboard data:', err);
       } finally {
@@ -73,6 +122,10 @@ export default function AdminDashboard() {
       }
     }
     fetchAdminData();
+
+    // Listen for new orders placed from checkout to update admin dashboard instantly
+    window.addEventListener('oxoo_order_placed', fetchAdminData);
+    return () => window.removeEventListener('oxoo_order_placed', fetchAdminData);
   }, [selectedPeriod]);
 
   // Handle customer suspension / activation
@@ -758,7 +811,8 @@ export default function AdminDashboard() {
                     <table className="oxoo-table">
                       <thead>
                         <tr>
-                          <th>Company</th>
+                          <th>Customer & Organization</th>
+                          <th>Purchased Software</th>
                           <th>Plan</th>
                           <th>Amount</th>
                           <th>Status</th>
@@ -768,8 +822,33 @@ export default function AdminDashboard() {
                       <tbody>
                         {customers && customers.length > 0 ? (
                           customers.slice(0, 5).map((c, i) => (
-                            <tr key={i}>
-                              <td className="oxoo-table-company">{c.company}</td>
+                            <tr key={i} style={{ cursor: 'pointer' }} onClick={() => setSelectedCustomerDetail(c)}>
+                              <td className="oxoo-table-company">
+                                <div>
+                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{c.company}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                                    {c.customerName || 'Customer'} {c.email ? `• ${c.email}` : ''}
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                {c.apps && c.apps.length > 0 ? (
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', maxWidth: '200px' }}>
+                                    {c.apps.slice(0, 2).map((a, idx) => (
+                                      <span key={idx} style={{ fontSize: '10.5px', background: '#e0f2fe', color: '#0284c7', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                        {a}
+                                      </span>
+                                    ))}
+                                    {c.apps.length > 2 && (
+                                      <span style={{ fontSize: '10.5px', background: '#f1f5f9', color: '#64748b', padding: '2px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                                        +{c.apps.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>Suite Applications</span>
+                                )}
+                              </td>
                               <td>{c.plan}</td>
                               <td className="oxoo-table-amount">{c.amount}</td>
                               <td>
@@ -782,7 +861,7 @@ export default function AdminDashboard() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                            <td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
                               No registered customers yet.
                             </td>
                           </tr>
@@ -869,7 +948,8 @@ export default function AdminDashboard() {
                 <table className="oxoo-table">
                   <thead>
                     <tr>
-                      <th>Company Organization</th>
+                      <th>Customer & Organization</th>
+                      <th>Purchased Applications</th>
                       <th>Subscription Tier</th>
                       <th>Billing Value</th>
                       <th>Status</th>
@@ -883,8 +963,26 @@ export default function AdminDashboard() {
                         <td className="oxoo-table-company">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Building2 size={16} color="#0284c7" />
-                            {c.company}
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{c.company}</div>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>
+                                {c.customerName || 'Customer Admin'} {c.email ? `• ${c.email}` : ''}
+                              </div>
+                            </div>
                           </div>
+                        </td>
+                        <td>
+                          {c.apps && c.apps.length > 0 ? (
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', maxWidth: '240px' }}>
+                              {c.apps.map((a, idx) => (
+                                <span key={idx} style={{ fontSize: '11px', background: '#dbeafe', color: '#1e40af', padding: '2px 7px', borderRadius: '5px', fontWeight: 600 }}>
+                                  {a}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>All Enterprise Apps</span>
+                          )}
                         </td>
                         <td>{c.plan}</td>
                         <td className="oxoo-table-amount">{c.amount}</td>
@@ -911,6 +1009,22 @@ export default function AdminDashboard() {
                               onClick={() => handleToggleCustomerStatus(c.company, c.status)}
                             >
                               {c.status === 'Active' ? 'Suspend' : 'Activate'}
+                            </button>
+                            <button
+                              type="button"
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                background: '#f1f5f9',
+                                color: '#0284c7',
+                                border: 'none',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => setSelectedCustomerDetail(c)}
+                            >
+                              Details
                             </button>
                           </div>
                         </td>
@@ -1211,6 +1325,132 @@ export default function AdminDashboard() {
             </div>
           )}
         </main>
+
+        {/* Customer Details Modal */}
+        <AnimatePresence>
+          {selectedCustomerDetail && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(15, 23, 42, 0.65)',
+                backdropFilter: 'blur(4px)',
+                display: 'grid',
+                placeItems: 'center',
+                zIndex: 9999,
+                padding: '20px'
+              }}
+              onClick={() => setSelectedCustomerDetail(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                style={{
+                  background: '#ffffff',
+                  width: 'min(100%, 540px)',
+                  borderRadius: '16px',
+                  padding: '28px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  position: 'relative'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  style={{
+                    position: 'absolute',
+                    top: '18px',
+                    right: '18px',
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    cursor: 'pointer',
+                    display: 'grid',
+                    placeItems: 'center'
+                  }}
+                  onClick={() => setSelectedCustomerDetail(null)}
+                >
+                  <X size={16} />
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e0f2fe', color: '#0284c7', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: '20px' }}>
+                    {(selectedCustomerDetail.customerName || selectedCustomerDetail.company || 'C').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                      {selectedCustomerDetail.customerName || 'Customer Admin'}
+                    </h3>
+                    <span style={{ fontSize: '13px', color: '#64748b' }}>
+                      {selectedCustomerDetail.company}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Email Address</span>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{selectedCustomerDetail.email || 'customer@oxoo.ai'}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Phone</span>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{selectedCustomerDetail.phone || '+91 98765 43210'}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Subscribed Plan</span>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{selectedCustomerDetail.plan}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Total Paid / Billing</span>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>{selectedCustomerDetail.amount}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Subscription Status</span>
+                    <div>
+                      <span className={`oxoo-status-tag ${String(selectedCustomerDetail.status).toLowerCase()}`}>
+                        {selectedCustomerDetail.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Registered / Order Date</span>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{selectedCustomerDetail.date}</div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <span style={{ fontSize: '12px', color: '#475569', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                    Purchased Applications & Software Entitlements
+                  </span>
+                  {selectedCustomerDetail.apps && selectedCustomerDetail.apps.length > 0 ? (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {selectedCustomerDetail.apps.map((app, idx) => (
+                        <span key={idx} style={{ fontSize: '12px', background: '#dbeafe', color: '#1d4ed8', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                          ✓ {app}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Full Business Suite Entitlements (All 24 Apps)</div>
+                  )}
+                </div>
+
+                {selectedCustomerDetail.orderNumber && (
+                  <div style={{ fontSize: '12px', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                    Reference Order: <strong>{selectedCustomerDetail.orderNumber}</strong>
+                    {selectedCustomerDetail.paymentId && ` • Payment ID: ${selectedCustomerDetail.paymentId}`}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

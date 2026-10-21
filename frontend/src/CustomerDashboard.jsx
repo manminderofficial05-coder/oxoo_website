@@ -57,7 +57,51 @@ export default function CustomerDashboard() {
           getCustomerTickets()
         ]);
 
-        if (ovData) setOverview(ovData);
+        // Merge with locally stored purchased apps and user session
+        let localPurchased = [];
+        try {
+          const lp = localStorage.getItem('oxoo_purchased_apps');
+          if (lp) localPurchased = JSON.parse(lp);
+        } catch (e) {}
+
+        let storedUser = null;
+        try {
+          const su = localStorage.getItem('oxoo_user');
+          if (su) storedUser = JSON.parse(su);
+        } catch (e) {}
+
+        let mergedApps = [...(ovData?.purchasedApps || [])];
+        const appIds = new Set(mergedApps.map(a => a.id));
+
+        localPurchased.forEach((app) => {
+          if (!appIds.has(app.id)) {
+            mergedApps.push({
+              id: app.id,
+              name: app.name,
+              category: app.category || 'Business Suite',
+              entitled: true,
+              status: 'Active',
+              demoUrl: app.demoUrl || `/apps/${app.id}`
+            });
+            appIds.add(app.id);
+          }
+        });
+
+        const activeCount = mergedApps.filter(a => a.entitled).length;
+
+        const effectiveOverview = {
+          ...ovData,
+          customerName: storedUser?.name || ovData?.customerName || 'Customer Admin',
+          company: storedUser?.organization || ovData?.company || 'My Organization',
+          email: storedUser?.email || ovData?.email || 'admin@organization.com',
+          avatar: (storedUser?.name || ovData?.customerName || 'C').charAt(0).toUpperCase(),
+          currentPlan: storedUser?.plan || ovData?.currentPlan || 'Business Pro',
+          purchasedApps: mergedApps,
+          activeAppsCount: activeCount > 0 ? activeCount : (ovData?.activeAppsCount || 0),
+          totalPurchasedApps: mergedApps.length > 0 ? mergedApps.length : (ovData?.totalPurchasedApps || 0)
+        };
+
+        setOverview(effectiveOverview);
         if (billData) setBillingData(billData);
         if (teamData?.members) setTeamMembers(teamData.members);
         if (tktData?.tickets) setTickets(tktData.tickets);
@@ -68,6 +112,14 @@ export default function CustomerDashboard() {
       }
     }
     loadData();
+
+    // Listen for order placements or auth changes to re-sync dashboard instantly
+    window.addEventListener('oxoo_order_placed', loadData);
+    window.addEventListener('oxoo_auth_change', loadData);
+    return () => {
+      window.removeEventListener('oxoo_order_placed', loadData);
+      window.removeEventListener('oxoo_auth_change', loadData);
+    };
   }, []);
 
   // Handle plan upgrade
@@ -143,8 +195,9 @@ export default function CustomerDashboard() {
       setUpgradeModalOpen(true);
       return;
     }
-    navigate(`/apps/${app.id}/workspace?company=abctech.oxoo`, {
-      state: { companyName: 'ABC Technologies', appName: app.name }
+    const slug = app.id || (app.name ? app.name.toLowerCase().replace(/\s+/g, '-') : 'accounting');
+    navigate(`/apps/${slug}`, {
+      state: { companyName: overview?.company || 'My Organization', appName: app.name }
     });
   };
 
