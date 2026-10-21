@@ -527,29 +527,31 @@ export default function CheckoutPage() {
               </div>
 
               {/* Order Items Table */}
-              <table className="cart-review-table">
-                <thead>
-                  <tr>
-                    <th>Software Application</th>
-                    <th>Description</th>
-                    <th>Billing Cycle</th>
-                    <th>Rate / User</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((app) => (
-                    <tr key={app.id}>
-                      <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img src={app.iconSrc} alt={app.name} style={{ width: 32, height: 32 }} />
-                        <b>{app.name}</b>
-                      </td>
-                      <td style={{ color: '#64748b' }}>{app.desc}</td>
-                      <td>{isYearly ? 'Yearly' : 'Monthly'}</td>
-                      <td><b>₹{isYearly ? '560' : '740'}</b></td>
+              <div className="invoice-table-responsive-wrapper">
+                <table className="cart-review-table">
+                  <thead>
+                    <tr>
+                      <th>Software Application</th>
+                      <th>Description</th>
+                      <th>Billing Cycle</th>
+                      <th>Rate / User</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((app) => (
+                      <tr key={app.id}>
+                        <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <img src={app.iconSrc} alt={app.name} style={{ width: 32, height: 32 }} />
+                          <b>{app.name}</b>
+                        </td>
+                        <td style={{ color: '#64748b' }}>{app.desc}</td>
+                        <td>{isYearly ? 'Yearly' : 'Monthly'}</td>
+                        <td><b>₹{isYearly ? '560' : '740'}</b></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Price Breakdown Box */}
               <div className="cart-review-breakdown">
@@ -1028,42 +1030,44 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Invoice Items Table */}
-                  <table className="invoice-table-sheet">
-                    <thead>
-                      <tr>
-                        <th className="text-center" style={{ width: '40px' }}>#</th>
-                        <th>Application</th>
-                        <th>Description</th>
-                        <th className="text-center" style={{ width: '80px' }}>Users</th>
-                        <th className="text-right" style={{ width: '130px' }}>Unit Price (INR)</th>
-                        <th className="text-right" style={{ width: '130px' }}>Amount (INR)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((app, index) => {
-                        const itemAmount = (isYearly ? 560 : 740) * userCount;
-                        return (
-                          <tr key={app.id}>
-                            <td className="text-center">{index + 1}</td>
-                            <td>
-                              <div className="invoice-app-col-wrap">
-                                <div className="invoice-app-icon-badge">
-                                  <img src={app.iconSrc} alt={app.name} />
+                  <div className="invoice-table-responsive-wrapper">
+                    <table className="invoice-table-sheet">
+                      <thead>
+                        <tr>
+                          <th className="text-center" style={{ width: '40px' }}>#</th>
+                          <th>Application</th>
+                          <th>Description</th>
+                          <th className="text-center" style={{ width: '80px' }}>Users</th>
+                          <th className="text-right" style={{ width: '130px' }}>Unit Price (INR)</th>
+                          <th className="text-right" style={{ width: '130px' }}>Amount (INR)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((app, index) => {
+                          const itemAmount = (isYearly ? 560 : 740) * userCount;
+                          return (
+                            <tr key={app.id}>
+                              <td className="text-center">{index + 1}</td>
+                              <td>
+                                <div className="invoice-app-col-wrap">
+                                  <div className="invoice-app-icon-badge">
+                                    <img src={app.iconSrc} alt={app.name} />
+                                  </div>
+                                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{app.name}</span>
                                 </div>
-                                <span style={{ fontWeight: 700, color: '#0f172a' }}>{app.name}</span>
-                              </div>
-                            </td>
-                            <td style={{ color: '#475569', fontSize: '0.82rem' }}>{app.desc}</td>
-                            <td className="text-center">{userCount}</td>
-                            <td className="text-right">₹{(isYearly ? 560 : 740).toFixed(2)}</td>
-                            <td className="text-right" style={{ fontWeight: 800, color: '#0f172a' }}>
-                              ₹{itemAmount.toFixed(2)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              </td>
+                              <td style={{ color: '#475569', fontSize: '0.82rem' }}>{app.desc}</td>
+                              <td className="text-center">{userCount}</td>
+                              <td className="text-right">₹{(isYearly ? 560 : 740).toFixed(2)}</td>
+                              <td className="text-right" style={{ fontWeight: 800, color: '#0f172a' }}>
+                                ₹{itemAmount.toFixed(2)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
 
                   {/* Subtotal Breakdown Box */}
                   <div className="invoice-breakdown-wrapper">

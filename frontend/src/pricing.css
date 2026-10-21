@@ -534,6 +534,21 @@
 }
 
 @media (max-width: 580px) {
+  .pricing-hero-wrap {
+    padding: 16px 12px 6px;
+  }
+  .pricing-main-heading {
+    font-size: 1.45rem;
+  }
+  .pricing-sub-heading {
+    font-size: 0.8rem;
+  }
+  .pricing-cards-container {
+    padding: 0 12px;
+  }
+  .pricing-card-box {
+    padding: 20px 16px;
+  }
   .pricing-categories-full-grid {
     grid-template-columns: 1fr;
     gap: 16px;

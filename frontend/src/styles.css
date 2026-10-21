@@ -413,6 +413,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   }
 }
 
+@media (max-width: 600px) {
+  .nav-signin-link {
+    display: none;
+  }
+  .nav-actions {
+    gap: 8px;
+  }
+  .nav-try-free-btn {
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+}
+
 /* =========================================================
    MEGA MENU MODAL / DROPDOWN
    ========================================================= */
@@ -1163,6 +1176,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     margin-top: 14px;
     gap: 10px;
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .row-3-anchor-wrapper {
+    margin-bottom: 8px;
+  }
+  .hero-price-annotation {
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .price-drawn-arrow {
+    width: 52px;
+    height: 40px;
+  }
+  .price-headline {
+    font-size: 20px;
+  }
+  .price-subline {
+    font-size: 17px;
   }
 }
 

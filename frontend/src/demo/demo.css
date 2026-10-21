@@ -1422,3 +1422,72 @@
   overflow: hidden !important;
   overflow-x: hidden !important;
 }
+
+/* Mobile Responsive Optimization for Demo Viewer */
+@media (max-width: 900px) {
+  .oxoo-demo-count-badge {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .oxoo-viewer-top-bar {
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    padding: 0 10px !important;
+    gap: 8px !important;
+  }
+  .oxoo-viewer-brand-group {
+    gap: 8px !important;
+  }
+  .oxoo-viewer-app-badge {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    max-width: 100px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .oxoo-viewer-timer-capsule {
+    padding: 3px 8px !important;
+    gap: 4px !important;
+  }
+  .oxoo-timer-label {
+    display: none !important;
+  }
+  .oxoo-timer-digits {
+    font-size: 13px !important;
+  }
+  .oxoo-viewer-actions-group {
+    gap: 6px !important;
+  }
+  .oxoo-viewer-btn-leave {
+    padding: 5px 8px !important;
+    font-size: 11.5px !important;
+  }
+  .oxoo-viewer-btn-buy {
+    padding: 5px 10px !important;
+    font-size: 11.5px !important;
+  }
+  .oxoo-viewer-iframe-frame {
+    height: calc(100dvh - 55px) !important;
+    min-height: calc(100dvh - 55px) !important;
+    max-height: calc(100dvh - 55px) !important;
+  }
+}
+
+@media (max-width: 580px) {
+  .oxoo-demo-suite-nav {
+    display: none !important;
+  }
+  .oxoo-viewer-app-badge {
+    display: none !important;
+  }
+  .oxoo-viewer-btn-leave {
+    padding: 5px 8px !important;
+  }
+  .oxoo-viewer-btn-buy {
+    padding: 5px 8px !important;
+  }
+}

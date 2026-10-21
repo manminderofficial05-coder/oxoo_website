@@ -501,6 +501,8 @@ export function Header() {
               ['All Apps & Services', '/services'],
               ['Industries We Serve', '/industries'],
               ['Pricing Plans', '/pricing'],
+              ['Customer Portal', '/dashboard'],
+              ['Admin Console', '/admin'],
               ['Book a Demo / Contact', '/contact'],
               ['Sign In', '/signin']
             ].map(([n, p]) => (
