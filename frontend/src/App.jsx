@@ -1766,15 +1766,36 @@ export default function App() {
       <Route path="/demo" element={<AppDemoPage />} />
       <Route path="/demo/request" element={<AppDemoPage />} />
       <Route path="/demo/live" element={<WebsiteDemoViewer />} />
+      <Route path="/demo/ai" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
       <Route path="/demo/ai-demo" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/demo/productivity" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/demo/sales" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
       <Route path="/demo/sales-demo" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
+      <Route path="/demo/hrms" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
       <Route path="/demo/hrms-demo" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
+      <Route path="/demo/finance" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
       <Route path="/demo/finance-demo" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
       <Route path="/demo/oxoo-finance-demo" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
-      <Route path="/demo/supply-chain-demo" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
       <Route path="/demo/supply-chain" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
-      <Route path="/demo/website-builder-demo" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
+      <Route path="/demo/supply-chain-demo" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
+      <Route path="/demo/website" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
       <Route path="/demo/website-demo" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
+      <Route path="/demo/website-builder-demo" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
+      {/* Direct demo static path fallbacks */}
+      <Route path="/dashboard/overview" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/overview/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/ai-chat" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/voice-ai" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/appointments" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/patient-crm" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/agents" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/dashboard/leads" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/ai-demo/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+      <Route path="/sales-demo/*" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
+      <Route path="/hrms-demo/*" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
+      <Route path="/finance-demo/*" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
+      <Route path="/supply-chain-demo/*" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
+      <Route path="/website-builder-demo/*" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
       <Route path="/services" element={<ServicesPage />} />
       <Route path="/services/:slug" element={<AppShowcase />} />
       <Route path="/services/:slug/portal" element={<PrimeProPortal />} />

@@ -18,7 +18,7 @@ export const DEMO_CONFIGS = {
     shortLabel: 'AI & Productivity',
     badge: '⚡ Productivity Suite Demo',
     category: 'Productivity',
-    src: '/ai-demo/demo.html',
+    src: '/ai-demo/dashboard/overview/index.html',
     title: 'Hospital Cart AI Intelligence & Productivity Platform',
     desc: 'Voice AI agents, automated workflow sequences, patient CRM, and smart task scheduling.',
     accentColor: '#8b5cf6',
@@ -30,7 +30,7 @@ export const DEMO_CONFIGS = {
     shortLabel: 'Sales CRM',
     badge: '💼 Sales & CRM Demo',
     category: 'Sales',
-    src: '/sales-demo/dashboard.html',
+    src: '/sales-demo/dashboard/index.html',
     title: 'LeadConnect Visual Sales Pipeline & CRM Dialing Suite',
     desc: 'Real-time sales deal stages, automated call dialer, lead management, and conversion analytics.',
     accentColor: '#f97316',
@@ -139,17 +139,34 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
   if (selectedSlugs.length > 0) {
     const uniqueIds = Array.from(new Set(selectedSlugs.map(mapSlugToDemoId)));
     visibleDemoIds = uniqueIds.filter((id) => DEMO_CONFIGS[id]);
+  } else if (queryParams.get('demo')) {
+    const d = queryParams.get('demo').trim().toLowerCase();
+    if (d === 'ai' || d === 'ai-demo' || d === 'productivity') visibleDemoIds = ['ai-demo'];
+    else if (d === 'sales' || d === 'sales-demo') visibleDemoIds = ['sales-demo'];
+    else if (d === 'hrms' || d === 'hrms-demo') visibleDemoIds = ['hrms-demo'];
+    else if (d === 'finance' || d === 'finance-demo' || d === 'oxoo-finance-demo') visibleDemoIds = ['finance-demo'];
+    else if (d.includes('supply')) visibleDemoIds = ['supply-chain-demo'];
+    else if (d.includes('website')) visibleDemoIds = ['website-builder-demo'];
+    else if (DEMO_CONFIGS[d]) visibleDemoIds = [d];
   } else if (defaultDemo && DEMO_CONFIGS[defaultDemo]) {
     visibleDemoIds = [defaultDemo];
   } else {
     // Direct path segment check (e.g. /demo/ai-demo, /demo/sales-demo, etc.)
-    const pathPart = location.pathname.split('/').filter(Boolean).pop();
-    if (pathPart && DEMO_CONFIGS[pathPart]) {
-      visibleDemoIds = [pathPart];
-    } else if (pathPart === 'oxoo-finance-demo') {
+    const pathPart = (location.pathname.split('/').filter(Boolean).pop() || '').toLowerCase();
+    if (pathPart === 'ai' || pathPart === 'ai-demo' || pathPart === 'productivity') {
+      visibleDemoIds = ['ai-demo'];
+    } else if (pathPart === 'sales' || pathPart === 'sales-demo') {
+      visibleDemoIds = ['sales-demo'];
+    } else if (pathPart === 'hrms' || pathPart === 'hrms-demo') {
+      visibleDemoIds = ['hrms-demo'];
+    } else if (pathPart === 'finance' || pathPart === 'finance-demo' || pathPart === 'oxoo-finance-demo') {
       visibleDemoIds = ['finance-demo'];
     } else if (pathPart === 'supply-chain-demo' || pathPart === 'supply-chain' || pathPart === 'supply_chain') {
       visibleDemoIds = ['supply-chain-demo'];
+    } else if (pathPart === 'website' || pathPart === 'website-demo' || pathPart === 'website-builder-demo') {
+      visibleDemoIds = ['website-builder-demo'];
+    } else if (pathPart && DEMO_CONFIGS[pathPart]) {
+      visibleDemoIds = [pathPart];
     } else if (appSlug) {
       visibleDemoIds = [mapSlugToDemoId(appSlug)];
     } else {

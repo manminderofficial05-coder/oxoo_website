@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node setup_demo_routes.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
