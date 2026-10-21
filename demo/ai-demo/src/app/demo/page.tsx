@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { startDemoSession } from '@/demo/session';
+import { startDemoSession } from '../../demo/session';
 
 /**
  * One-click demo entry for the company website: https://<demo-host>/demo
