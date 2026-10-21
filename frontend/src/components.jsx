@@ -309,7 +309,7 @@ export function Header() {
         {/* Right Action Items: Customer Login & Admin Login */}
         <div className="nav-actions">
           <Link
-            to="/signin?role=customer"
+            to="/customer/login"
             className="nav-customer-login-btn"
             title="Customer Portal Login"
           >
@@ -318,7 +318,7 @@ export function Header() {
           </Link>
 
           <Link
-            to="/signin?role=admin"
+            to="/admin/login"
             className="nav-admin-login-btn"
             title="Admin Console Login"
           >
@@ -492,8 +492,8 @@ export function Header() {
               ['All Apps & Services', '/services'],
               ['Industries We Serve', '/industries'],
               ['Pricing Plans', '/pricing'],
-              ['Customer Login', '/signin?role=customer'],
-              ['Admin Login', '/signin?role=admin'],
+              ['Customer Login', '/customer/login'],
+              ['Admin Login', '/admin/login'],
               ['Book a Demo / Contact', '/contact']
             ].map(([n, p]) => (
               <Link key={n} to={p} onClick={closeAll} className="mobile-link">

@@ -26,6 +26,8 @@ import ChooseAppsPage from './ChooseAppsPage';
 import AppDemoPage from './AppDemoPage';
 import PricingPage from './PricingPage';
 import CheckoutPage from './CheckoutPage';
+import CustomerLoginPage from './CustomerLoginPage';
+import AdminLoginPage from './AdminLoginPage';
 
 function useScrollTop() {
   const location = useLocation();
@@ -1575,185 +1577,15 @@ function ContactPage() {
 }
 
 // -------------------------------------------------------------
-// SIGN IN PAGE (/signin)
+// SIGN IN ROUTER (/signin & /login compatibility)
 // -------------------------------------------------------------
-function SignInPage() {
+function SignInRouter() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const requestedRole = searchParams.get('role');
-  const initialRole = requestedRole === 'admin' ? 'admin' : 'customer';
-
-  const [mode, setMode] = useState(initialRole);
-  const [email, setEmail] = useState(initialRole === 'admin' ? 'admin@oxoo.ai' : 'priya@retailmart.in');
-  const [password, setPassword] = useState('oxoo123');
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const role = params.get('role');
-    if (role === 'admin') {
-      setMode('admin');
-      setEmail('admin@oxoo.ai');
-      setPassword('oxoo123');
-    } else if (role === 'customer') {
-      setMode('customer');
-      setEmail('priya@retailmart.in');
-      setPassword('oxoo123');
-    }
-  }, [location.search]);
-
-  const handleQuickFill = (userType) => {
-    setErrorMsg('');
-    if (userType === 'admin') {
-      setMode('admin');
-      setEmail('admin@oxoo.ai');
-      setPassword('oxoo123');
-    } else {
-      setMode('customer');
-      setEmail('priya@retailmart.in');
-      setPassword('oxoo123');
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
-      return;
-    }
-    setErrorMsg('');
-    setLoading(true);
-    try {
-      const res = await loginUser(email, password);
-      if (res && res.token) {
-        localStorage.setItem('oxoo_token', res.token);
-        localStorage.setItem('oxoo_user', JSON.stringify(res.user));
-        setSuccessMsg(`Welcome back, ${res.user?.name || 'User'}! Redirecting...`);
-        setTimeout(() => {
-          if (mode === 'admin' || res.user?.role === 'superadmin') {
-            navigate('/admin');
-          } else {
-            navigate('/dashboard');
-          }
-        }, 700);
-      }
-    } catch (err) {
-      setErrorMsg(err.message || 'Login failed. Please verify credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <>
-      <Header />
-      <main className="signin-page">
-        <div className="signin-card">
-          <Logo stacked={true} />
-          <span className="eyebrow">WELCOME TO OXOO.AI</span>
-          <h1>Sign in to your account</h1>
-          <p>Access your workspace, projects, and connected business apps.</p>
-
-          <div className="signin-tabs">
-            <button
-              type="button"
-              className={mode === 'customer' ? 'selected' : ''}
-              onClick={() => { setMode('customer'); setEmail(''); setPassword(''); }}
-            >
-              Customer
-            </button>
-            <button
-              type="button"
-              className={mode === 'admin' ? 'selected' : ''}
-              onClick={() => { setMode('admin'); setEmail('admin@oxoo.ai'); setPassword('oxoo123'); }}
-            >
-              Admin
-            </button>
-          </div>
-
-          {/* 1-Click Quick Demo Login Shortcuts */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('customer')}
-              className="button button-small button-outline"
-              style={{ fontSize: '12px', flex: 1, padding: '7px 10px' }}
-            >
-              ⚡ Demo User
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('admin')}
-              className="button button-small button-outline"
-              style={{ fontSize: '12px', flex: 1, padding: '7px 10px' }}
-            >
-              🛡️ Demo Admin
-            </button>
-          </div>
-
-          {errorMsg && (
-            <div style={{ padding: '8px 12px', fontSize: '13px', marginBottom: '14px', borderRadius: '8px', background: '#fee2e2', color: '#b91c1c' }}>
-              {errorMsg}
-            </div>
-          )}
-          {successMsg && (
-            <div style={{ padding: '8px 12px', fontSize: '13px', marginBottom: '14px', borderRadius: '8px', background: '#dcfce7', color: '#15803d' }}>
-              {successMsg}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <label>
-              Email address
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-              />
-            </label>
-
-            <button
-              type="submit"
-              className="button button-emerald full-button"
-              disabled={loading}
-              style={{ marginTop: '14px' }}
-            >
-              {loading ? 'Authenticating...' : 'Sign In ➔'}
-            </button>
-          </form>
-
-          <small style={{ display: 'block', marginTop: '16px', color: '#64748b' }}>
-            Oxoo.ai Enterprise SSO with Google Workspace and Microsoft Azure AD enabled.
-          </small>
-
-          <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-            <Link to="/dashboard" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}>
-              Direct Customer Portal ➔
-            </Link>
-            <Link to="/admin" style={{ color: '#714b67', fontWeight: 600, textDecoration: 'none' }}>
-              Direct Admin Console ➔
-            </Link>
-          </div>
-        </div>
-      </main>
-      <Footer />
-    </>
-  );
+  if (searchParams.get('role') === 'admin') {
+    return <AdminLoginPage />;
+  }
+  return <CustomerLoginPage />;
 }
 
 // -------------------------------------------------------------
@@ -1846,8 +1678,12 @@ export default function App() {
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/buy" element={<CheckoutPage />} />
       <Route path="/contact" element={<ContactPage />} />
-      <Route path="/signin" element={<SignInPage />} />
-      <Route path="/login" element={<SignInPage />} />
+      <Route path="/customer/login" element={<CustomerLoginPage />} />
+      <Route path="/customer-login" element={<CustomerLoginPage />} />
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/admin-login" element={<AdminLoginPage />} />
+      <Route path="/signin" element={<SignInRouter />} />
+      <Route path="/login" element={<SignInRouter />} />
       <Route path="/customer" element={<CustomerDashboard />} />
       <Route path="/dashboard" element={<CustomerDashboard />} />
       <Route path="/admin" element={<AdminDashboard />} />

@@ -165,6 +165,18 @@ app.post('/api/auth/login', async (req, res, next) => {
       });
     }
 
+    // Default demo customer shortcut
+    if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@oxoo.ai' || emailNorm === 'demo@oxoo.ai' || emailNorm === 'user@oxoo.ai') &&
+        (password === 'oxoo123' || password === 'demo123' || password === 'customer123')) {
+      const custId = 101;
+      const token = jwt.sign({ id: custId, email: emailNorm, name: 'Priya Sharma', role: 'customer' }, JWT_SECRET, { expiresIn: '7d' });
+      return res.json({
+        message: 'Authenticated as Customer.',
+        token,
+        user: { id: custId, name: 'Priya Sharma', email: emailNorm, role: 'customer', organization: 'RetailMart Solutions' }
+      });
+    }
+
     if (!isDbConnected) {
       const token = jwt.sign({ id: 'user-guest', email: emailNorm, name: 'Demo User', role: 'member' }, JWT_SECRET, { expiresIn: '7d' });
       return res.json({
