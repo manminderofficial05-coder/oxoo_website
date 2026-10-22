@@ -219,6 +219,41 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
   const demoSrc = resolveDemoSrc(activeDemoId, activeAppObj?.slug);
   const demoTitle = `${displayAppName ? `Oxoo ${displayAppName} · ` : ''}${activeConfig.title}`;
 
+  // Demo Email OTP Verification Gate States (Enforces OTP verification before live demo begins!)
+  const [isDemoVerified, setIsDemoVerified] = useState(() => {
+    try {
+      if (queryParams.get('verified') === 'true') return true;
+      if (sessionStorage.getItem('oxoo_demo_session_verified') === 'true') return true;
+      if (localStorage.getItem('oxoo_demo_verified') === 'true') return true;
+    } catch (e) {}
+    return false;
+  });
+
+  useEffect(() => {
+    if (queryParams.get('verified') === 'true') {
+      try {
+        sessionStorage.setItem('oxoo_demo_session_verified', 'true');
+        localStorage.setItem('oxoo_demo_verified', 'true');
+      } catch (e) {}
+      setIsDemoVerified(true);
+    }
+  }, []);
+
+  const [gateEmail, setGateEmail] = useState(() => {
+    try {
+      return localStorage.getItem('oxoo_demo_email') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [gateOtp, setGateOtp] = useState('');
+  const [isGateOtpSent, setIsGateOtpSent] = useState(false);
+  const [isGateSending, setIsGateSending] = useState(false);
+  const [isGateVerifying, setIsGateVerifying] = useState(false);
+  const [gateError, setGateError] = useState('');
+  const [gateSuccess, setGateSuccess] = useState('');
+  const [gateCooldown, setGateCooldown] = useState(0);
+
   // 2 Minutes = 120 seconds countdown
   const INITIAL_TIME_SECONDS = 120;
   const [secondsLeft, setSecondsLeft] = useState(INITIAL_TIME_SECONDS);
@@ -341,29 +376,6 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
       iframe.src = resolveDemoSrc(demoId);
     }
   };
-
-  // Demo Email OTP Verification Gate States (Enforces OTP verification before live demo begins!)
-  const [isDemoVerified, setIsDemoVerified] = useState(() => {
-    try {
-      if (sessionStorage.getItem('oxoo_demo_session_verified') === 'true') return true;
-    } catch (e) {}
-    return false;
-  });
-
-  const [gateEmail, setGateEmail] = useState(() => {
-    try {
-      return localStorage.getItem('oxoo_demo_email') || '';
-    } catch (e) {
-      return '';
-    }
-  });
-  const [gateOtp, setGateOtp] = useState('');
-  const [isGateOtpSent, setIsGateOtpSent] = useState(false);
-  const [isGateSending, setIsGateSending] = useState(false);
-  const [isGateVerifying, setIsGateVerifying] = useState(false);
-  const [gateError, setGateError] = useState('');
-  const [gateSuccess, setGateSuccess] = useState('');
-  const [gateCooldown, setGateCooldown] = useState(0);
 
   useEffect(() => {
     let timer;

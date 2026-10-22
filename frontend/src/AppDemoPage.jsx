@@ -17,9 +17,23 @@ export default function AppDemoPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Parse any query params (e.g. ?app=accounting or ?company=...)
+  // Parse any query params (e.g. ?apps=ai or ?app=ai or ?company=...)
   const queryParams = new URLSearchParams(location.search);
-  const initialSlug = appSlug || queryParams.get('app') || 'accounting';
+  const rawAppsParam = queryParams.get('apps') || queryParams.get('app');
+  const firstAppSlug = rawAppsParam ? rawAppsParam.split(',')[0].trim() : null;
+
+  // Read stored selection from localStorage if available
+  let storedAppSlug = null;
+  try {
+    const rawStored = localStorage.getItem('oxoo_selected_apps');
+    if (rawStored) {
+      const parsed = JSON.parse(rawStored);
+      if (Array.isArray(parsed) && parsed.length > 0) storedAppSlug = parsed[0];
+    }
+  } catch (e) {}
+
+  // Explicit query param (?apps=...) has highest priority, then appSlug from route, then stored selection, then 'accounting'
+  const initialSlug = firstAppSlug || (appSlug && appSlug !== 'demo' ? appSlug : null) || storedAppSlug || 'accounting';
 
   // App Metadata state
   const [currentApp, setCurrentApp] = useState(() => getAppMeta(initialSlug));
@@ -92,12 +106,26 @@ export default function AppDemoPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Update app when route param changes
+  // Update app when route param or search params change
   useEffect(() => {
-    if (appSlug) {
-      setCurrentApp(getAppMeta(appSlug));
+    const params = new URLSearchParams(location.search);
+    const rawParam = params.get('apps') || params.get('app');
+    const firstSlug = rawParam ? rawParam.split(',')[0].trim() : null;
+
+    let localSlug = null;
+    try {
+      const rawStored = localStorage.getItem('oxoo_selected_apps');
+      if (rawStored) {
+        const parsed = JSON.parse(rawStored);
+        if (Array.isArray(parsed) && parsed.length > 0) localSlug = parsed[0];
+      }
+    } catch (e) {}
+
+    const targetSlug = firstSlug || (appSlug && appSlug !== 'demo' ? appSlug : null) || localSlug;
+    if (targetSlug) {
+      setCurrentApp(getAppMeta(targetSlug));
     }
-  }, [appSlug]);
+  }, [appSlug, location.search]);
 
   // Derived subdomain from company name (empty until typed)
   const cleanSubdomain = (
@@ -115,12 +143,15 @@ export default function AppDemoPage() {
     setCurrentApp(appItem);
     setChangeMenuOpen(false);
     setSearchAppQuery('');
+    try {
+      localStorage.setItem('oxoo_selected_apps', JSON.stringify([appItem.slug]));
+    } catch (e) {}
+    navigate(`/apps/${appItem.slug}/demo?apps=${encodeURIComponent(appItem.slug)}`, { replace: true });
   };
 
   const handleCelebrationComplete = () => {
-    const appsParam = queryParams.get('apps');
-    const appsQuery = appsParam ? `&apps=${encodeURIComponent(appsParam)}` : '';
-    navigate(`/apps/${currentApp.slug}/live-demo?company=${encodeURIComponent(`${cleanSubdomain}.oxoo`)}${appsQuery}`);
+    const appsParam = queryParams.get('apps') || queryParams.get('app') || currentApp.slug;
+    navigate(`/apps/${currentApp.slug}/live-demo?company=${encodeURIComponent(`${cleanSubdomain}.oxoo`)}&verified=true&apps=${encodeURIComponent(appsParam)}`);
   };
 
   const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

@@ -53,8 +53,19 @@ export function getAppMeta(slugOrApp) {
     ? slugOrApp.toLowerCase().trim()
     : (slugOrApp.slug || slugOrApp.id || '').toLowerCase().trim();
 
-  // Try exact slug match
-  let found = ALL_SYSTEM_APPS.find((a) => a.slug === slug);
+  // Try exact slug match or alias match
+  const aliasMap = {
+    'ai': 'artificial-intelligence',
+    'artificial-intelligence': 'artificial-intelligence',
+    'hr': 'human-resources',
+    'hrms': 'human-resources',
+    'supply-chain': 'inventory',
+    'supply_chain': 'inventory',
+    'website': 'website-builder'
+  };
+  const targetSlug = aliasMap[slug] || slug;
+
+  let found = ALL_SYSTEM_APPS.find((a) => a.slug === targetSlug || a.slug === slug);
   if (found) return found;
 
   // Try matching by name

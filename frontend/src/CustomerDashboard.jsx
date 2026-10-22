@@ -223,6 +223,9 @@ export default function CustomerDashboard() {
     }
   };
 
+  // Shared secret service key matching Oxoo Finance
+  const OXOO_FINANCE_SERVICE_KEY = "oxoo_live_secure_key_2026";
+
   // Application launch handler with strict entitlement verification
   const handleOpenApp = (app) => {
     if (!app.entitled) {
@@ -231,7 +234,15 @@ export default function CustomerDashboard() {
       setUpgradeModalOpen(true);
       return;
     }
-    const slug = app.id || (app.name ? app.name.toLowerCase().replace(/\s+/g, '-') : 'accounting');
+    const slug = (app.id || (app.name ? app.name.toLowerCase().replace(/\s+/g, '-') : 'accounting')).toLowerCase();
+
+    // If opening Finance/Accounting, launch authenticated live suite with service key
+    if (slug === 'finance' || slug.includes('finance') || slug === 'accounting') {
+      const financeUrl = `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&user=${encodeURIComponent(overview?.email || storedUser?.email || 'customer')}`;
+      window.open(financeUrl, '_blank');
+      return;
+    }
+
     navigate(`/apps/${slug}`, {
       state: { companyName: overview?.company || 'My Organization', appName: app.name }
     });

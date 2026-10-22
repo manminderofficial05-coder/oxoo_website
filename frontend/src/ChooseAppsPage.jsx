@@ -39,7 +39,7 @@ export default function ChooseAppsPage() {
     } catch (e) {}
 
     const slugsParam = slugs.join(',');
-    navigate(`/demo?apps=${encodeURIComponent(slugsParam)}`);
+    navigate(`/apps/${slugs[0]}/demo?apps=${encodeURIComponent(slugsParam)}`);
   };
 
   return (

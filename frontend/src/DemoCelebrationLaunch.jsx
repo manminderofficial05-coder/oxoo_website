@@ -184,6 +184,21 @@ export default function DemoCelebrationLaunch({
     };
   }, [phase]);
 
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  // Global safety fallback: force transition after 5.5s max
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      if (onCompleteRef.current) {
+        onCompleteRef.current();
+      }
+    }, 5500);
+    return () => clearTimeout(safetyTimer);
+  }, []);
+
   // -------------------------------------------------------------
   // TYPEWRITER ANIMATION ORCHESTRATOR
   // -------------------------------------------------------------
@@ -205,7 +220,7 @@ export default function DemoCelebrationLaunch({
       if (charIndex < targetText.length) {
         setDisplayText(targetText.slice(0, charIndex + 1));
         charIndex++;
-        const speed = phase === 1 ? 45 : (phase === 2 ? 30 : 40);
+        const speed = phase === 1 ? 25 : (phase === 2 ? 18 : 22);
         timeoutId = setTimeout(typeNextChar, speed);
       } else {
         setIsTyping(false);
@@ -214,23 +229,29 @@ export default function DemoCelebrationLaunch({
         if (phase === 1) {
           timeoutId = setTimeout(() => {
             setPhase(2);
-          }, 1200);
+          }, 800);
         } else if (phase === 2) {
           timeoutId = setTimeout(() => {
             setPhase(3);
-          }, 1800);
+          }, 1000);
         } else if (phase === 3) {
           timeoutId = setTimeout(() => {
-            if (onComplete) onComplete();
-          }, 1600);
+            if (onCompleteRef.current) onCompleteRef.current();
+          }, 1200);
         }
       }
     };
 
-    timeoutId = setTimeout(typeNextChar, 250);
+    timeoutId = setTimeout(typeNextChar, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [phase, appName, onComplete]);
+  }, [phase, appName]);
+
+  const handleSkipToDemo = () => {
+    if (onCompleteRef.current) {
+      onCompleteRef.current();
+    }
+  };
 
   return (
     <div
@@ -244,10 +265,46 @@ export default function DemoCelebrationLaunch({
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        transition: 'background-color 0.8s ease',
-        backgroundColor: phase === 3 ? '#ffffff' : '#000000'
+        transition: 'background-color 0.6s ease',
+        backgroundColor: phase === 3 ? '#0f172a' : '#000000'
       }}
     >
+      {/* Quick Skip to Demo Button (Top Right) */}
+      <button
+        type="button"
+        onClick={handleSkipToDemo}
+        style={{
+          position: 'absolute',
+          top: '24px',
+          right: '24px',
+          zIndex: 10,
+          background: 'rgba(255, 255, 255, 0.12)',
+          border: '1px solid rgba(255, 255, 255, 0.25)',
+          color: '#ffffff',
+          borderRadius: '999px',
+          padding: '8px 18px',
+          fontSize: '13px',
+          fontWeight: '700',
+          cursor: 'pointer',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)';
+          e.currentTarget.style.borderColor = '#ffffff';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+        }}
+      >
+        <span>Open Demo Now</span>
+        <span>→</span>
+      </button>
       {/* Canvas for Continuous Fireworks in Phases 1 & 2 */}
       {phase !== 3 && (
         <canvas
@@ -367,7 +424,7 @@ export default function DemoCelebrationLaunch({
                 style={{
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                   fontSize: 'clamp(32px, 4.5vw, 56px)',
-                  color: '#263446',
+                  color: '#ffffff',
                   fontWeight: '500',
                   margin: '0 0 24px',
                   letterSpacing: '-0.5px'
@@ -376,22 +433,22 @@ export default function DemoCelebrationLaunch({
                 {displayText.startsWith('Building your ') ? (
                   <>
                     <span>Building your </span>
-                    <strong style={{ color: '#0f172a', fontWeight: '800' }}>
+                    <strong style={{ color: '#38bdf8', fontWeight: '800' }}>
                       {displayText.replace('Building your ', '')}
                     </strong>
                   </>
                 ) : (
                   displayText
                 )}
-                <span className="typewriter-cursor dark">|</span>
+                <span className="typewriter-cursor">|</span>
               </h2>
 
               {/* Progress Bar & Status */}
               <div
                 style={{
-                  width: '280px',
-                  height: '4px',
-                  backgroundColor: '#f1f5f9',
+                  width: '320px',
+                  height: '5px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
                   borderRadius: '999px',
                   margin: '0 auto',
                   overflow: 'hidden',
@@ -405,7 +462,7 @@ export default function DemoCelebrationLaunch({
                     left: 0,
                     width: '60%',
                     height: '100%',
-                    backgroundColor: '#00a3e0',
+                    background: 'linear-gradient(90deg, #38bdf8, #00e5ff)',
                     borderRadius: '999px',
                     animation: 'subdomainBarSlide 1.2s infinite ease-in-out'
                   }}
@@ -414,14 +471,38 @@ export default function DemoCelebrationLaunch({
 
               <p
                 style={{
-                  fontSize: '14px',
-                  color: '#64748b',
-                  marginTop: '14px',
+                  fontSize: '14.5px',
+                  color: '#94a3b8',
+                  marginTop: '16px',
+                  marginBottom: '26px',
                   fontWeight: '500'
                 }}
               >
-                Configuring modules for <strong>{companyName}.oxoo.com</strong>...
+                Configuring modules for <strong style={{ color: '#e2e8f0' }}>{companyName}.oxoo.com</strong>...
               </p>
+
+              <button
+                type="button"
+                onClick={handleSkipToDemo}
+                style={{
+                  padding: '12px 28px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 10px 25px rgba(2, 132, 199, 0.35)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>Launch Live Demo Now</span>
+                <span>→</span>
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

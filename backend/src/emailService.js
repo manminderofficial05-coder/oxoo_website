@@ -38,6 +38,8 @@ async function sendOtpEmail({ email, purpose = 'Verification', customerName = ''
     attempts: 0
   });
 
+  console.log(`[OTP Generated] ${normEmail} => ${otp}`);
+
   const transporter = getMailTransporter();
 
   const isDemo = purpose.toLowerCase().includes('demo');
