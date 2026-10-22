@@ -256,18 +256,14 @@ export default function CheckoutPage() {
     setOtpError('');
     setOtpSuccess('');
     try {
-      const otpRes = await sendEmailOtp({
+      await sendEmailOtp({
         email: cleanEmail,
         purpose: 'OXOO Billing & Payment Verification',
         customerName: (formData.yourName || '').trim()
       });
+      setOtpValue(''); // Keep empty so customer types the code received on email
       setIsOtpModalOpen(true);
-      if (otpRes && otpRes.fallbackOtp) {
-        setOtpSuccess(`Verification code sent to ${cleanEmail}`);
-        setOtpValue(otpRes.fallbackOtp);
-      } else {
-        setOtpSuccess(`Verification code sent to ${cleanEmail}`);
-      }
+      setOtpSuccess(`Verification code sent to ${cleanEmail}`);
       setResendCooldown(30);
     } catch (err) {
       alert(err.message || 'Failed to send verification code. Please check your email.');

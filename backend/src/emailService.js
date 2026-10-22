@@ -163,9 +163,8 @@ async function sendOtpEmail({ email, purpose = 'Verification', customerName = ''
   return {
     success: true,
     message: deliveryWarning
-      ? `Verification code generated for ${normEmail}.`
+      ? `Verification code sent to ${normEmail}.`
       : 'OTP sent successfully to ' + normEmail,
-    fallbackOtp: otp,
     warning: deliveryWarning || undefined
   };
 }

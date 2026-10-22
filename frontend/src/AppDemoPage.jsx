@@ -201,18 +201,16 @@ export default function AppDemoPage() {
 
     try {
       // Send OTP to customer's work email
-      const otpRes = await sendEmailOtp({
+      await sendEmailOtp({
         email: cleanEmail,
         purpose: 'OXOO Live Demo Access',
         customerName: fullName.trim()
       });
 
+      setOtpCode(''); // Keep empty so user must enter code from email
       setIsOtpStep(true);
       setOtpError('');
       setOtpSuccess(`A 6-digit verification code has been sent to ${cleanEmail}`);
-      if (otpRes && otpRes.fallbackOtp) {
-        setOtpCode(otpRes.fallbackOtp);
-      }
       setResendCooldown(30);
       setIsSubmitting(false);
     } catch (err) {
