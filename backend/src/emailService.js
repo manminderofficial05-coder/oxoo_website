@@ -38,20 +38,106 @@ function createTransporters() {
   return { primary, secondary };
 }
 
-// Function to send email with automatic Port 465 -> Port 587 fallback
+// Send via Resend HTTPS REST API (Port 443 - Never blocked on Render)
+async function sendViaResend({ to, subject, html }) {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) return null;
+
+  const fromEmail = process.env.RESEND_FROM || 'OXOO <onboarding@resend.dev>';
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: [to],
+      subject,
+      html
+    })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`Resend API error (${res.status}): ${data.message || JSON.stringify(data)}`);
+  }
+  return { success: true, messageId: data.id, provider: 'resend' };
+}
+
+// Send via Brevo HTTPS REST API (Port 443 - Never blocked on Render)
+async function sendViaBrevo({ to, subject, html }) {
+  const apiKey = (process.env.BREVO_API_KEY || '').trim();
+  if (!apiKey) return null;
+
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'manminder.singh@primepro.ai';
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      'accept': 'application/json'
+    },
+    body: JSON.stringify({
+      sender: { name: 'OXOO', email: senderEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html
+    })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`Brevo API error (${res.status}): ${data.message || JSON.stringify(data)}`);
+  }
+  return { success: true, messageId: data.messageId, provider: 'brevo' };
+}
+
+// Function to send email with automatic HTTPS (Resend / Brevo) -> SMTP (Port 465 -> Port 587) fallback
 async function sendMailWithFallback(mailOptions) {
+  const to = mailOptions.to;
+  const subject = mailOptions.subject;
+  const html = mailOptions.html;
+
+  // 1. Try Resend HTTPS REST API (Port 443) if configured
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const res = await sendViaResend({ to, subject, html });
+      if (res && res.success) {
+        console.log(`[EmailService] Delivered via Resend HTTPS API to ${to} (${res.messageId})`);
+        return { success: true, messageId: res.messageId, port: 443, provider: 'resend' };
+      }
+    } catch (rErr) {
+      console.warn(`[EmailService] Resend API attempt failed (${rErr.message}). Falling back...`);
+    }
+  }
+
+  // 2. Try Brevo HTTPS REST API (Port 443) if configured
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await sendViaBrevo({ to, subject, html });
+      if (res && res.success) {
+        console.log(`[EmailService] Delivered via Brevo HTTPS API to ${to} (${res.messageId})`);
+        return { success: true, messageId: res.messageId, port: 443, provider: 'brevo' };
+      }
+    } catch (bErr) {
+      console.warn(`[EmailService] Brevo API attempt failed (${bErr.message}). Falling back...`);
+    }
+  }
+
+  // 3. SMTP fallback (Port 465 SSL -> Port 587 STARTTLS)
   const { primary, secondary } = createTransporters();
   try {
     const info = await primary.sendMail(mailOptions);
-    return { success: true, messageId: info.messageId, port: 465 };
+    return { success: true, messageId: info.messageId, port: 465, provider: 'smtp-465' };
   } catch (err465) {
     console.warn(`[EmailService] Port 465 delivery attempt failed (${err465.message}). Retrying on Port 587...`);
     try {
       const info = await secondary.sendMail(mailOptions);
-      return { success: true, messageId: info.messageId, port: 587 };
+      return { success: true, messageId: info.messageId, port: 587, provider: 'smtp-587' };
     } catch (err587) {
       console.error(`[EmailService] Port 587 delivery attempt also failed (${err587.message})`);
-      throw new Error(`SMTP delivery failed: ${err587.message || err465.message}`);
+      throw new Error(`Email delivery failed on all channels (Resend, Brevo, SMTP): ${err587.message || err465.message}`);
     }
   }
 }
