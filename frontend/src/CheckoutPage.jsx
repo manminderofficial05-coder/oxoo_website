@@ -73,42 +73,11 @@ export default function CheckoutPage() {
   const paramBilling = searchParams.get('billing');
   const [isYearly, setIsYearly] = useState(paramBilling === 'yearly');
 
-  // Logged-in user state
-  const [loggedInUser, setLoggedInUser] = useState(() => {
-    try {
-      const u = localStorage.getItem('oxoo_user');
-      return u ? JSON.parse(u) : null;
-    } catch (e) {
-      return null;
-    }
-  });
+  // Logged-in user state (null by default for new checkout)
+  const [loggedInUser, setLoggedInUser] = useState(null);
 
-  // Track apps already purchased by THIS SPECIFIC logged-in customer (only if logged in)
-  const [ownedAppIds, setOwnedAppIds] = useState(() => {
-    try {
-      const u = localStorage.getItem('oxoo_user');
-      if (!u) return [];
-      const user = JSON.parse(u);
-      if (!user || !user.email) return [];
-
-      const ids = new Set();
-      const lp = localStorage.getItem('oxoo_purchased_apps');
-      if (lp) {
-        const list = JSON.parse(lp);
-        list.forEach((a) => {
-          const str = (typeof a === 'string' ? a : a.id || a.name || '').toLowerCase();
-          if (str.includes('sale')) ids.add('sales');
-          else if (str.includes('supply') || str.includes('chain') || str.includes('inventory')) ids.add('supply-chain');
-          else if (str.includes('human') || str.includes('resource') || str.includes('hr')) ids.add('human-resources');
-          else if (str.includes('productivity') || str.includes('ai')) ids.add('productivity');
-          else if (str.includes('finance') || str.includes('account')) ids.add('finance');
-        });
-      }
-      return Array.from(ids);
-    } catch (e) {
-      return [];
-    }
-  });
+  // Track apps already purchased
+  const [ownedAppIds, setOwnedAppIds] = useState([]);
 
   // Selected Software(s)
   const paramApps = searchParams.get('apps');
@@ -128,26 +97,18 @@ export default function CheckoutPage() {
   // Number of licensed users
   const [userCount, setUserCount] = useState(1);
 
-  // Step 3: Company & Billing Details - Clean and empty by default (auto-fill only from authenticated logged-in user)
-  const [formData, setFormData] = useState(() => {
-    let user = null;
-    try {
-      const u = localStorage.getItem('oxoo_user');
-      if (u) user = JSON.parse(u);
-    } catch (e) {}
-
-    return {
-      yourName: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      companyName: user?.organization || '',
-      vat: user?.vat || '',
-      streetAndNumber: user?.streetAndNumber || '',
-      city: user?.city || '',
-      zipCode: user?.zipCode || '',
-      country: user?.country || 'India',
-      stateProvince: user?.stateProvince || ''
-    };
+  // Step 3: Company & Billing Details - Clean and empty by default
+  const [formData, setFormData] = useState({
+    yourName: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    vat: '',
+    streetAndNumber: '',
+    city: '',
+    zipCode: '',
+    country: 'India',
+    stateProvince: ''
   });
 
   // Listen for login/auth changes to automatically sync user details into formData
@@ -210,17 +171,8 @@ export default function CheckoutPage() {
 
   const [formErrors, setFormErrors] = useState({});
 
-  // Step 3 Billing Email OTP Verification States
-  const [isEmailVerified, setIsEmailVerified] = useState(() => {
-    try {
-      const u = localStorage.getItem('oxoo_user');
-      if (u) {
-        const user = JSON.parse(u);
-        return Boolean(user?.email);
-      }
-    } catch (e) {}
-    return false;
-  });
+  // Step 3 Billing Email OTP Verification States - Always starts unverified for new checkout
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [otpValue, setOtpValue] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -929,118 +881,40 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
-              {/* Logged in auto-fill banner */}
-              {loggedInUser ? (
-                <div
-                  className="checkout-logged-in-banner"
+              {/* Customer Account Notice */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '12px 16px',
+                  marginBottom: '20px',
+                  fontSize: '13px',
+                  color: '#475569'
+                }}
+              >
+                <span>
+                  Already have an OXOO customer or enterprise account?
+                </span>
+                <Link
+                  to="/customer/login"
                   style={{
-                    display: 'flex',
+                    color: '#2563eb',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                    background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
-                    border: '1.5px solid #86efac',
-                    borderRadius: '12px',
-                    padding: '14px 18px',
-                    marginBottom: '22px'
+                    gap: '4px'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div
-                      style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        background: '#16a34a',
-                        color: '#ffffff',
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontWeight: 800,
-                        fontSize: '17px',
-                        flexShrink: 0,
-                        boxShadow: '0 4px 10px rgba(22, 163, 74, 0.25)'
-                      }}
-                    >
-                      {loggedInUser.name ? loggedInUser.name.charAt(0).toUpperCase() : '✓'}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#166534' }}>
-                          Account Active: {loggedInUser.name || 'Registered Customer'}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            background: '#dcfce7',
-                            color: '#15803d',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            border: '1px solid #bbf7d0'
-                          }}
-                        >
-                          ✓ Auto-Filled with Account Data
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '2px' }}>
-                        {loggedInUser.email} &bull; {formData.companyName || loggedInUser.organization || 'Business Workspace'} &bull; Details loaded from your account.
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleProceedFromStep3}
-                    className="checkout-primary-btn"
-                    style={{
-                      padding: '9px 18px',
-                      fontSize: '13px',
-                      borderRadius: '8px',
-                      whiteSpace: 'nowrap',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    Use Account Details & Continue <ArrowRight size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '12px 16px',
-                    marginBottom: '20px',
-                    fontSize: '13px',
-                    color: '#475569'
-                  }}
-                >
-                  <span>
-                    Already have an OXOO customer or enterprise account?
-                  </span>
-                  <Link
-                    to="/customer/login"
-                    style={{
-                      color: '#2563eb',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    Log in to auto-fill this form &rarr;
-                  </Link>
-                </div>
-              )}
+                  Log in to your account &rarr;
+                </Link>
+              </div>
 
               <form onSubmit={handleProceedFromStep3}>
                 <div className="company-details-form-grid">

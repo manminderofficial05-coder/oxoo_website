@@ -246,12 +246,17 @@ async function sendOtpEmail({ email, purpose = 'Verification', customerName = ''
     console.warn(`[EmailService] Notice: Outbound SMTP blocked or delayed (${err.message}). OTP ${otp} active in store for verification.`);
   }
 
+  if (deliveryWarning) {
+    return {
+      success: false,
+      message: `Could not send email to ${normEmail}: ${deliveryWarning}. Please configure RESEND_API_KEY in Render Dashboard.`,
+      warning: deliveryWarning
+    };
+  }
+
   return {
     success: true,
-    message: deliveryWarning
-      ? `Verification code sent to ${normEmail}.`
-      : 'OTP sent successfully to ' + normEmail,
-    warning: deliveryWarning || undefined
+    message: 'OTP sent successfully to ' + normEmail
   };
 }
 

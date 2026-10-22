@@ -418,13 +418,15 @@ app.post('/api/auth/send-otp', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email address is required.' });
     }
     const result = await sendOtpEmail({ email, purpose, customerName });
+    if (!result.success) {
+      return res.status(502).json(result);
+    }
     return res.json(result);
   } catch (e) {
     console.error('Error in /api/auth/send-otp:', e.message);
-    return res.json({
-      success: true,
-      message: 'Verification code generated.',
-      warning: e.message
+    return res.status(500).json({
+      success: false,
+      message: e.message || 'Failed to send verification email.'
     });
   }
 });
