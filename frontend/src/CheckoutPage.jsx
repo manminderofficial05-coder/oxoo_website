@@ -391,118 +391,166 @@ export default function CheckoutPage() {
       const curYear = new Date().getFullYear();
       const orderNumber = orderRes.order?.orderNumber || `OXOO-ORD-${curYear}-${Date.now().toString().slice(-6)}`;
       const invoiceNumber = `INV-${curYear}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
-      const paymentId = `pay_rzp_${Date.now().toString().slice(-8)}`;
 
-      // 2. Verify Payment on backend
-      const verifyRes = await verifyPayment({
-        orderNumber,
-        paymentId,
-        paymentMethod,
-        companyName: formData.companyName || formData.yourName,
-        customerName: formData.yourName,
-        customerEmail: formData.email,
-        selectedApps: selectedAppsNames,
-        planName: planNameFormatted,
-        billingCycle: isYearly ? 'yearly' : 'monthly',
-        totalAmount: totals.totalAmount,
-        invoiceNumber
-      });
+      const finalizeOrder = async (realPaymentId) => {
+        const paymentId = realPaymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
 
-      const today = new Date();
-      const calcDueDate = new Date(today);
-      if (isYearly) {
-        calcDueDate.setFullYear(calcDueDate.getFullYear() + 1);
-      } else {
-        calcDueDate.setMonth(calcDueDate.getMonth() + 1);
-      }
-      const invoiceDateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-      const dueDateStr = calcDueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        // 2. Verify Payment on backend
+        const verifyRes = await verifyPayment({
+          orderNumber,
+          paymentId,
+          paymentMethod,
+          companyName: formData.companyName || formData.yourName,
+          customerName: formData.yourName,
+          customerEmail: formData.email,
+          selectedApps: selectedAppsNames,
+          planName: planNameFormatted,
+          billingCycle: isYearly ? 'yearly' : 'monthly',
+          totalAmount: totals.totalAmount,
+          invoiceNumber
+        });
 
-      // Prepare purchased app modules
-      const purchasedModules = SOFTWARE_MODULES
-        .filter((m) => selectedAppIds.includes(m.id))
-        .map((m) => ({
-          id: m.id,
-          name: m.name,
-          category: m.category || 'Business Suite',
-          entitled: true,
+        const today = new Date();
+        const calcDueDate = new Date(today);
+        if (isYearly) {
+          calcDueDate.setFullYear(calcDueDate.getFullYear() + 1);
+        } else {
+          calcDueDate.setMonth(calcDueDate.getMonth() + 1);
+        }
+        const invoiceDateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const dueDateStr = calcDueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        // Prepare purchased app modules
+        const purchasedModules = SOFTWARE_MODULES
+          .filter((m) => selectedAppIds.includes(m.id))
+          .map((m) => ({
+            id: m.id,
+            name: m.name,
+            category: m.category || 'Business Suite',
+            entitled: true,
+            status: 'Active',
+            demoUrl: m.demoUrl || `/apps/${m.id}`,
+            iconSrc: m.iconSrc
+          }));
+
+        // Store strictly the newly purchased apps in localStorage for instant synchronization
+        const combinedPurchasedApps = purchasedModules;
+        localStorage.setItem('oxoo_purchased_apps', JSON.stringify(purchasedModules));
+
+        // Build customer order record for Admin Dashboard & Customer Dashboard
+        const orderRecord = {
+          orderNumber,
+          invoiceNumber,
+          paymentId,
+          company: formData.companyName || formData.yourName,
+          companyName: formData.companyName || formData.yourName,
+          customerName: formData.yourName,
+          email: formData.email,
+          phone: formData.phone,
+          plan: planNameFormatted,
+          billingCycle: isYearly ? 'yearly' : 'monthly',
+          amount: `₹${totals.totalAmount.toLocaleString('en-IN')}`,
+          rawAmount: totals.totalAmount,
+          currency: 'INR',
           status: 'Active',
-          demoUrl: m.demoUrl || `/apps/${m.id}`,
-          iconSrc: m.iconSrc
-        }));
+          date: invoiceDateStr,
+          timestamp: new Date().toISOString(),
+          apps: selectedAppsNames,
+          purchasedApps: combinedPurchasedApps
+        };
 
-      // Store strictly the newly purchased apps in localStorage for instant synchronization
-      const combinedPurchasedApps = purchasedModules;
-      localStorage.setItem('oxoo_purchased_apps', JSON.stringify(purchasedModules));
+        // Store in oxoo_recent_customers for Admin Dashboard
+        let adminCustomers = [];
+        try {
+          const ac = localStorage.getItem('oxoo_recent_customers');
+          if (ac) adminCustomers = JSON.parse(ac);
+        } catch (e) {}
+        const updatedAdminCustomers = [orderRecord, ...adminCustomers.filter((c) => c.company !== orderRecord.company)];
+        localStorage.setItem('oxoo_recent_customers', JSON.stringify(updatedAdminCustomers));
+        localStorage.setItem('oxoo_last_order', JSON.stringify(orderRecord));
 
-      // Build customer order record for Admin Dashboard & Customer Dashboard
-      const orderRecord = {
-        orderNumber,
-        invoiceNumber,
-        paymentId,
-        company: formData.companyName || formData.yourName,
-        companyName: formData.companyName || formData.yourName,
-        customerName: formData.yourName,
-        email: formData.email,
-        phone: formData.phone,
-        plan: planNameFormatted,
-        billingCycle: isYearly ? 'yearly' : 'monthly',
-        amount: `₹${totals.totalAmount.toLocaleString('en-IN')}`,
-        rawAmount: totals.totalAmount,
-        currency: 'INR',
-        status: 'Active',
-        date: invoiceDateStr,
-        timestamp: new Date().toISOString(),
-        apps: selectedAppsNames,
-        purchasedApps: combinedPurchasedApps
+        // Also ensure user session has active purchasedApps
+        try {
+          let userObj = loggedInUser || {
+            id: Date.now(),
+            name: formData.yourName,
+            email: formData.email,
+            role: 'customer'
+          };
+          userObj = {
+            ...userObj,
+            organization: formData.companyName || userObj.organization || 'My Organization',
+            purchasedApps: combinedPurchasedApps,
+            plan: planNameFormatted
+          };
+          localStorage.setItem('oxoo_user', JSON.stringify(userObj));
+        } catch (e) {}
+
+        // Trigger global events for immediate UI reactivity
+        window.dispatchEvent(new Event('oxoo_auth_change'));
+        window.dispatchEvent(new Event('oxoo_order_placed'));
+
+        setPaymentSuccessData({
+          orderNumber,
+          invoiceNumber,
+          paymentId,
+          planName: planNameFormatted,
+          paymentDate: invoiceDateStr,
+          invoiceDate: invoiceDateStr,
+          dueDate: dueDateStr,
+          ...verifyRes
+        });
+
+        setIsProcessing(false);
+        setCurrentStep(5);
       };
 
-      // Store in oxoo_recent_customers for Admin Dashboard
-      let adminCustomers = [];
-      try {
-        const ac = localStorage.getItem('oxoo_recent_customers');
-        if (ac) adminCustomers = JSON.parse(ac);
-      } catch (e) {}
-      const updatedAdminCustomers = [orderRecord, ...adminCustomers.filter((c) => c.company !== orderRecord.company)];
-      localStorage.setItem('oxoo_recent_customers', JSON.stringify(updatedAdminCustomers));
-      localStorage.setItem('oxoo_last_order', JSON.stringify(orderRecord));
-
-      // Also ensure user session has active purchasedApps
-      try {
-        let userObj = loggedInUser || {
-          id: Date.now(),
-          name: formData.yourName,
-          email: formData.email,
-          role: 'customer'
+      // Launch official Razorpay checkout modal if SDK is available
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        const rzpKey = orderRes.razorpayKeyId || 'rzp_test_Tqu6q5BYPuxhzd';
+        const rzpOptions = {
+          key: rzpKey,
+          amount: orderRes.amountPaise || Math.round(totals.totalAmount * 100),
+          currency: 'INR',
+          name: 'OXOO Multiix',
+          description: `${planNameFormatted} (${isYearly ? 'Annual' : 'Monthly'})`,
+          image: '/oxoo-icon.png',
+          order_id: orderRes.razorpayOrderId || undefined,
+          prefill: {
+            name: formData.yourName || '',
+            email: formData.email || '',
+            contact: formData.phone || ''
+          },
+          theme: {
+            color: '#16a34a'
+          },
+          handler: async function (response) {
+            try {
+              await finalizeOrder(response.razorpay_payment_id);
+            } catch (vErr) {
+              setPaymentError(vErr.message || 'Payment confirmation failed.');
+              setIsProcessing(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setIsProcessing(false);
+            }
+          }
         };
-        userObj = {
-          ...userObj,
-          organization: formData.companyName || userObj.organization || 'My Organization',
-          purchasedApps: combinedPurchasedApps,
-          plan: planNameFormatted
-        };
-        localStorage.setItem('oxoo_user', JSON.stringify(userObj));
-      } catch (e) {}
 
-      // Trigger global events for immediate UI reactivity
-      window.dispatchEvent(new Event('oxoo_auth_change'));
-      window.dispatchEvent(new Event('oxoo_order_placed'));
-
-      setPaymentSuccessData({
-        orderNumber,
-        invoiceNumber,
-        paymentId,
-        planName: planNameFormatted,
-        paymentDate: invoiceDateStr,
-        invoiceDate: invoiceDateStr,
-        dueDate: dueDateStr,
-        ...verifyRes
-      });
-
-      setCurrentStep(5);
+        const rzpInstance = new window.Razorpay(rzpOptions);
+        rzpInstance.on('payment.failed', function (response) {
+          setIsProcessing(false);
+          setPaymentError(response.error?.description || 'Payment was unsuccessful. Please try again.');
+        });
+        rzpInstance.open();
+      } else {
+        // Fallback: direct verification
+        await finalizeOrder(`pay_rzp_${Date.now().toString().slice(-8)}`);
+      }
     } catch (err) {
       setPaymentError(err.message || 'Payment processing failed. Please try again.');
-    } finally {
       setIsProcessing(false);
     }
   };

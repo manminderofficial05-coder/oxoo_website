@@ -1616,10 +1616,41 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       );
     }
 
+    const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tqu6q5BYPuxhzd';
+    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'VzzE4JIz1vaKtWJkAqurKwT8';
+
+    let razorpayOrderId = null;
+    try {
+      const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
+      const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: calc.totalAmountPaise,
+          currency: 'INR',
+          receipt: orderNumber.slice(-40),
+          notes: {
+            companyName: companyName || '',
+            customerEmail: customerEmail || ''
+          }
+        })
+      });
+      const rzpData = await rzpRes.json();
+      if (rzpData && rzpData.id) {
+        razorpayOrderId = rzpData.id;
+      }
+    } catch (rzpErr) {
+      console.warn('[Razorpay] Order creation notice:', rzpErr.message);
+    }
+
     res.json({
       success: true,
       order,
-      razorpayKeyId: 'rzp_test_oxoo_demo_key',
+      razorpayOrderId,
+      razorpayKeyId: RAZORPAY_KEY_ID,
       amountPaise: calc.totalAmountPaise,
       currency: 'INR'
     });
