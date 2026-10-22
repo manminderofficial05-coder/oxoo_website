@@ -478,18 +478,9 @@ export default function CheckoutPage() {
           iconSrc: m.iconSrc
         }));
 
-      // Store in localStorage for instant synchronization across Customer and Admin Dashboards
-      let existingApps = [];
-      try {
-        const ea = localStorage.getItem('oxoo_purchased_apps');
-        if (ea) existingApps = JSON.parse(ea);
-      } catch (e) {}
-
-      const appMap = new Map();
-      existingApps.forEach((a) => appMap.set(a.id, a));
-      purchasedModules.forEach((a) => appMap.set(a.id, a));
-      const combinedPurchasedApps = Array.from(appMap.values());
-      localStorage.setItem('oxoo_purchased_apps', JSON.stringify(combinedPurchasedApps));
+      // Store strictly the newly purchased apps in localStorage for instant synchronization
+      const combinedPurchasedApps = purchasedModules;
+      localStorage.setItem('oxoo_purchased_apps', JSON.stringify(purchasedModules));
 
       // Build customer order record for Admin Dashboard & Customer Dashboard
       const orderRecord = {
@@ -1630,7 +1621,7 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                   <div style={{ fontSize: '13px', color: '#334155', marginTop: '4px', lineHeight: 1.5 }}>
-                    Your official Tax Invoice receipt and your Customer Dashboard login credentials (<strong style={{ color: '#1e3a8a' }}>User ID:</strong> <code>{formData.email}</code> &bull; <strong style={{ color: '#1e3a8a' }}>Password:</strong> <code>oxoo123</code>) have been sent to your email. You can sign in to access your customer dashboard anytime.
+                    Your official Tax Invoice receipt and Customer Dashboard login credentials (<strong style={{ color: '#1e3a8a' }}>Storage ID:</strong> <code>{paymentSuccessData?.storageId || ('STG-' + String(paymentSuccessData?.orderNumber || '').replace(/[^0-9]/g, '').slice(-8))}</code> &bull; <strong style={{ color: '#1e3a8a' }}>User ID:</strong> <code>{formData.email}</code> &bull; <strong style={{ color: '#1e3a8a' }}>Password:</strong> <code>oxoo123</code>) have been sent to your email. You can change your password anytime in dashboard settings.
                   </div>
                 </div>
               </div>

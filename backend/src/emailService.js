@@ -162,6 +162,7 @@ async function sendInvoiceAndCredentialsEmail({
   companyName = 'My Organization',
   invoiceNumber,
   orderNumber,
+  storageId,
   amount,
   billingCycle = 'monthly',
   planName = 'Standard Pack',
@@ -174,6 +175,7 @@ async function sendInvoiceAndCredentialsEmail({
 
   const transporter = getMailTransporter();
   const isYearly = String(billingCycle).toLowerCase() === 'yearly';
+  const effectiveStorageId = storageId || (orderNumber ? 'STG-' + String(orderNumber).replace(/[^0-9]/g, '').slice(-8) : 'STG-08643413');
 
   const appsListHtml = Array.isArray(selectedApps) && selectedApps.length > 0
     ? selectedApps.map(a => {
@@ -227,7 +229,7 @@ async function sendInvoiceAndCredentialsEmail({
                   </span>
                 </div>
                 <p style="font-size: 13px; color: #334155; margin-top: 0; margin-bottom: 16px;">
-                  Use these credentials to sign in to your Customer Dashboard, view your bills, and access all your active software applications:
+                  Use these credentials to sign in to your Customer Dashboard, view your bills, and access your active software:
                 </p>
                 <table width="100%" cellpadding="6" cellspacing="0" style="background: #ffffff; border-radius: 10px; border: 1px solid #bae6fd; font-size: 14px;">
                   <tr>
@@ -237,17 +239,31 @@ async function sendInvoiceAndCredentialsEmail({
                     </td>
                   </tr>
                   <tr>
+                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">Storage ID:</td>
+                    <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                      <span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: 800; border: 1px solid #bae6fd;">
+                        ${effectiveStorageId}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
                     <td style="color: #64748b; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">User ID / Email:</td>
                     <td style="color: #0f172a; font-weight: 700; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
                       ${normEmail}
                     </td>
                   </tr>
                   <tr>
-                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px;">Password:</td>
-                    <td style="padding: 10px 14px;">
+                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">Password:</td>
+                    <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
                       <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a;">
                         ${password}
                       </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px;">Password Security:</td>
+                    <td style="color: #475569; font-size: 12px; line-height: 1.4; padding: 10px 14px;">
+                      You can change this password anytime in Dashboard Settings. If forgotten, click <strong>"Forgot Password"</strong> on the login screen to get a reset link on your email.
                     </td>
                   </tr>
                 </table>
@@ -340,8 +356,111 @@ async function sendInvoiceAndCredentialsEmail({
   return { success: true, messageId: info.messageId };
 }
 
+/**
+ * Send Password Reset Link Email
+ */
+async function sendPasswordResetEmail({
+  toEmail,
+  customerName = 'Customer',
+  storageId = '',
+  resetUrl
+}) {
+  if (!toEmail) throw new Error('Recipient email is required.');
+  const normEmail = toEmail.trim().toLowerCase();
+  const transporter = getMailTransporter();
+
+  const subject = `Reset Your OXOO Password · Security Link`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 15px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="600px" style="max-width: 600px; background-color: #ffffff; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 14px 35px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
+                OXOO
+              </h1>
+              <span style="font-size: 12px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">
+                Account Security & Password Assistance
+              </span>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 36px 32px;">
+              <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
+                Password Reset Request
+              </h2>
+              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 16px;">
+                Hello <strong>${customerName}</strong>, we received a request to reset the password for your OXOO account.
+              </p>
+
+              ${storageId ? `
+              <div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #0369a1;">
+                <strong>Storage / Account ID:</strong> <span style="font-family: monospace; font-weight: 800;">${storageId}</span>
+              </div>
+              ` : ''}
+
+              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
+                Click the secure button below to choose a new password. This link is valid for <strong>1 hour</strong>.
+              </p>
+
+              <div style="text-align: center; margin: 28px 0;">
+                <a href="${resetUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 14px 34px; border-radius: 10px; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
+                  Reset My Password →
+                </a>
+              </div>
+
+              <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px; padding-top: 18px; border-top: 1px solid #f1f5f9;">
+                If the button above does not work, copy and paste this link into your browser:<br>
+                <a href="${resetUrl}" style="color: #0284c7; word-break: break-all;">${resetUrl}</a>
+              </p>
+
+              <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 20px;">
+                If you did not request a password reset, please ignore this email. Your password will remain unchanged until you access the link above.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+              © ${new Date().getFullYear()} OXOO Multiix Enterprise Suite. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const info = await transporter.sendMail({
+    from: DEFAULT_FROM,
+    to: normEmail,
+    subject,
+    html
+  });
+
+  console.log(`[EmailService] Password reset link sent to ${normEmail} (Message ID: ${info.messageId})`);
+  return { success: true, messageId: info.messageId };
+}
+
 module.exports = {
   sendOtpEmail,
   verifyOtp,
-  sendInvoiceAndCredentialsEmail
+  sendInvoiceAndCredentialsEmail,
+  sendPasswordResetEmail
 };

@@ -433,6 +433,43 @@ export async function verifyEmailOtp({ email, otp }) {
   return data;
 }
 
+export async function forgotPassword(emailOrStorageId) {
+  const r = await fetch(`${API_URL}/api/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ emailOrStorageId })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to send password reset link.');
+  return data;
+}
+
+export async function resetPassword({ email, token, newPassword }) {
+  const r = await fetch(`${API_URL}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, token, newPassword })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to reset password.');
+  return data;
+}
+
+export async function changePassword({ currentPassword, newPassword }) {
+  const token = localStorage.getItem('oxoo_token');
+  const r = await fetch(`${API_URL}/api/customer/change-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to change password.');
+  return data;
+}
+
 export { API_URL };
 
 

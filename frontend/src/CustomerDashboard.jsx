@@ -12,7 +12,7 @@ import {
 import {
   getCustomerOverview, getCustomerBilling, upgradeCustomerPlan,
   getCustomerTeam, inviteTeamMember, removeTeamMember,
-  getCustomerTickets, createCustomerTicket
+  getCustomerTickets, createCustomerTicket, changePassword
 } from './api';
 import './dashboards.css';
 
@@ -36,9 +36,15 @@ export default function CustomerDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Forms
+  // Forms & Password
   const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Member', apps: 'all' });
   const [ticketForm, setTicketForm] = useState({ subject: '', description: '', priority: 'Medium' });
+  const [pwdCurrent, setPwdCurrent] = useState('');
+  const [pwdNew, setPwdNew] = useState('');
+  const [pwdConfirm, setPwdConfirm] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdSuccess, setPwdSuccess] = useState('');
+  const [pwdError, setPwdError] = useState('');
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -108,25 +114,28 @@ export default function CustomerDashboard() {
           }
         });
 
-        // 2. Add apps from local storage
-        localPurchased.forEach((app) => {
-          const key = getCanonicalKey(app);
-          const base = canonicalModuleDefs[key] || {
-            id: key,
-            name: app.name || key,
-            category: app.category || 'Business Suite',
-            demoUrl: app.demoUrl || `/apps/${key}`
-          };
-          if (key && !appMap.has(key)) {
-            appMap.set(key, { ...base, entitled: true, status: 'Active' });
-          }
-        });
+        // 2. Add apps from local storage ONLY if backend returned no apps
+        if (appMap.size === 0) {
+          localPurchased.forEach((app) => {
+            const key = getCanonicalKey(app);
+            const base = canonicalModuleDefs[key] || {
+              id: key,
+              name: app.name || key,
+              category: app.category || 'Business Suite',
+              demoUrl: app.demoUrl || `/apps/${key}`
+            };
+            if (key && !appMap.has(key)) {
+              appMap.set(key, { ...base, entitled: true, status: 'Active' });
+            }
+          });
+        }
 
         const mergedApps = Array.from(appMap.values());
         const activeCount = mergedApps.filter(a => a.entitled).length;
 
         const effectiveOverview = {
           ...ovData,
+          storageId: ovData?.storageId || storedUser?.storageId || 'STG-08643413',
           customerName: storedUser?.name || ovData?.customerName || 'Customer Admin',
           company: storedUser?.organization || ovData?.company || 'My Organization',
           email: storedUser?.email || ovData?.email || 'admin@organization.com',
@@ -1056,10 +1065,62 @@ export default function CustomerDashboard() {
           {activeTab === 'settings' && (
             <div className="oxoo-section-card" style={{ maxWidth: '800px' }}>
               <div className="oxoo-section-header">
-                <h2 className="oxoo-section-title">Organization Settings & Security</h2>
+                <div>
+                  <h2 className="oxoo-section-title">Organization Settings & Security</h2>
+                  <p style={{ fontSize: '13px', color: '#64748b' }}>
+                    Manage your tenant storage identity, company profile, and access credentials.
+                  </p>
+                </div>
               </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); showToast('Settings successfully updated!'); }} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* STORAGE ID HIGHLIGHT CARD */}
+              <div style={{
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
+                border: '1.5px solid #7dd3fc',
+                borderRadius: '14px',
+                padding: '18px 22px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                boxShadow: '0 4px 15px rgba(2, 132, 199, 0.06)'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Tenant Storage ID / Customer Account ID
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#0c4a6e', fontFamily: 'monospace', margin: '4px 0 2px' }}>
+                    {overview?.storageId || 'STG-08643413'}
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: '#475569' }}>
+                    Use this ID when signing in, requesting password recovery, or contacting enterprise support.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(overview?.storageId || 'STG-08643413');
+                    showToast('Storage ID copied to clipboard!');
+                  }}
+                  style={{
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '9px 16px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)'
+                  }}
+                >
+                  Copy Storage ID
+                </button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); showToast('Organization settings updated!'); }} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 <div className="oxoo-form-group">
                   <label className="oxoo-form-label">Organization Legal Name</label>
                   <input type="text" className="oxoo-form-input" defaultValue={overview?.company || "My Organization"} />
@@ -1085,12 +1146,124 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '12px' }}>
+                <div style={{ marginTop: '4px' }}>
                   <button type="submit" className="oxoo-upgrade-btn">
                     Save Changes
                   </button>
                 </div>
               </form>
+
+              {/* CHANGE PASSWORD CARD */}
+              <div style={{ marginTop: '32px', paddingTop: '26px', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#e0f2fe', color: '#0284c7', display: 'grid', placeItems: 'center' }}>
+                    <Lock size={17} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '16.5px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      Change Account Password
+                    </h3>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>Update your customer login password anytime</span>
+                  </div>
+                </div>
+
+                {pwdError && (
+                  <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '12.5px', margin: '14px 0' }}>
+                    {pwdError}
+                  </div>
+                )}
+
+                {pwdSuccess && (
+                  <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontSize: '12.5px', margin: '14px 0' }}>
+                    {pwdSuccess}
+                  </div>
+                )}
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setPwdSuccess('');
+                    setPwdError('');
+
+                    if (!pwdCurrent || !pwdNew || !pwdConfirm) {
+                      setPwdError('Please complete all password fields.');
+                      return;
+                    }
+                    if (pwdNew.length < 6) {
+                      setPwdError('New password must be at least 6 characters.');
+                      return;
+                    }
+                    if (pwdNew !== pwdConfirm) {
+                      setPwdError('New password and confirmation do not match.');
+                      return;
+                    }
+
+                    setPwdLoading(true);
+                    try {
+                      const res = await changePassword({ currentPassword: pwdCurrent, newPassword: pwdNew });
+                      setPwdSuccess(res.message || 'Password changed successfully!');
+                      setPwdCurrent('');
+                      setPwdNew('');
+                      setPwdConfirm('');
+                      showToast('Account password updated successfully!');
+                    } catch (err) {
+                      setPwdError(err.message || 'Failed to update password. Please check your current password.');
+                    } finally {
+                      setPwdLoading(false);
+                    }
+                  }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '16px', maxWidth: '440px' }}
+                >
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Current Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={pwdCurrent}
+                      onChange={(e) => setPwdCurrent(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="oxoo-form-input"
+                    />
+                  </div>
+
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">New Password (min 6 characters)</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={pwdNew}
+                      onChange={(e) => setPwdNew(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="oxoo-form-input"
+                    />
+                  </div>
+
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Confirm New Password</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={pwdConfirm}
+                      onChange={(e) => setPwdConfirm(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="oxoo-form-input"
+                    />
+                  </div>
+
+                  <div style={{ marginTop: '8px' }}>
+                    <button
+                      type="submit"
+                      disabled={pwdLoading}
+                      className="oxoo-upgrade-btn"
+                      style={{ padding: '10px 22px' }}
+                    >
+                      {pwdLoading ? 'Updating Password...' : 'Update Password'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </main>

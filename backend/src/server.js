@@ -5,10 +5,11 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const { pool, query, initDb } = require('./db');
 const { categories: fallbackCategories, services: fallbackServices } = require('./seedData');
-const { sendOtpEmail, verifyOtp, sendInvoiceAndCredentialsEmail } = require('./emailService');
+const { sendOtpEmail, verifyOtp, sendInvoiceAndCredentialsEmail, sendPasswordResetEmail } = require('./emailService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -188,33 +189,204 @@ app.post('/api/auth/login', async (req, res, next) => {
     }
 
     const userResult = await query(
-      `SELECT id, name, email, password, role, organization, active
-       FROM users WHERE email = $1 LIMIT 1`,
+      `SELECT id, name, email, password, role, organization, active, storage_id
+       FROM users WHERE (LOWER(email) = $1 OR LOWER(storage_id) = $1) LIMIT 1`,
       [emailNorm]
     );
 
     if (userResult.rows.length === 0 || !userResult.rows[0].active) {
-      return res.status(401).json({ message: 'Invalid email or password.' });
+      return res.status(401).json({ message: 'Invalid email, Storage ID, or password.' });
     }
 
     const user = userResult.rows[0];
     const isMatch = await bcrypt.compare(String(password), user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password.' });
+      return res.status(401).json({ message: 'Invalid email, Storage ID, or password.' });
     }
 
     // Update last login
     await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
-    await logAudit('User Login', emailNorm, user.name, req.ip);
+    await logAudit('User Login', user.email, user.name, req.ip);
 
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       message: 'Login successful.',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, organization: user.organization }
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        organization: user.organization,
+        storageId: user.storage_id || 'STG-08643413'
+      }
     });
   } catch (e) {
     next(e);
+  }
+});
+
+app.post('/api/auth/forgot-password', async (req, res, next) => {
+  try {
+    const { emailOrStorageId, email } = req.body || {};
+    const inputVal = emailOrStorageId || email;
+    if (!inputVal) {
+      return res.status(400).json({ message: 'Please provide your account Email Address or Storage ID.' });
+    }
+    const queryTerm = String(inputVal).trim().toLowerCase();
+
+    if (!isDbConnected) {
+      return res.json({
+        success: true,
+        message: 'A password reset link has been sent to your registered email (Demo Mode).'
+      });
+    }
+
+    const uRes = await query(
+      `SELECT id, name, email, storage_id FROM users
+       WHERE LOWER(email) = $1 OR LOWER(storage_id) = $1 LIMIT 1`,
+      [queryTerm]
+    );
+
+    if (uRes.rows.length === 0) {
+      return res.status(404).json({ message: 'No registered customer account found with that Email or Storage ID.' });
+    }
+
+    const targetUser = uRes.rows[0];
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
+
+    await query(
+      `UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3`,
+      [resetToken, expiresAt, targetUser.id]
+    );
+
+    const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+    const resetUrl = `${origin}/reset-password?token=${resetToken}&email=${encodeURIComponent(targetUser.email)}`;
+
+    // Mask email for security/privacy display (e.g. ma***@gmail.com)
+    const emailParts = targetUser.email.split('@');
+    const maskedName = emailParts[0].length > 2
+      ? emailParts[0].slice(0, 2) + '*'.repeat(Math.max(1, emailParts[0].length - 2))
+      : emailParts[0] + '*';
+    const maskedEmail = `${maskedName}@${emailParts[1]}`;
+
+    await sendPasswordResetEmail({
+      toEmail: targetUser.email,
+      customerName: targetUser.name || 'Customer',
+      storageId: targetUser.storage_id || '',
+      resetUrl
+    });
+
+    await logAudit('Password Reset Requested', targetUser.email, targetUser.name, req.ip);
+
+    res.json({
+      success: true,
+      message: `A secure password reset link has been sent to ${maskedEmail}. Please check your inbox and spam folder.`,
+      maskedEmail
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res, next) => {
+  try {
+    const { email, token, newPassword } = req.body || {};
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ message: 'Email, reset token, and new password are required.' });
+    }
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+
+    const normEmail = String(email).trim().toLowerCase();
+
+    if (!isDbConnected) {
+      return res.json({ success: true, message: 'Password reset successfully (Demo Mode).' });
+    }
+
+    const uRes = await query(
+      `SELECT id, name, email, reset_token, reset_token_expires
+       FROM users WHERE LOWER(email) = $1 LIMIT 1`,
+      [normEmail]
+    );
+
+    if (uRes.rows.length === 0) {
+      return res.status(404).json({ message: 'Customer account not found.' });
+    }
+
+    const targetUser = uRes.rows[0];
+    if (!targetUser.reset_token || targetUser.reset_token !== token) {
+      return res.status(400).json({ message: 'Invalid or already used password reset link.' });
+    }
+
+    if (new Date(targetUser.reset_token_expires) < new Date()) {
+      return res.status(400).json({ message: 'This password reset link has expired. Please request a new one.' });
+    }
+
+    const newHash = await bcrypt.hash(String(newPassword), 10);
+    await query(
+      `UPDATE users
+       SET password = $1, reset_token = NULL, reset_token_expires = NULL, updated_at = NOW()
+       WHERE id = $2`,
+      [newHash, targetUser.id]
+    );
+
+    await logAudit('Password Reset Completed', normEmail, targetUser.name, req.ip);
+
+    res.json({
+      success: true,
+      message: 'Your password has been reset successfully! You can now sign in with your new password.'
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/customer/change-password', verifyToken, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required.' });
+    }
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+
+    if (!isDbConnected) {
+      return res.json({ success: true, message: 'Password updated successfully (Demo Mode).' });
+    }
+
+    const uRes = await query(
+      `SELECT id, name, email, password FROM users WHERE id = $1 LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (uRes.rows.length === 0) {
+      return res.status(404).json({ message: 'User account not found.' });
+    }
+
+    const user = uRes.rows[0];
+    const isMatch = await bcrypt.compare(String(currentPassword), user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Incorrect current password. Please try again.' });
+    }
+
+    const newHash = await bcrypt.hash(String(newPassword), 10);
+    await query(
+      `UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2`,
+      [newHash, user.id]
+    );
+
+    await logAudit('Password Changed by Customer', user.email, user.name, req.ip);
+
+    res.json({
+      success: true,
+      message: 'Your password has been changed successfully!'
+    });
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -223,15 +395,16 @@ app.get('/api/auth/me', verifyToken, async (req, res, next) => {
     if (!isDbConnected) return res.json({ user: req.user });
     let user = null;
     if (typeof req.user.id === 'number' || /^\d+$/.test(String(req.user.id))) {
-      const userRes = await query('SELECT id, name, email, role, organization, avatar, last_login as "lastLogin" FROM users WHERE id = $1', [parseInt(req.user.id, 10)]);
+      const userRes = await query('SELECT id, name, email, role, organization, avatar, storage_id as "storageId", last_login as "lastLogin" FROM users WHERE id = $1', [parseInt(req.user.id, 10)]);
       if (userRes.rows.length > 0) user = userRes.rows[0];
     } else if (req.user.email) {
-      const userRes = await query('SELECT id, name, email, role, organization, avatar, last_login as "lastLogin" FROM users WHERE email = $1', [req.user.email]);
+      const userRes = await query('SELECT id, name, email, role, organization, avatar, storage_id as "storageId", last_login as "lastLogin" FROM users WHERE email = $1', [req.user.email]);
       if (userRes.rows.length > 0) user = userRes.rows[0];
     }
     res.json({ user: user || req.user });
   } catch (e) {
     next(e);
+
   }
 });
 
@@ -604,13 +777,13 @@ app.get('/api/customer/overview', async (req, res, next) => {
         }
 
         const rawCollectedApps = [];
+        // Single source of truth: customer's latest active subscription
         if (subRes && subRes.rows.length > 0) {
-          subRes.rows.forEach(sub => {
-            if (sub.active_apps) {
-              const list = Array.isArray(sub.active_apps) ? sub.active_apps : (typeof sub.active_apps === 'string' ? JSON.parse(sub.active_apps) : []);
-              rawCollectedApps.push(...list);
-            }
-          });
+          const latestSub = subRes.rows[0];
+          if (latestSub.active_apps) {
+            const list = Array.isArray(latestSub.active_apps) ? latestSub.active_apps : (typeof latestSub.active_apps === 'string' ? JSON.parse(latestSub.active_apps) : []);
+            rawCollectedApps.push(...list);
+          }
         }
 
         // 2. Fetch paid orders for this specific customer
@@ -626,12 +799,11 @@ app.get('/api/customer/overview', async (req, res, next) => {
 
         if (ordRes && ordRes.rows.length > 0) {
           latestOrder = ordRes.rows[0];
-          ordRes.rows.forEach(ord => {
-            if (ord.selected_apps) {
-              const list = Array.isArray(ord.selected_apps) ? ord.selected_apps : (typeof ord.selected_apps === 'string' ? JSON.parse(ord.selected_apps) : []);
-              rawCollectedApps.push(...list);
-            }
-          });
+          // Only fallback to latest order if subscription didn't specify apps
+          if (rawCollectedApps.length === 0 && latestOrder.selected_apps) {
+            const list = Array.isArray(latestOrder.selected_apps) ? latestOrder.selected_apps : (typeof latestOrder.selected_apps === 'string' ? JSON.parse(latestOrder.selected_apps) : []);
+            rawCollectedApps.push(...list);
+          }
         }
 
         // 3. Fallback to organization active apps if empty
@@ -680,10 +852,31 @@ app.get('/api/customer/overview', async (req, res, next) => {
     const effectiveCompany = userCompany || org?.name || latestOrder?.company_name || 'My Organization';
     const effectiveEmail = userEmail || latestOrder?.customer_email || 'customer@oxoo.ai';
 
+    // Resolve tenant Storage ID
+    let customerStorageId = null;
+    if (userEmail && isDbConnected) {
+      try {
+        const uRes = await query(`SELECT storage_id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`, [userEmail]);
+        if (uRes.rows.length > 0 && uRes.rows[0].storage_id) {
+          customerStorageId = uRes.rows[0].storage_id;
+        }
+      } catch (e) {}
+    }
+    if (!customerStorageId && latestOrder && latestOrder.storage_id) {
+      customerStorageId = latestOrder.storage_id;
+    }
+    if (!customerStorageId && latestOrder && latestOrder.order_number) {
+      customerStorageId = 'STG-' + String(latestOrder.order_number).replace(/[^0-9]/g, '').slice(-8);
+    }
+    if (!customerStorageId) {
+      customerStorageId = 'STG-08643413';
+    }
+
     res.json({
       company: effectiveCompany,
       customerName: effectiveName,
       email: effectiveEmail,
+      storageId: customerStorageId,
       avatar: effectiveName.charAt(0).toUpperCase() || 'C',
       currentPlan: latestOrder?.plan_name || org?.plan || (purchasedApps.length > 1 ? 'Custom Pack' : 'Standard Pack'),
       status: org?.status || 'Active',
@@ -1458,9 +1651,11 @@ app.post('/api/payment/verify', async (req, res, next) => {
         invoiceNumber = `INV-${curYear}-${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`;
       }
 
+      const effectiveStorageId = 'STG-' + (orderNumber ? String(orderNumber).replace(/[^0-9]/g, '').slice(-8) : Date.now().toString().slice(-8));
+
       await query(
-        `UPDATE orders SET status = 'Paid', payment_id = $1, payment_method = $2, updated_at = NOW() WHERE order_number = $3`,
-        [verifiedPaymentId, paymentMethod, orderNumber]
+        `UPDATE orders SET status = 'Paid', payment_id = $1, payment_method = $2, storage_id = $3, updated_at = NOW() WHERE order_number = $4`,
+        [verifiedPaymentId, paymentMethod, effectiveStorageId, orderNumber]
       );
 
       const renewalInterval = billingCycle === 'yearly' ? '1 year' : '1 month';
@@ -1492,13 +1687,14 @@ app.post('/api/payment/verify', async (req, res, next) => {
         try {
           const defaultHash = await bcrypt.hash('oxoo123', 10);
           await query(
-            `INSERT INTO users (name, email, password, role, organization, active, last_login)
-             VALUES ($1, $2, $3, 'customer', $4, true, NOW())
+            `INSERT INTO users (name, email, password, role, organization, active, storage_id, last_login)
+             VALUES ($1, $2, $3, 'customer', $4, true, $5, NOW())
              ON CONFLICT (email) DO UPDATE
              SET organization = EXCLUDED.organization,
                  name = EXCLUDED.name,
+                 storage_id = COALESCE(users.storage_id, EXCLUDED.storage_id),
                  last_login = NOW()`,
-            [customerName || companyName || 'Customer Admin', customerEmail.toLowerCase().trim(), defaultHash, companyName || 'My Organization']
+            [customerName || companyName || 'Customer Admin', customerEmail.toLowerCase().trim(), defaultHash, companyName || 'My Organization', effectiveStorageId]
           );
 
           // Send formal tax invoice & customer dashboard login credentials to customer email
@@ -1510,6 +1706,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
               companyName: companyName || 'My Organization',
               invoiceNumber,
               orderNumber,
+              storageId: effectiveStorageId,
               amount: safeTotalAmount,
               billingCycle,
               planName,
@@ -1528,7 +1725,8 @@ app.post('/api/payment/verify', async (req, res, next) => {
       await logAudit('Payment Succeeded & Verified', `${orderNumber} (${invoiceNumber})`, customerEmail || customerName, req.ip, {
         amount: safeTotalAmount,
         paymentId: verifiedPaymentId,
-        paymentMethod
+        paymentMethod,
+        storageId: effectiveStorageId
       });
     }
 
@@ -1546,6 +1744,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
       orderNumber,
       paymentId: verifiedPaymentId,
       invoiceNumber,
+      storageId: effectiveStorageId,
       planName,
       selectedApps,
       status: 'Active',

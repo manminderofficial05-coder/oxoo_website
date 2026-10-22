@@ -266,7 +266,7 @@ async function initDb() {
       );
     `);
 
-    // Schema Migrations: Ensure numeric columns allow decimals (e.g. 660.80)
+    // Schema Migrations: Ensure numeric columns and credential/storage columns
     try {
       await client.query(`
         ALTER TABLE subscriptions ALTER COLUMN amount TYPE NUMERIC(12, 2);
@@ -276,8 +276,12 @@ async function initDb() {
         ALTER TABLE orders ALTER COLUMN tax_amount TYPE NUMERIC(12, 2);
         ALTER TABLE orders ALTER COLUMN discount_amount TYPE NUMERIC(12, 2);
         ALTER TABLE orders ALTER COLUMN total_amount TYPE NUMERIC(12, 2);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS storage_id VARCHAR(100);
+        ALTER TABLE orders ADD COLUMN IF NOT EXISTS storage_id VARCHAR(100);
       `);
-      console.log('PostgreSQL numeric column migrations applied successfully.');
+      console.log('PostgreSQL migrations applied successfully.');
     } catch (migErr) {
       console.log('Migration check note:', migErr.message);
     }

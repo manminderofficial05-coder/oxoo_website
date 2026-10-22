@@ -28,6 +28,7 @@ import PricingPage from './PricingPage';
 import CheckoutPage from './CheckoutPage';
 import CustomerLoginPage from './CustomerLoginPage';
 import AdminLoginPage from './AdminLoginPage';
+import ResetPasswordPage from './ResetPasswordPage';
 
 function useScrollTop() {
   const location = useLocation();
@@ -1680,6 +1681,7 @@ export default function App() {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/customer/login" element={<CustomerLoginPage />} />
       <Route path="/customer-login" element={<CustomerLoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin-login" element={<AdminLoginPage />} />
       <Route path="/signin" element={<SignInRouter />} />
