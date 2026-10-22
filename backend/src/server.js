@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 
 const { pool, query, initDb } = require('./db');
 const { categories: fallbackCategories, services: fallbackServices } = require('./seedData');
+const { sendOtpEmail, verifyOtp, sendInvoiceAndCredentialsEmail } = require('./emailService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -231,6 +232,40 @@ app.get('/api/auth/me', verifyToken, async (req, res, next) => {
     res.json({ user: user || req.user });
   } catch (e) {
     next(e);
+  }
+});
+
+// -------------------------------------------------------------
+// OTP Verification Routes (Demo Access & Billing Form)
+// -------------------------------------------------------------
+app.post('/api/auth/send-otp', async (req, res, next) => {
+  try {
+    const { email, purpose = 'Verification', customerName = '' } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
+    const result = await sendOtpEmail({ email, purpose, customerName });
+    res.json(result);
+  } catch (e) {
+    console.error('Error in /api/auth/send-otp:', e.message);
+    res.status(500).json({ success: false, message: e.message || 'Failed to send verification email.' });
+  }
+});
+
+app.post('/api/auth/verify-otp', async (req, res, next) => {
+  try {
+    const { email, otp } = req.body || {};
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP code are required.' });
+    }
+    const result = verifyOtp({ email, otp });
+    if (!result.valid) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+    res.json({ success: true, verified: true, message: result.message });
+  } catch (e) {
+    console.error('Error in /api/auth/verify-otp:', e.message);
+    res.status(500).json({ success: false, message: e.message || 'Failed to verify OTP.' });
   }
 });
 
@@ -499,10 +534,40 @@ app.get('/api/admin/audit-logs', async (_req, res, next) => {
 // 7. CUSTOMER PORTAL API ROUTES (POSTGRESQL POWERED)
 // -------------------------------------------------------------
 
+// Helper mapping for canonical software modules
+const CANONICAL_MODULES = {
+  'finance': { id: 'finance', name: 'Finance Software', category: 'Finance Suite', demoUrl: '/apps/finance' },
+  'sales': { id: 'sales', name: 'Sales Software', category: 'Sales Suite', demoUrl: '/apps/sales' },
+  'supply-chain': { id: 'supply-chain', name: 'Supply Chain Software', category: 'Operations Suite', demoUrl: '/apps/supply-chain' },
+  'human-resources': { id: 'human-resources', name: 'Human Resources Software', category: 'HR Suite', demoUrl: '/apps/human-resources' },
+  'productivity': { id: 'productivity', name: 'Productivity Software', category: 'Productivity Suite', demoUrl: '/apps/productivity' }
+};
+
+function getCanonicalApp(raw) {
+  if (!raw) return null;
+  const str = (typeof raw === 'string' ? raw : (raw.id || raw.name || '')).toLowerCase().trim();
+  let key = 'finance';
+  if (str.includes('sale')) key = 'sales';
+  else if (str.includes('supply') || str.includes('chain') || str.includes('inventory')) key = 'supply-chain';
+  else if (str.includes('human') || str.includes('resource') || str.includes('hr')) key = 'human-resources';
+  else if (str.includes('productivity') || str.includes('ai') || str.includes('artificial')) key = 'productivity';
+  else if (str.includes('finance') || str.includes('account')) key = 'finance';
+  else key = str.replace(/\s+/g, '-');
+
+  const base = CANONICAL_MODULES[key] || { id: key, name: typeof raw === 'string' ? raw : (raw.name || key), category: 'Enterprise Suite', demoUrl: `/apps/${key}` };
+  return {
+    ...base,
+    entitled: true,
+    status: 'Active'
+  };
+}
+
 // Customer Overview (Summary Cards, Plan, Entitlements, Recent Activity)
-// Customer Overview (Summary Cards, Plan, Entitlements, Recent Activity)
-app.get('/api/customer/overview', async (_req, res, next) => {
+app.get('/api/customer/overview', async (req, res, next) => {
   try {
+    const userEmail = (req.query.email || req.headers['x-user-email'] || '').trim().toLowerCase();
+    const userCompany = (req.query.company || req.headers['x-user-company'] || '').trim();
+
     let org = null;
     let openTicketsCount = 0;
     let teamCount = 0;
@@ -512,8 +577,14 @@ app.get('/api/customer/overview', async (_req, res, next) => {
 
     if (isDbConnected) {
       try {
-        const orgRes = await query(`SELECT * FROM organizations ORDER BY id ASC LIMIT 1`);
-        if (orgRes.rows.length > 0) org = orgRes.rows[0];
+        if (userCompany) {
+          const orgRes = await query(`SELECT * FROM organizations WHERE LOWER(name) = LOWER($1) OR name ILIKE '%' || $2 || '%' LIMIT 1`, [userCompany, userCompany]);
+          if (orgRes.rows.length > 0) org = orgRes.rows[0];
+        }
+        if (!org) {
+          const defaultOrgRes = await query(`SELECT * FROM organizations ORDER BY id ASC LIMIT 1`);
+          if (defaultOrgRes.rows.length > 0) org = defaultOrgRes.rows[0];
+        }
 
         const ticketRes = await query(`SELECT COUNT(*) FROM support_tickets WHERE status != 'Resolved'`);
         if (ticketRes.rows.length > 0) openTicketsCount = parseInt(ticketRes.rows[0].count, 10) || 0;
@@ -521,53 +592,78 @@ app.get('/api/customer/overview', async (_req, res, next) => {
         const teamRes = await query(`SELECT COUNT(*) FROM team_members WHERE status = 'Active'`);
         if (teamRes.rows.length > 0) teamCount = parseInt(teamRes.rows[0].count, 10) || 0;
 
-        // 1. Fetch latest active subscription apps
-        const subRes = await query(`SELECT * FROM subscriptions WHERE status = 'Active' ORDER BY id DESC LIMIT 1`);
-        if (subRes.rows.length > 0 && subRes.rows[0].active_apps) {
-          const rawApps = subRes.rows[0].active_apps;
-          const appsList = Array.isArray(rawApps) ? rawApps : (typeof rawApps === 'string' ? JSON.parse(rawApps) : []);
-          purchasedApps = appsList.map(a => {
-            if (typeof a === 'string') {
-              const slug = a.toLowerCase().replace(/\s+/g, '-');
-              return { id: slug, name: a, entitled: true, status: 'Active', category: 'Enterprise Suite' };
+        // 1. Fetch active subscription apps for this specific customer
+        let subRes;
+        if (userCompany) {
+          subRes = await query(
+            `SELECT * FROM subscriptions WHERE (LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%') AND status = 'Active' ORDER BY id DESC`,
+            [userCompany, userCompany]
+          );
+        } else {
+          subRes = await query(`SELECT * FROM subscriptions WHERE status = 'Active' ORDER BY id DESC LIMIT 1`);
+        }
+
+        const rawCollectedApps = [];
+        if (subRes && subRes.rows.length > 0) {
+          subRes.rows.forEach(sub => {
+            if (sub.active_apps) {
+              const list = Array.isArray(sub.active_apps) ? sub.active_apps : (typeof sub.active_apps === 'string' ? JSON.parse(sub.active_apps) : []);
+              rawCollectedApps.push(...list);
             }
-            return { ...a, entitled: true, status: 'Active' };
           });
         }
 
-        // 2. Fallback to latest Paid order if subscription had empty apps
-        const ordRes = await query(`SELECT * FROM orders WHERE status = 'Paid' ORDER BY id DESC LIMIT 1`);
-        if (ordRes.rows.length > 0) {
+        // 2. Fetch paid orders for this specific customer
+        let ordRes;
+        if (userEmail || userCompany) {
+          ordRes = await query(
+            `SELECT * FROM orders WHERE (LOWER(customer_email) = LOWER($1) OR LOWER(company_name) = LOWER($2) OR company_name ILIKE '%' || $3 || '%') AND status = 'Paid' ORDER BY id DESC`,
+            [userEmail || '__none__', userCompany || '__none__', userCompany || '__none__']
+          );
+        } else {
+          ordRes = await query(`SELECT * FROM orders WHERE status = 'Paid' ORDER BY id DESC LIMIT 1`);
+        }
+
+        if (ordRes && ordRes.rows.length > 0) {
           latestOrder = ordRes.rows[0];
-          if (purchasedApps.length === 0 && ordRes.rows[0].selected_apps) {
-            const rawApps = ordRes.rows[0].selected_apps;
-            const appsList = Array.isArray(rawApps) ? rawApps : (typeof rawApps === 'string' ? JSON.parse(rawApps) : []);
-            purchasedApps = appsList.map(a => {
-              if (typeof a === 'string') {
-                const slug = a.toLowerCase().replace(/\s+/g, '-');
-                return { id: slug, name: a, entitled: true, status: 'Active', category: 'Enterprise Suite' };
-              }
-              return { ...a, entitled: true, status: 'Active' };
-            });
-          }
-        }
-
-        // 3. Fallback to organization active apps
-        if (purchasedApps.length === 0 && org?.active_apps) {
-          const rawApps = org.active_apps;
-          const appsList = Array.isArray(rawApps) ? rawApps : (typeof rawApps === 'string' ? JSON.parse(rawApps) : []);
-          purchasedApps = appsList.map(a => {
-            if (typeof a === 'string') {
-              const slug = a.toLowerCase().replace(/\s+/g, '-');
-              return { id: slug, name: a, entitled: true, status: 'Active', category: 'Enterprise Suite' };
+          ordRes.rows.forEach(ord => {
+            if (ord.selected_apps) {
+              const list = Array.isArray(ord.selected_apps) ? ord.selected_apps : (typeof ord.selected_apps === 'string' ? JSON.parse(ord.selected_apps) : []);
+              rawCollectedApps.push(...list);
             }
-            return { ...a, entitled: true, status: 'Active' };
           });
         }
 
-        // Invoices for activity stream
-        const invRes = await query(`SELECT * FROM invoices ORDER BY invoice_date DESC LIMIT 5`);
-        if (invRes.rows.length > 0) {
+        // 3. Fallback to organization active apps if empty
+        if (rawCollectedApps.length === 0 && org?.active_apps) {
+          const list = Array.isArray(org.active_apps) ? org.active_apps : (typeof org.active_apps === 'string' ? JSON.parse(org.active_apps) : []);
+          rawCollectedApps.push(...list);
+        }
+
+        // Canonical deduplication: Each software (e.g. Finance) is listed EXACTLY ONCE
+        const appMap = new Map();
+        rawCollectedApps.forEach(item => {
+          const canon = getCanonicalApp(item);
+          if (canon && !appMap.has(canon.id)) {
+            appMap.set(canon.id, canon);
+          }
+        });
+        purchasedApps = Array.from(appMap.values());
+
+        // Invoices for activity stream - ONLY for this customer
+        let invRes;
+        if (userCompany || userEmail) {
+          invRes = await query(
+            `SELECT DISTINCT ON (invoice_number) * FROM invoices
+             WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'
+             ORDER BY invoice_number, invoice_date DESC LIMIT 5`,
+            [userCompany || '__none__', userCompany || '__none__']
+          );
+        } else {
+          invRes = await query(`SELECT * FROM invoices ORDER BY invoice_date DESC LIMIT 5`);
+        }
+
+        if (invRes && invRes.rows.length > 0) {
           recentActivity = invRes.rows.map(inv => ({
             type: 'success',
             title: `Payment Received (${inv.invoice_number})`,
@@ -580,16 +676,16 @@ app.get('/api/customer/overview', async (_req, res, next) => {
       }
     }
 
-    const effectiveName = latestOrder?.customer_name || 'Customer Admin';
-    const effectiveCompany = org?.name || latestOrder?.company_name || 'My Organization';
-    const effectiveEmail = latestOrder?.customer_email || 'admin@organization.com';
+    const effectiveName = latestOrder?.customer_name || (userEmail ? userEmail.split('@')[0] : 'Customer Admin');
+    const effectiveCompany = userCompany || org?.name || latestOrder?.company_name || 'My Organization';
+    const effectiveEmail = userEmail || latestOrder?.customer_email || 'customer@oxoo.ai';
 
     res.json({
       company: effectiveCompany,
       customerName: effectiveName,
       email: effectiveEmail,
       avatar: effectiveName.charAt(0).toUpperCase() || 'C',
-      currentPlan: org?.plan || latestOrder?.plan_name || 'Business Pro',
+      currentPlan: latestOrder?.plan_name || org?.plan || (purchasedApps.length > 1 ? 'Custom Softwares' : 'Single Software'),
       status: org?.status || 'Active',
       nextBillingDate: org?.next_billing ? new Date(org.next_billing).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '30 Days',
       mrr: org?.mrr || (latestOrder ? Number(latestOrder.total_amount) : 0),
@@ -610,29 +706,47 @@ app.get('/api/customer/overview', async (_req, res, next) => {
   }
 });
 
-// Customer Billing & Subscriptions
-app.get('/api/customer/billing', async (_req, res, next) => {
+// Customer Billing & Subscriptions - Shows ONLY customer's own bills, NOT all bills
+app.get('/api/customer/billing', async (req, res, next) => {
   try {
+    const userEmail = (req.query.email || req.headers['x-user-email'] || '').trim().toLowerCase();
+    const userCompany = (req.query.company || req.headers['x-user-company'] || '').trim();
+
     let invoices = [];
     if (isDbConnected) {
       try {
-        const invRes = await query(`SELECT * FROM invoices ORDER BY invoice_date DESC LIMIT 20`);
-        invoices = invRes.rows;
-      } catch (e) {}
+        if (userCompany || userEmail) {
+          const invRes = await query(
+            `SELECT DISTINCT ON (i.invoice_number) i.* FROM invoices i
+             LEFT JOIN orders o ON LOWER(o.company_name) = LOWER(i.company_name) OR o.order_number = i.invoice_number
+             WHERE LOWER(i.company_name) = LOWER($1)
+                OR LOWER(i.company_name) ILIKE '%' || $2 || '%'
+                OR LOWER(o.customer_email) = LOWER($3)
+             ORDER BY i.invoice_number, i.invoice_date DESC`,
+            [userCompany || '__none__', userCompany || '__none__', userEmail || '__none__']
+          );
+          invoices = invRes.rows;
+        } else {
+          // If no customer is authenticated or specified, return empty array
+          invoices = [];
+        }
+      } catch (e) {
+        console.error('Error fetching customer invoices:', e.message);
+      }
     }
 
     res.json({
       currentPlan: {
-        name: 'Starter',
+        name: 'Single Software',
         amount: 0,
         currency: '₹',
         cycle: 'Monthly',
         status: 'Active',
-        nextBilling: 'N/A',
+        nextBilling: '30 Days',
         features: [
-          'Access to Standard Applications',
-          'Team Workspace',
-          'Standard Community Support'
+          'Access to Purchased Software Modules',
+          'Team Workspace & Role Access',
+          'Standard SLA & Support'
         ]
       },
       availablePlans: [
@@ -980,6 +1094,24 @@ app.get('/api/admin/customers', async (req, res, next) => {
     }
 
     res.json(customers);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Admin Payments & Invoices (Returns ALL invoices across all customers)
+app.get('/api/admin/invoices', async (_req, res, next) => {
+  try {
+    let invoices = [];
+    if (isDbConnected) {
+      try {
+        const invRes = await query(`SELECT * FROM invoices ORDER BY invoice_date DESC`);
+        invoices = invRes.rows;
+      } catch (e) {
+        console.error('Error fetching admin invoices:', e.message);
+      }
+    }
+    res.json(invoices);
   } catch (e) {
     next(e);
   }
@@ -1368,6 +1500,26 @@ app.post('/api/payment/verify', async (req, res, next) => {
                  last_login = NOW()`,
             [customerName || companyName || 'Customer Admin', customerEmail.toLowerCase().trim(), defaultHash, companyName || 'My Organization']
           );
+
+          // Send formal tax invoice & customer dashboard login credentials to customer email
+          try {
+            const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+            await sendInvoiceAndCredentialsEmail({
+              toEmail: customerEmail.toLowerCase().trim(),
+              customerName: customerName || companyName || 'Customer',
+              companyName: companyName || 'My Organization',
+              invoiceNumber,
+              orderNumber,
+              amount: safeTotalAmount,
+              billingCycle,
+              planName,
+              selectedApps,
+              password: 'oxoo123',
+              loginUrl: `${origin}/login`
+            });
+          } catch (emailErr) {
+            console.error('Error sending invoice and login credentials email:', emailErr.message);
+          }
         } catch (uErr) {
           console.error('Error recording customer in users table:', uErr.message);
         }

@@ -106,9 +106,26 @@ export async function getAdminOverview() {
 // -------------------------------------------------------------
 // Customer API
 // -------------------------------------------------------------
-export async function getCustomerOverview() {
+export async function getCustomerOverview(params = {}) {
   try {
-    const r = await fetch(`${API_URL}/api/customer/overview`);
+    let user = null;
+    try {
+      const su = localStorage.getItem('oxoo_user');
+      if (su) user = JSON.parse(su);
+    } catch (e) {}
+
+    const email = params.email || user?.email || '';
+    const company = params.company || user?.organization || '';
+    const queryStr = new URLSearchParams();
+    if (email) queryStr.set('email', email);
+    if (company) queryStr.set('company', company);
+
+    const r = await fetch(`${API_URL}/api/customer/overview?${queryStr.toString()}`, {
+      headers: {
+        'x-user-email': email,
+        'x-user-company': company
+      }
+    });
     if (!r.ok) throw new Error('Customer overview unavailable');
     return await r.json();
   } catch (err) {
@@ -117,9 +134,26 @@ export async function getCustomerOverview() {
   }
 }
 
-export async function getCustomerBilling() {
+export async function getCustomerBilling(params = {}) {
   try {
-    const r = await fetch(`${API_URL}/api/customer/billing`);
+    let user = null;
+    try {
+      const su = localStorage.getItem('oxoo_user');
+      if (su) user = JSON.parse(su);
+    } catch (e) {}
+
+    const email = params.email || user?.email || '';
+    const company = params.company || user?.organization || '';
+    const queryStr = new URLSearchParams();
+    if (email) queryStr.set('email', email);
+    if (company) queryStr.set('company', company);
+
+    const r = await fetch(`${API_URL}/api/customer/billing?${queryStr.toString()}`, {
+      headers: {
+        'x-user-email': email,
+        'x-user-company': company
+      }
+    });
     if (!r.ok) throw new Error('Customer billing unavailable');
     return await r.json();
   } catch {
@@ -244,6 +278,16 @@ export async function getAdminTickets() {
   }
 }
 
+export async function getAdminInvoices() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/invoices`);
+    if (!r.ok) throw new Error('Admin invoices unavailable');
+    return await r.json();
+  } catch {
+    return [];
+  }
+}
+
 export async function updateAdminTicket(id, payload) {
   const r = await fetch(`${API_URL}/api/admin/tickets/${id}`, {
     method: 'PUT',
@@ -365,6 +409,28 @@ export async function getPaymentInvoice(orderNumber) {
     console.warn('Invoice fetch failed:', err.message);
     return null;
   }
+}
+
+export async function sendEmailOtp({ email, purpose = 'Verification', customerName = '' }) {
+  const r = await fetch(`${API_URL}/api/auth/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, purpose, customerName })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to send verification code.');
+  return data;
+}
+
+export async function verifyEmailOtp({ email, otp }) {
+  const r = await fetch(`${API_URL}/api/auth/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Verification code is invalid or expired.');
+  return data;
 }
 
 export { API_URL };

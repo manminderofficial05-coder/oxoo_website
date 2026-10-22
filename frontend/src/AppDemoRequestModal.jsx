@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, User, Mail, Phone, Building2, Globe, Languages, Check, ArrowRight,
-  ChevronDown, Sparkles, CheckCircle2, Pencil, AlertCircle
+  ChevronDown, Sparkles, CheckCircle2, Pencil, AlertCircle, KeyRound,
+  ShieldCheck, RefreshCw, ArrowLeft
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ALL_SYSTEM_APPS, getAppMeta } from './appMetaHelper';
-import { submitLead } from './api';
+import { submitLead, sendEmailOtp, verifyEmailOtp } from './api';
 import DemoCelebrationLaunch from './DemoCelebrationLaunch';
 import CompanyBrandLogo from './CompanyBrandLogo';
 
@@ -36,6 +37,15 @@ export default function AppDemoRequestModal({
 
   // Company Name Limit (Max 8 characters)
   const [companyError, setCompanyError] = useState('');
+
+  // OTP Verification States
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpSuccess, setOtpSuccess] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const handleCompanyChange = (e) => {
     const rawVal = e.target.value;
@@ -82,6 +92,17 @@ export default function AppDemoRequestModal({
     }
   }, [app]);
 
+  // Resend cooldown timer
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
   // Reset states when opened (empty form)
   useEffect(() => {
     if (isOpen) {
@@ -96,6 +117,13 @@ export default function AppDemoRequestModal({
       setCompanyName('');
       setCustomSubdomain('');
       setIsEditingSubdomain(false);
+      setIsOtpStep(false);
+      setOtpValue('');
+      setIsVerifyingOtp(false);
+      setIsResendingOtp(false);
+      setOtpError('');
+      setOtpSuccess('');
+      setResendCooldown(0);
     }
   }, [isOpen]);
 
@@ -113,7 +141,7 @@ export default function AppDemoRequestModal({
 
   const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-  // Handle Form Submission
+  // Handle Initial Form Submission -> Sends OTP
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -157,10 +185,67 @@ export default function AppDemoRequestModal({
     setIsSubmitting(true);
 
     try {
-      // 1. Submit lead details to backend (graceful fallback if offline)
+      // Send 6-digit OTP to user's work email
+      await sendEmailOtp({
+        email: cleanEmail,
+        purpose: 'OXOO Live Demo Access',
+        customerName: fullName.trim()
+      });
+
+      setIsOtpStep(true);
+      setOtpError('');
+      setOtpSuccess(`A 6-digit verification code was sent to ${cleanEmail}`);
+      setResendCooldown(30);
+      setIsSubmitting(false);
+    } catch (err) {
+      setIsSubmitting(false);
+      setErrorMessage(err.message || 'Failed to send verification code. Please check your email.');
+    }
+  };
+
+  // Handle Resend OTP
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || isResendingOtp) return;
+    setIsResendingOtp(true);
+    setOtpError('');
+    setOtpSuccess('');
+    try {
+      await sendEmailOtp({
+        email: workEmail.trim(),
+        purpose: 'OXOO Live Demo Access',
+        customerName: fullName.trim()
+      });
+      setOtpSuccess(`A fresh verification code was sent to ${workEmail.trim()}`);
+      setResendCooldown(30);
+    } catch (err) {
+      setOtpError(err.message || 'Failed to resend code.');
+    } finally {
+      setIsResendingOtp(false);
+    }
+  };
+
+  // Handle Verify OTP and Launch Celebration
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    setOtpError('');
+    const cleanOtp = otpValue.replace(/\D/g, '').trim();
+    if (cleanOtp.length !== 6) {
+      setOtpError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      await verifyEmailOtp({
+        email: workEmail.trim(),
+        otp: cleanOtp
+      });
+
+      // Submit lead details to backend
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
       await submitLead({
         name: fullName.trim(),
-        email: cleanEmail,
+        email: workEmail.trim(),
         phone: `+91 ${cleanPhone}`,
         company: `${cleanSubdomain}.oxoo`,
         country,
@@ -170,21 +255,22 @@ export default function AppDemoRequestModal({
         source: 'app-showcase-demo-modal'
       }).catch(() => null);
 
-      // 2. Persist demo company & user to localStorage
+      // Persist demo company & user to localStorage and sessionStorage
       try {
+        sessionStorage.setItem('oxoo_demo_session_verified', 'true');
+        localStorage.setItem('oxoo_demo_verified', 'true');
         localStorage.setItem('oxoo_demo_user', fullName.trim());
-        localStorage.setItem('oxoo_demo_email', cleanEmail);
+        localStorage.setItem('oxoo_demo_email', workEmail.trim());
         localStorage.setItem('oxoo_demo_company', `${cleanSubdomain}.oxoo`);
         localStorage.setItem('oxoo_demo_app', currentApp.slug);
       } catch (err) {}
 
-      // 3. Launch full page continuous fireworks & typewriter celebration!
+      // Launch full page continuous fireworks & typewriter celebration!
       setShowCelebration(true);
-      setIsSubmitting(false);
+      setIsVerifyingOtp(false);
     } catch (err) {
-      setIsSubmitting(false);
-      setErrorMessage(err.message || 'Something went wrong. Launching celebration directly...');
-      setShowCelebration(true);
+      setIsVerifyingOtp(false);
+      setOtpError(err.message || 'Invalid or expired verification code. Please try again.');
     }
   };
 
@@ -218,6 +304,230 @@ export default function AppDemoRequestModal({
             <X size={20} />
           </button>
 
+          {isOtpStep ? (
+            <div style={{ padding: '32px 30px' }}>
+              <form onSubmit={handleVerifyOtp} noValidate className="demo-otp-form">
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                  <div
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                      border: '1px solid #bfdbfe',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#2563eb',
+                      marginBottom: '16px',
+                      boxShadow: '0 8px 24px rgba(37, 99, 235, 0.15)'
+                    }}
+                  >
+                    <ShieldCheck size={32} />
+                  </div>
+                  <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                    Verify Your Work Email
+                  </h2>
+                  <p style={{ fontSize: '14px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                    Enter the 6-digit verification code sent to <br />
+                    <strong style={{ color: '#0f172a', fontWeight: '700' }}>{workEmail.trim()}</strong>
+                  </p>
+                </div>
+
+                {otpSuccess && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      color: '#15803d',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      marginBottom: '18px',
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>{otpSuccess}</span>
+                  </div>
+                )}
+
+                {otpError && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#dc2626',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      marginBottom: '18px',
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <AlertCircle size={16} />
+                    <span>{otpError}</span>
+                  </div>
+                )}
+
+                <div style={{ marginBottom: '22px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: '#334155',
+                      marginBottom: '10px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    Enter 6-Digit Code
+                  </label>
+                  <div style={{ maxWidth: '280px', margin: '0 auto' }}>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoFocus
+                      value={otpValue}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setOtpValue(clean);
+                        if (otpError) setOtpError('');
+                      }}
+                      placeholder="••••••"
+                      style={{
+                        width: '100%',
+                        height: '52px',
+                        textAlign: 'center',
+                        fontSize: '28px',
+                        fontWeight: '800',
+                        letterSpacing: '10px',
+                        color: '#0f172a',
+                        background: '#f8fafc',
+                        border: '2px solid #cbd5e1',
+                        borderRadius: '12px',
+                        outline: 'none',
+                        transition: 'all 0.2s ease',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.background = '#ffffff';
+                        e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#cbd5e1';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '8px' }}>
+                    Code valid for 10 minutes. Check your inbox or spam folder.
+                  </p>
+                </div>
+
+                {/* Primary Verify CTA */}
+                <button
+                  type="submit"
+                  disabled={isVerifyingOtp || otpValue.trim().length !== 6}
+                  style={{
+                    width: '100%',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: otpValue.trim().length === 6 ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : '#94a3b8',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '15px',
+                    fontWeight: '700',
+                    cursor: otpValue.trim().length === 6 && !isVerifyingOtp ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: otpValue.trim().length === 6 ? '0 8px 20px rgba(37, 99, 235, 0.25)' : 'none',
+                    transition: 'all 0.2s ease',
+                    marginBottom: '16px'
+                  }}
+                >
+                  {isVerifyingOtp ? (
+                    <span className="btn-loading-flex">
+                      <span className="btn-spinner" />
+                      <span>Verifying code...</span>
+                    </span>
+                  ) : (
+                    <>
+                      <span>Verify & Access Demo</span>
+                      <ArrowRight size={18} />
+                    </>
+                  )}
+                </button>
+
+                {/* Resend and Back buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOtpStep(false);
+                      setOtpValue('');
+                      setOtpError('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748b',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 8px',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Edit details</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resendCooldown > 0 || isResendingOtp}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: resendCooldown > 0 ? '#94a3b8' : '#2563eb',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 8px',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <RefreshCw size={13} className={isResendingOtp ? 'animate-spin' : ''} />
+                    <span>
+                      {isResendingOtp ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} noValidate>
               {/* App Header Suite Banner */}
               <div className="demo-modal-app-header-banner">
@@ -538,7 +848,7 @@ export default function AppDemoRequestModal({
                   {isSubmitting ? (
                     <span className="btn-loading-flex">
                       <span className="btn-spinner" />
-                      <span>Setting up your demo...</span>
+                      <span>Sending verification code...</span>
                     </span>
                   ) : (
                     <span>Request My Demo ➔</span>
@@ -546,6 +856,7 @@ export default function AppDemoRequestModal({
                 </button>
               </div>
             </form>
+          )}
         </motion.div>
       </div>
       )}

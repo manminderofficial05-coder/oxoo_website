@@ -8,6 +8,7 @@ import {
 import { Logo } from '../components';
 import CompanyBrandLogo from '../CompanyBrandLogo';
 import { getAppBySlug, APPS_DATA } from '../appsData';
+import { sendEmailOtp, verifyEmailOtp } from '../api';
 import './demo.css';
 
 // 5 Interactive Application Demos Catalog
@@ -235,9 +236,9 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     } catch (e) {}
   }, []);
 
-  // 2-Minute Countdown Timer
+  // 2-Minute Countdown Timer (Only runs after OTP verification!)
   useEffect(() => {
-    if (!isTimerRunning) return;
+    if (!isTimerRunning || !isDemoVerified) return;
 
     timerRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
@@ -252,7 +253,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [isTimerRunning]);
+  }, [isTimerRunning, isDemoVerified]);
 
   // Handle Before Unload (Prompt on exit)
   useEffect(() => {
@@ -338,6 +339,93 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     const iframe = document.querySelector('.oxoo-viewer-iframe-frame');
     if (iframe) {
       iframe.src = resolveDemoSrc(demoId);
+    }
+  };
+
+  // Demo Email OTP Verification Gate States (Enforces OTP verification before live demo begins!)
+  const [isDemoVerified, setIsDemoVerified] = useState(() => {
+    try {
+      if (sessionStorage.getItem('oxoo_demo_session_verified') === 'true') return true;
+    } catch (e) {}
+    return false;
+  });
+
+  const [gateEmail, setGateEmail] = useState(() => {
+    try {
+      return localStorage.getItem('oxoo_demo_email') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [gateOtp, setGateOtp] = useState('');
+  const [isGateOtpSent, setIsGateOtpSent] = useState(false);
+  const [isGateSending, setIsGateSending] = useState(false);
+  const [isGateVerifying, setIsGateVerifying] = useState(false);
+  const [gateError, setGateError] = useState('');
+  const [gateSuccess, setGateSuccess] = useState('');
+  const [gateCooldown, setGateCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (gateCooldown > 0) {
+      timer = setInterval(() => {
+        setGateCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [gateCooldown]);
+
+  const handleSendGateOtp = async (e) => {
+    if (e) e.preventDefault();
+    const cleanEmail = (gateEmail || '').trim();
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
+      setGateError('Please enter a valid work email address.');
+      return;
+    }
+    setIsGateSending(true);
+    setGateError('');
+    setGateSuccess('');
+    try {
+      await sendEmailOtp({
+        email: cleanEmail,
+        purpose: 'OXOO Live Demo Access'
+      });
+      setIsGateOtpSent(true);
+      setGateSuccess(`Verification code sent to ${cleanEmail}`);
+      setGateCooldown(30);
+    } catch (err) {
+      setGateError(err.message || 'Failed to send verification code. Please check your email.');
+    } finally {
+      setIsGateSending(false);
+    }
+  };
+
+  const handleVerifyGateOtp = async (e) => {
+    if (e) e.preventDefault();
+    const cleanOtp = gateOtp.replace(/\D/g, '').trim();
+    if (cleanOtp.length !== 6) {
+      setGateError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+    setIsGateVerifying(true);
+    setGateError('');
+    try {
+      await verifyEmailOtp({
+        email: gateEmail.trim(),
+        otp: cleanOtp
+      });
+      try {
+        sessionStorage.setItem('oxoo_demo_session_verified', 'true');
+        localStorage.setItem('oxoo_demo_verified', 'true');
+        localStorage.setItem('oxoo_demo_email', gateEmail.trim());
+      } catch (err) {}
+      setIsDemoVerified(true);
+      setIsTimerRunning(true);
+    } catch (err) {
+      setGateError(err.message || 'Invalid or expired verification code.');
+    } finally {
+      setIsGateVerifying(false);
     }
   };
 
@@ -583,7 +671,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
       <iframe
         key={activeDemoId}
         title={demoTitle}
-        src={demoSrc}
+        src={isDemoVerified ? demoSrc : 'about:blank'}
         className="oxoo-viewer-iframe-frame"
         onLoad={(e) => {
           try {
@@ -799,6 +887,251 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Email OTP Verification Gate Modal (Guarantees demo only starts after OTP verification) */}
+      {!isDemoVerified && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999999,
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              padding: '36px 32px',
+              maxWidth: '460px',
+              width: '100%',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.35)',
+              textAlign: 'center',
+              position: 'relative'
+            }}
+          >
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '18px',
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                border: '1px solid #bfdbfe',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#2563eb',
+                marginBottom: '16px',
+                boxShadow: '0 8px 24px rgba(37, 99, 235, 0.16)'
+              }}
+            >
+              <ShieldCheck size={32} />
+            </div>
+
+            <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+              Verify Email to Access Live Demo
+            </h2>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+              Please verify your work email with a 6-digit OTP code to unlock and start the interactive OXOO live demo.
+            </p>
+
+            {gateSuccess && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  color: '#15803d',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  marginBottom: '16px'
+                }}
+              >
+                {gateSuccess}
+              </div>
+            )}
+
+            {gateError && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  marginBottom: '16px'
+                }}
+              >
+                {gateError}
+              </div>
+            )}
+
+            {!isGateOtpSent ? (
+              <form onSubmit={handleSendGateOtp}>
+                <div style={{ marginBottom: '18px', textAlign: 'left' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Work Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@company.com"
+                    value={gateEmail}
+                    onChange={(e) => {
+                      setGateEmail(e.target.value);
+                      if (gateError) setGateError('');
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '46px',
+                      padding: '0 14px',
+                      fontSize: '15px',
+                      color: '#0f172a',
+                      background: '#f8fafc',
+                      border: '1.5px solid #cbd5e1',
+                      borderRadius: '10px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isGateSending || !gateEmail.trim()}
+                  style={{
+                    width: '100%',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: gateEmail.trim() ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : '#94a3b8',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    cursor: gateEmail.trim() && !isGateSending ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: gateEmail.trim() ? '0 8px 20px rgba(37, 99, 235, 0.25)' : 'none'
+                  }}
+                >
+                  {isGateSending ? 'Sending verification code...' : 'Send Verification OTP →'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyGateOtp}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                    Enter 6-Digit Code
+                  </label>
+                  <div style={{ maxWidth: '280px', margin: '0 auto' }}>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoFocus
+                      value={gateOtp}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setGateOtp(clean);
+                        if (gateError) setGateError('');
+                      }}
+                      placeholder="••••••"
+                      style={{
+                        width: '100%',
+                        height: '52px',
+                        textAlign: 'center',
+                        fontSize: '28px',
+                        fontWeight: 800,
+                        letterSpacing: '10px',
+                        color: '#0f172a',
+                        background: '#f8fafc',
+                        border: '2px solid #cbd5e1',
+                        borderRadius: '12px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '8px' }}>
+                    Code valid for 10 minutes. Check your inbox or spam.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isGateVerifying || gateOtp.trim().length !== 6}
+                  style={{
+                    width: '100%',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: gateOtp.trim().length === 6 ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#94a3b8',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    cursor: gateOtp.trim().length === 6 && !isGateVerifying ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: gateOtp.trim().length === 6 ? '0 8px 20px rgba(22, 163, 74, 0.25)' : 'none',
+                    marginBottom: '14px'
+                  }}
+                >
+                  {isGateVerifying ? 'Verifying...' : 'Verify & Unlock Live Demo →'}
+                </button>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsGateOtpSent(false);
+                      setGateOtp('');
+                      setGateError('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748b',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ← Change Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendGateOtp}
+                    disabled={gateCooldown > 0 || isGateSending}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: gateCooldown > 0 ? '#94a3b8' : '#2563eb',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: gateCooldown > 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {isGateSending ? 'Sending...' : gateCooldown > 0 ? `Resend in ${gateCooldown}s` : 'Resend Code'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

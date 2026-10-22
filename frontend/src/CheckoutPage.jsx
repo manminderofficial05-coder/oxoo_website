@@ -3,11 +3,14 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Check, ArrowRight, ArrowLeft, ShieldCheck, Lock, CreditCard,
   Download, Printer, CheckCircle2, Building2, User, Mail, Phone,
-  FileText, QrCode, Sparkles, AlertCircle
+  FileText, QrCode, Sparkles, AlertCircle, RefreshCw, KeyRound, X
 } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { SOFTWARE_MODULES } from './PricingPage';
-import { calculatePricing, createPaymentOrder, verifyPayment } from './api';
+import {
+  calculatePricing, createPaymentOrder, verifyPayment, getCustomerOverview,
+  sendEmailOtp, verifyEmailOtp
+} from './api';
 import './checkout.css';
 
 const INDIAN_STATES = [
@@ -70,6 +73,26 @@ export default function CheckoutPage() {
   const paramBilling = searchParams.get('billing');
   const [isYearly, setIsYearly] = useState(paramBilling === 'yearly');
 
+  // Track apps already purchased by customer to prevent duplicate buying
+  const [ownedAppIds, setOwnedAppIds] = useState(() => {
+    const ids = new Set();
+    try {
+      const lp = localStorage.getItem('oxoo_purchased_apps');
+      if (lp) {
+        const list = JSON.parse(lp);
+        list.forEach((a) => {
+          const str = (typeof a === 'string' ? a : a.id || a.name || '').toLowerCase();
+          if (str.includes('sale')) ids.add('sales');
+          else if (str.includes('supply') || str.includes('chain') || str.includes('inventory')) ids.add('supply-chain');
+          else if (str.includes('human') || str.includes('resource') || str.includes('hr')) ids.add('human-resources');
+          else if (str.includes('productivity') || str.includes('ai')) ids.add('productivity');
+          else if (str.includes('finance') || str.includes('account')) ids.add('finance');
+        });
+      }
+    } catch (e) {}
+    return Array.from(ids);
+  });
+
   // Selected Software(s)
   const paramApps = searchParams.get('apps');
   const validSoftwareIds = SOFTWARE_MODULES.map((m) => m.id);
@@ -77,11 +100,20 @@ export default function CheckoutPage() {
     .map((id) => (id === 'hr' ? 'human-resources' : id))
     .filter((id) => validSoftwareIds.includes(id));
 
-  const initialApps = parsedApps.length > 0
+  // Exclude already owned softwares from initial selection
+  const unownedSoftwareIds = SOFTWARE_MODULES.filter((m) => !ownedAppIds.includes(m.id)).map((m) => m.id);
+  const candidateApps = parsedApps.length > 0
     ? parsedApps
     : activePlan === 'custom'
     ? ['sales', 'finance']
     : ['sales'];
+  const filteredApps = candidateApps.filter((id) => !ownedAppIds.includes(id));
+  const initialApps = filteredApps.length > 0
+    ? filteredApps
+    : unownedSoftwareIds.length > 0
+    ? [unownedSoftwareIds[0]]
+    : [];
+
   const [selectedAppIds, setSelectedAppIds] = useState(initialApps);
 
   // Number of licensed users
@@ -148,7 +180,130 @@ export default function CheckoutPage() {
     return () => window.removeEventListener('oxoo_auth_change', handleAuthSync);
   }, []);
 
+  // Fetch customer's already active software from backend to prevent duplicate purchases
+  useEffect(() => {
+    async function checkExistingPurchases() {
+      const email = loggedInUser?.email || formData.email;
+      const company = loggedInUser?.organization || formData.companyName;
+      if (!email && !company) return;
+
+      try {
+        const res = await getCustomerOverview({ email, company });
+        if (res?.purchasedApps && res.purchasedApps.length > 0) {
+          const ids = new Set(ownedAppIds);
+          res.purchasedApps.forEach((a) => {
+            const str = (typeof a === 'string' ? a : a.id || a.name || '').toLowerCase();
+            if (str.includes('sale')) ids.add('sales');
+            else if (str.includes('supply') || str.includes('chain') || str.includes('inventory')) ids.add('supply-chain');
+            else if (str.includes('human') || str.includes('resource') || str.includes('hr')) ids.add('human-resources');
+            else if (str.includes('productivity') || str.includes('ai')) ids.add('productivity');
+            else if (str.includes('finance') || str.includes('account')) ids.add('finance');
+          });
+          const updated = Array.from(ids);
+          setOwnedAppIds(updated);
+
+          // If any currently selected apps are already owned, remove them
+          setSelectedAppIds((prev) => {
+            const clean = prev.filter((id) => !updated.includes(id));
+            if (clean.length > 0) return clean;
+            const available = SOFTWARE_MODULES.find((m) => !updated.includes(m.id));
+            return available ? [available.id] : [];
+          });
+        }
+      } catch (e) {}
+    }
+    checkExistingPurchases();
+  }, [loggedInUser]);
+
   const [formErrors, setFormErrors] = useState({});
+
+  // Step 3 Billing Email OTP Verification States
+  const [isEmailVerified, setIsEmailVerified] = useState(() => {
+    try {
+      const u = localStorage.getItem('oxoo_user');
+      if (u) {
+        const user = JSON.parse(u);
+        return Boolean(user?.email);
+      }
+    } catch (e) {}
+    return false;
+  });
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpSuccess, setOtpSuccess] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Trigger sending OTP to billing email
+  const handleTriggerEmailOtp = async () => {
+    const cleanEmail = (formData.email || '').trim();
+    if (!cleanEmail) {
+      setFormErrors((prev) => ({ ...prev, email: 'Please enter your email address' }));
+      return;
+    }
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setFormErrors((prev) => ({ ...prev, email: 'Please enter a valid email address' }));
+      return;
+    }
+
+    setIsSendingOtp(true);
+    setOtpError('');
+    setOtpSuccess('');
+    try {
+      await sendEmailOtp({
+        email: cleanEmail,
+        purpose: 'OXOO Billing & Payment Verification',
+        customerName: (formData.yourName || '').trim()
+      });
+      setIsOtpModalOpen(true);
+      setOtpSuccess(`Verification code sent to ${cleanEmail}`);
+      setResendCooldown(30);
+    } catch (err) {
+      alert(err.message || 'Failed to send verification code. Please check your email.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Verify OTP entered by customer
+  const handleVerifyCheckoutOtp = async (e) => {
+    if (e) e.preventDefault();
+    setOtpError('');
+    const cleanOtp = otpValue.replace(/\D/g, '').trim();
+    if (cleanOtp.length !== 6) {
+      setOtpError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+    setIsVerifyingOtp(true);
+    try {
+      await verifyEmailOtp({
+        email: formData.email.trim(),
+        otp: cleanOtp
+      });
+      setIsEmailVerified(true);
+      setIsOtpModalOpen(false);
+      setOtpValue('');
+      // Successfully verified email! Now proceed to payment step
+      setCurrentStep(4);
+    } catch (err) {
+      setOtpError(err.message || 'Invalid or expired verification code.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   // Step 4: Payment Method
   const [paymentMethod, setPaymentMethod] = useState('Credit / Debit Card');
@@ -166,17 +321,28 @@ export default function CheckoutPage() {
   // Handle plan switcher in Step 1
   const handleSelectPlan = (plan) => {
     setActivePlan(plan);
+    const unowned = SOFTWARE_MODULES.filter((m) => !ownedAppIds.includes(m.id)).map((m) => m.id);
     if (plan === 'single') {
-      setSelectedAppIds([selectedAppIds[0] || 'sales']);
+      const pick = selectedAppIds.find((id) => unowned.includes(id)) || unowned[0] || 'sales';
+      setSelectedAppIds([pick]);
     } else if (plan === 'custom') {
-      if (selectedAppIds.length < 2) {
-        setSelectedAppIds(['hr', 'sales']);
+      const candidates = unowned.slice(0, 2);
+      if (candidates.length >= 2) {
+        setSelectedAppIds(candidates);
+      } else if (candidates.length === 1) {
+        setSelectedAppIds(candidates);
       }
     }
   };
 
-  // Handle toggling software selection in Step 1
+  // Handle toggling software selection in Step 1 (Blocks re-purchasing already owned software)
   const handleToggleSoftware = (appId) => {
+    if (ownedAppIds.includes(appId)) {
+      const mod = SOFTWARE_MODULES.find((m) => m.id === appId);
+      alert(`You already own ${mod ? mod.name : 'this software'}! Customers cannot purchase duplicate licenses for the same software.`);
+      return;
+    }
+
     if (selectedAppIds.includes(appId)) {
       if (selectedAppIds.length > 1) {
         const next = selectedAppIds.filter((id) => id !== appId);
@@ -243,11 +409,18 @@ export default function CheckoutPage() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleProceedFromStep3 = (e) => {
-    e.preventDefault();
-    if (validateCompanyDetails()) {
+  // Proceed from Step 3: Enforces email OTP verification before allowing payment!
+  const handleProceedFromStep3 = async (e) => {
+    if (e) e.preventDefault();
+    if (!validateCompanyDetails()) return;
+
+    if (isEmailVerified) {
       setCurrentStep(4);
+      return;
     }
+
+    // Require email OTP verification before payment!
+    await handleTriggerEmailOtp();
   };
 
   // Step 4: Execute Payment
@@ -559,48 +732,82 @@ export default function CheckoutPage() {
                 </span>
               </div>
 
-              {/* Software Selection Grid (8 Business Softwares) */}
+              {/* Software Selection Grid */}
               <div className="checkout-software-grid">
                 {SOFTWARE_MODULES.map((mod) => {
+                  const isOwned = ownedAppIds.includes(mod.id);
                   const isChecked = selectedAppIds.includes(mod.id);
                   return (
                     <div
                       key={mod.id}
-                      className={`checkout-software-card ${isChecked ? 'selected' : ''}`}
+                      className={`checkout-software-card ${isChecked ? 'selected' : ''} ${isOwned ? 'already-owned' : ''}`}
                       onClick={() => handleToggleSoftware(mod.id)}
+                      style={isOwned ? {
+                        opacity: 0.75,
+                        background: '#f8fafc',
+                        border: '1.5px dashed #94a3b8',
+                        cursor: 'not-allowed'
+                      } : {}}
                     >
                       <input
                         type="checkbox"
-                        checked={isChecked}
+                        checked={isOwned ? false : isChecked}
+                        disabled={isOwned}
                         onChange={() => handleToggleSoftware(mod.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
                       <img src={mod.iconSrc} alt={mod.name} className="checkout-software-icon" />
                       <div className="checkout-software-info">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
                           <span className="checkout-software-name">{mod.name}</span>
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              fontWeight: 700,
-                              padding: '1px 7px',
-                              borderRadius: '4px',
-                              background: `${mod.color}15`,
-                              color: mod.color
-                            }}
-                          >
-                            6 Apps Suite
-                          </span>
+                          {isOwned ? (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                background: '#dcfce7',
+                                color: '#15803d',
+                                border: '1px solid #86efac'
+                              }}
+                            >
+                              ✓ Already Purchased & Active
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                padding: '1px 7px',
+                                borderRadius: '4px',
+                                background: `${mod.color}15`,
+                                color: mod.color
+                              }}
+                            >
+                              6 Apps Suite
+                            </span>
+                          )}
                         </div>
-                        <span className="checkout-software-desc">{mod.desc}</span>
+                        <span className="checkout-software-desc">
+                          {isOwned ? 'Active in your account. You cannot buy duplicate copies of this software.' : mod.desc}
+                        </span>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <span className="checkout-software-rate" style={{ display: 'block' }}>
-                          ₹{isYearly ? '560' : '740'}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                          / user / mo
-                        </span>
+                        {isOwned ? (
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#16a34a' }}>
+                            Owned
+                          </span>
+                        ) : (
+                          <>
+                            <span className="checkout-software-rate" style={{ display: 'block' }}>
+                              ₹{isYearly ? '560' : '740'}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                              / user / mo
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -891,14 +1098,49 @@ export default function CheckoutPage() {
 
                   {/* Email * */}
                   <div className="form-field-group">
-                    <label className="form-field-label">Email *</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label className="form-field-label" style={{ marginBottom: 0 }}>Email *</label>
+                      {isEmailVerified ? (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', background: '#dcfce7', padding: '2px 8px', borderRadius: '10px' }}>
+                          <CheckCircle2 size={12} /> Email Verified
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleTriggerEmailOtp}
+                          disabled={isSendingOtp || !formData.email.trim()}
+                          style={{
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            padding: '2px 8px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <KeyRound size={11} />
+                          {isSendingOtp ? 'Sending...' : 'Verify Email (OTP)'}
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="email"
                       className="form-field-input"
                       required
                       placeholder="rahul@abc.com"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => {
+                        const newEmail = e.target.value;
+                        setFormData({ ...formData, email: newEmail });
+                        if (isEmailVerified && (!loggedInUser || loggedInUser.email !== newEmail)) {
+                          setIsEmailVerified(false);
+                        }
+                      }}
                     />
                     {formErrors.email && (
                       <span style={{ color: '#ef4444', fontSize: '12px' }}>{formErrors.email}</span>
@@ -1050,6 +1292,222 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* OTP Verification Modal for Billing Email */}
+          {isOtpModalOpen && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(15, 23, 42, 0.7)',
+                backdropFilter: 'blur(8px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 99999,
+                padding: '20px'
+              }}
+              onClick={() => setIsOtpModalOpen(false)}
+            >
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '18px',
+                  padding: '32px 28px',
+                  maxWidth: '440px',
+                  width: '100%',
+                  boxShadow: '0 24px 48px rgba(0, 0, 0, 0.25)',
+                  position: 'relative'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsOtpModalOpen(false)}
+                  style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#94a3b8'
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+
+                <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+                  <div
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                      border: '1px solid #bfdbfe',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#2563eb',
+                      marginBottom: '14px',
+                      boxShadow: '0 8px 20px rgba(37, 99, 235, 0.15)'
+                    }}
+                  >
+                    <ShieldCheck size={30} />
+                  </div>
+                  <h3 style={{ fontSize: '21px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                    Verify Your Billing Email
+                  </h3>
+                  <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                    Enter the 6-digit OTP code sent to <br />
+                    <strong style={{ color: '#0f172a' }}>{formData.email}</strong>
+                  </p>
+                </div>
+
+                {otpSuccess && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      color: '#15803d',
+                      fontSize: '12.5px',
+                      textAlign: 'center',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>{otpSuccess}</span>
+                  </div>
+                )}
+
+                {otpError && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#dc2626',
+                      fontSize: '12.5px',
+                      textAlign: 'center',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <AlertCircle size={15} />
+                    <span>{otpError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleVerifyCheckoutOtp}>
+                  <div style={{ marginBottom: '22px' }}>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoFocus
+                      value={otpValue}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setOtpValue(clean);
+                        if (otpError) setOtpError('');
+                      }}
+                      placeholder="••••••"
+                      style={{
+                        width: '100%',
+                        height: '52px',
+                        textAlign: 'center',
+                        fontSize: '28px',
+                        fontWeight: 800,
+                        letterSpacing: '10px',
+                        color: '#0f172a',
+                        background: '#f8fafc',
+                        border: '2px solid #cbd5e1',
+                        borderRadius: '12px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '8px' }}>
+                      Verification code is valid for 10 minutes.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isVerifyingOtp || otpValue.trim().length !== 6}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      borderRadius: '12px',
+                      background: otpValue.trim().length === 6 ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#94a3b8',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontSize: '15px',
+                      fontWeight: 700,
+                      cursor: otpValue.trim().length === 6 && !isVerifyingOtp ? 'pointer' : 'not-allowed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: otpValue.trim().length === 6 ? '0 8px 20px rgba(22, 163, 74, 0.25)' : 'none',
+                      marginBottom: '16px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isVerifyingOtp ? 'Verifying code...' : 'Verify & Proceed to Payment →'}
+                  </button>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsOtpModalOpen(false)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#64748b',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTriggerEmailOtp}
+                      disabled={resendCooldown > 0 || isSendingOtp}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: resendCooldown > 0 ? '#94a3b8' : '#2563eb',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <RefreshCw size={13} className={isSendingOtp ? 'animate-spin' : ''} />
+                      <span>{isSendingOtp ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* =============================================================== */}
           {/* STEP 4: Complete Your Payment                                   */}
           {/* =============================================================== */}
@@ -1178,6 +1636,49 @@ export default function CheckoutPage() {
           {/* =============================================================== */}
           {currentStep === 5 && (
             <div>
+              {/* Emailed Invoice & Customer Dashboard Login Credentials Banner */}
+              <div
+                className="no-print"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
+                  border: '1.5px solid #93c5fd',
+                  borderRadius: '14px',
+                  padding: '18px 22px',
+                  marginBottom: '20px',
+                  boxShadow: '0 4px 16px rgba(37, 99, 235, 0.08)'
+                }}
+              >
+                <div
+                  style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                  }}
+                >
+                  <Mail size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '15.5px', fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>Tax Invoice & Customer Login Credentials Emailed!</span>
+                    <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
+                      ✓ Delivered to {formData.email}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#334155', marginTop: '4px', lineHeight: 1.5 }}>
+                    Your official Tax Invoice receipt and your Customer Dashboard login credentials (<strong style={{ color: '#1e3a8a' }}>User ID:</strong> <code>{formData.email}</code> &bull; <strong style={{ color: '#1e3a8a' }}>Password:</strong> <code>oxoo123</code>) have been sent to your email. You can sign in to access your customer dashboard anytime.
+                  </div>
+                </div>
+              </div>
+
               {/* Actions Banner */}
               <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

@@ -50,9 +50,18 @@ export default function CustomerDashboard() {
     async function loadData() {
       setLoading(true);
       try {
+        let storedUser = null;
+        try {
+          const su = localStorage.getItem('oxoo_user');
+          if (su) storedUser = JSON.parse(su);
+        } catch (e) {}
+
+        const userEmail = storedUser?.email || '';
+        const userCompany = storedUser?.organization || '';
+
         const [ovData, billData, teamData, tktData] = await Promise.all([
-          getCustomerOverview(),
-          getCustomerBilling(),
+          getCustomerOverview({ email: userEmail, company: userCompany }),
+          getCustomerBilling({ email: userEmail, company: userCompany }),
           getCustomerTeam(),
           getCustomerTickets()
         ]);
@@ -64,29 +73,56 @@ export default function CustomerDashboard() {
           if (lp) localPurchased = JSON.parse(lp);
         } catch (e) {}
 
-        let storedUser = null;
-        try {
-          const su = localStorage.getItem('oxoo_user');
-          if (su) storedUser = JSON.parse(su);
-        } catch (e) {}
+        const canonicalModuleDefs = {
+          'finance': { id: 'finance', name: 'Finance Software', category: 'Finance Suite', demoUrl: '/apps/finance' },
+          'sales': { id: 'sales', name: 'Sales Software', category: 'Sales Suite', demoUrl: '/apps/sales' },
+          'supply-chain': { id: 'supply-chain', name: 'Supply Chain Software', category: 'Operations Suite', demoUrl: '/apps/supply-chain' },
+          'human-resources': { id: 'human-resources', name: 'Human Resources Software', category: 'HR Suite', demoUrl: '/apps/human-resources' },
+          'productivity': { id: 'productivity', name: 'Productivity Software', category: 'Productivity Suite', demoUrl: '/apps/productivity' }
+        };
 
-        let mergedApps = [...(ovData?.purchasedApps || [])];
-        const appIds = new Set(mergedApps.map(a => a.id));
+        const getCanonicalKey = (item) => {
+          if (!item) return '';
+          const str = (typeof item === 'string' ? item : (item.id || item.name || '')).toLowerCase().trim();
+          if (str.includes('sale')) return 'sales';
+          if (str.includes('supply') || str.includes('chain') || str.includes('inventory')) return 'supply-chain';
+          if (str.includes('human') || str.includes('resource') || str.includes('hr')) return 'human-resources';
+          if (str.includes('productivity') || str.includes('ai') || str.includes('artificial')) return 'productivity';
+          if (str.includes('finance') || str.includes('account')) return 'finance';
+          return str.replace(/\s+/g, '-');
+        };
 
-        localPurchased.forEach((app) => {
-          if (!appIds.has(app.id)) {
-            mergedApps.push({
-              id: app.id,
-              name: app.name,
-              category: app.category || 'Business Suite',
-              entitled: true,
-              status: 'Active',
-              demoUrl: app.demoUrl || `/apps/${app.id}`
-            });
-            appIds.add(app.id);
+        const appMap = new Map();
+
+        // 1. Add apps from backend overview
+        (ovData?.purchasedApps || []).forEach((app) => {
+          const key = getCanonicalKey(app);
+          const base = canonicalModuleDefs[key] || {
+            id: key,
+            name: app.name || key,
+            category: app.category || 'Business Suite',
+            demoUrl: app.demoUrl || `/apps/${key}`
+          };
+          if (key && !appMap.has(key)) {
+            appMap.set(key, { ...base, entitled: true, status: 'Active' });
           }
         });
 
+        // 2. Add apps from local storage
+        localPurchased.forEach((app) => {
+          const key = getCanonicalKey(app);
+          const base = canonicalModuleDefs[key] || {
+            id: key,
+            name: app.name || key,
+            category: app.category || 'Business Suite',
+            demoUrl: app.demoUrl || `/apps/${key}`
+          };
+          if (key && !appMap.has(key)) {
+            appMap.set(key, { ...base, entitled: true, status: 'Active' });
+          }
+        });
+
+        const mergedApps = Array.from(appMap.values());
         const activeCount = mergedApps.filter(a => a.entitled).length;
 
         const effectiveOverview = {
@@ -95,7 +131,7 @@ export default function CustomerDashboard() {
           company: storedUser?.organization || ovData?.company || 'My Organization',
           email: storedUser?.email || ovData?.email || 'admin@organization.com',
           avatar: (storedUser?.name || ovData?.customerName || 'C').charAt(0).toUpperCase(),
-          currentPlan: storedUser?.plan || ovData?.currentPlan || 'Business Pro',
+          currentPlan: storedUser?.plan || ovData?.currentPlan || (mergedApps.length > 1 ? 'Custom Softwares' : 'Single Software'),
           purchasedApps: mergedApps,
           activeAppsCount: activeCount > 0 ? activeCount : (ovData?.activeAppsCount || 0),
           totalPurchasedApps: mergedApps.length > 0 ? mergedApps.length : (ovData?.totalPurchasedApps || 0)
@@ -807,35 +843,45 @@ export default function CustomerDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {billingData?.invoices && billingData.invoices.length > 0 ? (
-                        billingData.invoices.map((inv) => (
-                          <tr key={inv.id || inv.invoice_number}>
-                            <td className="oxoo-table-company">{inv.invoice_number}</td>
-                            <td>{inv.company_name}</td>
-                            <td>{inv.plan}</td>
-                            <td className="oxoo-table-amount">₹{inv.amount?.toLocaleString('en-IN')}</td>
-                            <td>
-                              <span className="oxoo-status-tag active">{inv.status}</span>
-                            </td>
-                            <td>{new Date(inv.invoice_date).toLocaleDateString('en-GB')}</td>
-                            <td>
-                              <button
-                                type="button"
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
-                                onClick={() => showToast(`Downloading ${inv.invoice_number}.pdf`)}
-                              >
-                                <Download size={12} /> PDF
-                              </button>
+                      {(() => {
+                        const customerOrg = (overview?.company || '').toLowerCase().trim();
+                        const displayedInvoices = (billingData?.invoices || []).filter((inv) => {
+                          if (!inv) return false;
+                          if (!customerOrg) return true;
+                          const invComp = (inv.company_name || '').toLowerCase().trim();
+                          return invComp === customerOrg || invComp.includes(customerOrg) || customerOrg.includes(invComp);
+                        });
+
+                        return displayedInvoices.length > 0 ? (
+                          displayedInvoices.map((inv) => (
+                            <tr key={inv.id || inv.invoice_number}>
+                              <td className="oxoo-table-company">{inv.invoice_number}</td>
+                              <td>{inv.company_name}</td>
+                              <td>{inv.plan}</td>
+                              <td className="oxoo-table-amount">₹{Number(inv.amount || 0).toLocaleString('en-IN')}</td>
+                              <td>
+                                <span className="oxoo-status-tag active">{inv.status}</span>
+                              </td>
+                              <td>{new Date(inv.invoice_date).toLocaleDateString('en-GB')}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
+                                  onClick={() => showToast(`Downloading ${inv.invoice_number}.pdf`)}
+                                >
+                                  <Download size={12} /> PDF
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                              No invoices generated yet for your account.
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
-                            No invoices generated yet.
-                          </td>
-                        </tr>
-                      )}
+                        );
+                      })()}
                     </tbody>
                   </table>
                 </div>

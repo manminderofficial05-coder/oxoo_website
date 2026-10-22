@@ -268,7 +268,7 @@ export default function AppShowcase() {
               <button
                 type="button"
                 className="mockup-play-center-btn"
-                onClick={() => navigate(`/apps/${app.slug}/live-demo`)}
+                onClick={() => navigate(`/apps/${app.slug}/demo`)}
                 title={`Launch Interactive Live Demo of ${app.name}`}
               >
                 <Play size={24} fill="#714b67" color="#714b67" />

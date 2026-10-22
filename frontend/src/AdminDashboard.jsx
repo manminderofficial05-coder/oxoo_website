@@ -12,7 +12,7 @@ import {
 import {
   getAdminMetrics, getAdminRevenueChart, getAdminGrowthChart,
   getAdminTopProducts, getAdminCustomers, getAdminTickets,
-  updateAdminTicket, updateCustomerStatus
+  getAdminInvoices, updateAdminTicket, updateCustomerStatus
 } from './api';
 import './dashboards.css';
 
@@ -46,19 +46,19 @@ export default function AdminDashboard() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Load all admin data from backend/PostgreSQL
   // Load all admin data from backend/PostgreSQL and sync latest checkout orders
   useEffect(() => {
     async function fetchAdminData() {
       setLoading(true);
       try {
-        const [mRes, rRes, gRes, pRes, cRes, tRes] = await Promise.all([
+        const [mRes, rRes, gRes, pRes, cRes, tRes, invRes] = await Promise.all([
           getAdminMetrics(),
           getAdminRevenueChart(selectedPeriod.toLowerCase()),
           getAdminGrowthChart(),
           getAdminTopProducts(),
           getAdminCustomers(),
-          getAdminTickets()
+          getAdminTickets(),
+          getAdminInvoices()
         ]);
 
         if (mRes) setMetrics(mRes);
@@ -66,6 +66,7 @@ export default function AdminDashboard() {
         if (gRes?.data) setGrowthData(gRes.data);
         if (pRes) setTopProducts(pRes);
         if (tRes) setTickets(tRes);
+        if (invRes) setInvoices(invRes);
 
         // Merge backend customers with locally saved checkout orders for immediate reflection
         let localCusts = [];
