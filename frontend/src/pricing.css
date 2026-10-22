@@ -309,7 +309,8 @@
 /* Card Action Buttons */
 .card-cta-btn {
   width: 100%;
-  padding: 10px 16px;
+  margin-top: auto;
+  padding: 11px 16px;
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 700;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, ArrowRight, Grid, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Header, Footer } from './components';
 import { ALL_APPS_CATEGORIES } from './AllAppsDirectory';
 import './pricing.css';
@@ -143,29 +143,6 @@ export default function PricingPage() {
               </div>
               <div className="price-unit-caption">Completely Free</div>
 
-              <ul className="card-features-list">
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet blue"><Check size={11} /></span>
-                  <span>One software (choose any)</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet blue"><Check size={11} /></span>
-                  <span>Unlimited users</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet blue"><Check size={11} /></span>
-                  <span>Full feature access for 14 days</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet blue"><Check size={11} /></span>
-                  <span>Explore UI & workflow</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet blue"><Check size={11} /></span>
-                  <span>No credit card required</span>
-                </li>
-              </ul>
-
               {/* Free Demo goes directly to all apps as requested */}
               <Link
                 to="/apps"
@@ -201,29 +178,6 @@ export default function PricingPage() {
                   </span>
                 )}
               </div>
-
-              <ul className="card-features-list">
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet coral"><Check size={11} /></span>
-                  <span>Select any one available software</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet coral"><Check size={11} /></span>
-                  <span>Full features of chosen software</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet coral"><Check size={11} /></span>
-                  <span>Application-specific dashboard</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet coral"><Check size={11} /></span>
-                  <span>User & role management</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet coral"><Check size={11} /></span>
-                  <span>Reports, analytics & updates</span>
-                </li>
-              </ul>
 
               <button
                 type="button"
@@ -263,29 +217,6 @@ export default function PricingPage() {
               <div className="price-extra-note">
                 Additional software: + Rs {isYearly ? '560' : '740'} each / user / month
               </div>
-
-              <ul className="card-features-list">
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet mint"><Check size={11} /></span>
-                  <span>Select 2 or more software</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet mint"><Check size={11} /></span>
-                  <span>All selected apps full access</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet mint"><Check size={11} /></span>
-                  <span>Mix & match as per your business</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet mint"><Check size={11} /></span>
-                  <span>Multi-company support & external API</span>
-                </li>
-                <li className="feature-check-item">
-                  <span className="feature-icon-bullet mint"><Check size={11} /></span>
-                  <span>Advanced reporting & priority support</span>
-                </li>
-              </ul>
 
               <button
                 type="button"
