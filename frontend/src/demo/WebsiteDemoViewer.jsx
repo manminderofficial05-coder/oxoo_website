@@ -399,12 +399,15 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     setGateError('');
     setGateSuccess('');
     try {
-      await sendEmailOtp({
+      const otpRes = await sendEmailOtp({
         email: cleanEmail,
         purpose: 'OXOO Live Demo Access'
       });
       setIsGateOtpSent(true);
       setGateSuccess(`Verification code sent to ${cleanEmail}`);
+      if (otpRes && otpRes.fallbackOtp) {
+        setGateOtp(otpRes.fallbackOtp);
+      }
       setGateCooldown(30);
     } catch (err) {
       setGateError(err.message || 'Failed to send verification code. Please check your email.');

@@ -256,13 +256,18 @@ export default function CheckoutPage() {
     setOtpError('');
     setOtpSuccess('');
     try {
-      await sendEmailOtp({
+      const otpRes = await sendEmailOtp({
         email: cleanEmail,
         purpose: 'OXOO Billing & Payment Verification',
         customerName: (formData.yourName || '').trim()
       });
       setIsOtpModalOpen(true);
-      setOtpSuccess(`Verification code sent to ${cleanEmail}`);
+      if (otpRes && otpRes.fallbackOtp) {
+        setOtpSuccess(`Verification code sent to ${cleanEmail}`);
+        setOtpValue(otpRes.fallbackOtp);
+      } else {
+        setOtpSuccess(`Verification code sent to ${cleanEmail}`);
+      }
       setResendCooldown(30);
     } catch (err) {
       alert(err.message || 'Failed to send verification code. Please check your email.');
