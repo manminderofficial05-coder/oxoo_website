@@ -224,7 +224,7 @@ export default function CustomerDashboard() {
   };
 
   // Shared secret service key matching Oxoo Finance
-  const OXOO_FINANCE_SERVICE_KEY = "oxoo_live_secure_key_2026";
+  const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
 
   // Application launch handler with strict entitlement verification
   const handleOpenApp = (app) => {

@@ -73,10 +73,25 @@ export default function CheckoutPage() {
   const paramBilling = searchParams.get('billing');
   const [isYearly, setIsYearly] = useState(paramBilling === 'yearly');
 
-  // Track apps already purchased by customer to prevent duplicate buying
-  const [ownedAppIds, setOwnedAppIds] = useState(() => {
-    const ids = new Set();
+  // Logged-in user state
+  const [loggedInUser, setLoggedInUser] = useState(() => {
     try {
+      const u = localStorage.getItem('oxoo_user');
+      return u ? JSON.parse(u) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Track apps already purchased by THIS SPECIFIC logged-in customer (only if logged in)
+  const [ownedAppIds, setOwnedAppIds] = useState(() => {
+    try {
+      const u = localStorage.getItem('oxoo_user');
+      if (!u) return [];
+      const user = JSON.parse(u);
+      if (!user || !user.email) return [];
+
+      const ids = new Set();
       const lp = localStorage.getItem('oxoo_purchased_apps');
       if (lp) {
         const list = JSON.parse(lp);
@@ -89,8 +104,10 @@ export default function CheckoutPage() {
           else if (str.includes('finance') || str.includes('account')) ids.add('finance');
         });
       }
-    } catch (e) {}
-    return Array.from(ids);
+      return Array.from(ids);
+    } catch (e) {
+      return [];
+    }
   });
 
   // Selected Software(s)
@@ -100,36 +117,18 @@ export default function CheckoutPage() {
     .map((id) => (id === 'hr' ? 'human-resources' : id))
     .filter((id) => validSoftwareIds.includes(id));
 
-  // Exclude already owned softwares from initial selection
-  const unownedSoftwareIds = SOFTWARE_MODULES.filter((m) => !ownedAppIds.includes(m.id)).map((m) => m.id);
   const candidateApps = parsedApps.length > 0
     ? parsedApps
     : activePlan === 'custom'
     ? ['sales', 'finance']
     : ['sales'];
-  const filteredApps = candidateApps.filter((id) => !ownedAppIds.includes(id));
-  const initialApps = filteredApps.length > 0
-    ? filteredApps
-    : unownedSoftwareIds.length > 0
-    ? [unownedSoftwareIds[0]]
-    : [];
 
-  const [selectedAppIds, setSelectedAppIds] = useState(initialApps);
+  const [selectedAppIds, setSelectedAppIds] = useState(candidateApps);
 
   // Number of licensed users
   const [userCount, setUserCount] = useState(1);
 
-  // Logged-in user state
-  const [loggedInUser, setLoggedInUser] = useState(() => {
-    try {
-      const u = localStorage.getItem('oxoo_user');
-      return u ? JSON.parse(u) : null;
-    } catch (e) {
-      return null;
-    }
-  });
-
-  // Step 3: Company & Billing Details - Auto-fill from logged-in user if available
+  // Step 3: Company & Billing Details - Clean and empty by default (auto-fill only from authenticated logged-in user)
   const [formData, setFormData] = useState(() => {
     let user = null;
     try {
@@ -137,23 +136,17 @@ export default function CheckoutPage() {
       if (u) user = JSON.parse(u);
     } catch (e) {}
 
-    let profile = null;
-    try {
-      const p = localStorage.getItem('oxoo_customer_profile');
-      if (p) profile = JSON.parse(p);
-    } catch (e) {}
-
     return {
-      yourName: user?.name || profile?.yourName || 'Rahul Sharma',
-      email: user?.email || profile?.email || 'rahul@abc.com',
-      phone: user?.phone || profile?.phone || '98765 43210',
-      companyName: user?.organization || profile?.companyName || (user?.name ? `${user.name} Workspace` : 'ABC Pvt Ltd'),
-      vat: user?.vat || profile?.vat || '29ABCDE1234F1Z5',
-      streetAndNumber: user?.streetAndNumber || profile?.streetAndNumber || '123, MG Road',
-      city: user?.city || profile?.city || 'Bengaluru',
-      zipCode: user?.zipCode || profile?.zipCode || '560001',
-      country: user?.country || profile?.country || 'India',
-      stateProvince: user?.stateProvince || profile?.stateProvince || 'Karnataka'
+      yourName: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      companyName: user?.organization || '',
+      vat: user?.vat || '',
+      streetAndNumber: user?.streetAndNumber || '',
+      city: user?.city || '',
+      zipCode: user?.zipCode || '',
+      country: user?.country || 'India',
+      stateProvince: user?.stateProvince || ''
     };
   });
 
@@ -248,7 +241,7 @@ export default function CheckoutPage() {
 
   // Trigger sending OTP to billing email
   const handleTriggerEmailOtp = async () => {
-    const cleanEmail = (formData.email || '').trim();
+    const cleanEmail = (formData.email || '').trim().toLowerCase();
     if (!cleanEmail) {
       setFormErrors((prev) => ({ ...prev, email: 'Please enter your email address' }));
       return;
@@ -287,10 +280,11 @@ export default function CheckoutPage() {
       setOtpError('Please enter the complete 6-digit verification code.');
       return;
     }
+    const cleanEmail = (formData.email || '').trim().toLowerCase();
     setIsVerifyingOtp(true);
     try {
       await verifyEmailOtp({
-        email: formData.email.trim(),
+        email: cleanEmail,
         otp: cleanOtp
       });
       setIsEmailVerified(true);
@@ -321,28 +315,19 @@ export default function CheckoutPage() {
   // Handle plan switcher in Step 1
   const handleSelectPlan = (plan) => {
     setActivePlan(plan);
-    const unowned = SOFTWARE_MODULES.filter((m) => !ownedAppIds.includes(m.id)).map((m) => m.id);
     if (plan === 'single') {
-      const pick = selectedAppIds.find((id) => unowned.includes(id)) || unowned[0] || 'sales';
+      const pick = selectedAppIds[0] || 'sales';
       setSelectedAppIds([pick]);
     } else if (plan === 'custom') {
-      const candidates = unowned.slice(0, 2);
-      if (candidates.length >= 2) {
-        setSelectedAppIds(candidates);
-      } else if (candidates.length === 1) {
-        setSelectedAppIds(candidates);
+      if (selectedAppIds.length < 2) {
+        const remaining = SOFTWARE_MODULES.map((m) => m.id).filter((id) => !selectedAppIds.includes(id));
+        setSelectedAppIds([...selectedAppIds, remaining[0] || 'finance']);
       }
     }
   };
 
-  // Handle toggling software selection in Step 1 (Blocks re-purchasing already owned software)
+  // Handle toggling software selection in Step 1
   const handleToggleSoftware = (appId) => {
-    if (ownedAppIds.includes(appId)) {
-      const mod = SOFTWARE_MODULES.find((m) => m.id === appId);
-      alert(`You already own ${mod ? mod.name : 'this software'}! Customers cannot purchase duplicate licenses for the same software.`);
-      return;
-    }
-
     if (selectedAppIds.includes(appId)) {
       if (selectedAppIds.length > 1) {
         const next = selectedAppIds.filter((id) => id !== appId);
@@ -396,14 +381,16 @@ export default function CheckoutPage() {
   // Validate Step 3 fields
   const validateCompanyDetails = () => {
     const errs = {};
-    if (!formData.yourName.trim()) errs.yourName = 'Your name is required';
-    if (!formData.email.trim()) errs.email = 'Email address is required';
+    if (!formData.yourName.trim()) errs.yourName = 'Your full name is required';
+    if (!formData.email.trim()) {
+      errs.email = 'Email address is required';
+    } else {
+      const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!EMAIL_REGEX.test(formData.email.trim())) {
+        errs.email = 'Please enter a valid email address';
+      }
+    }
     if (!formData.phone.trim()) errs.phone = 'Phone number is required';
-    if (!formData.streetAndNumber.trim()) errs.streetAndNumber = 'Street and number are required';
-    if (!formData.city.trim()) errs.city = 'City is required';
-    if (!formData.zipCode.trim()) errs.zipCode = 'Zip Code is required';
-    if (!formData.country) errs.country = 'Country is required';
-    if (!formData.stateProvince) errs.stateProvince = 'State/Province is required';
 
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
@@ -735,24 +722,17 @@ export default function CheckoutPage() {
               {/* Software Selection Grid */}
               <div className="checkout-software-grid">
                 {SOFTWARE_MODULES.map((mod) => {
-                  const isOwned = ownedAppIds.includes(mod.id);
+                  const isOwned = Boolean(loggedInUser && ownedAppIds.includes(mod.id));
                   const isChecked = selectedAppIds.includes(mod.id);
                   return (
                     <div
                       key={mod.id}
-                      className={`checkout-software-card ${isChecked ? 'selected' : ''} ${isOwned ? 'already-owned' : ''}`}
+                      className={`checkout-software-card ${isChecked ? 'selected' : ''}`}
                       onClick={() => handleToggleSoftware(mod.id)}
-                      style={isOwned ? {
-                        opacity: 0.75,
-                        background: '#f8fafc',
-                        border: '1.5px dashed #94a3b8',
-                        cursor: 'not-allowed'
-                      } : {}}
                     >
                       <input
                         type="checkbox"
-                        checked={isOwned ? false : isChecked}
-                        disabled={isOwned}
+                        checked={isChecked}
                         onChange={() => handleToggleSoftware(mod.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
@@ -772,7 +752,7 @@ export default function CheckoutPage() {
                                 border: '1px solid #86efac'
                               }}
                             >
-                              ✓ Already Purchased & Active
+                              Active on Account
                             </span>
                           ) : (
                             <span
@@ -790,24 +770,16 @@ export default function CheckoutPage() {
                           )}
                         </div>
                         <span className="checkout-software-desc">
-                          {isOwned ? 'Active in your account. You cannot buy duplicate copies of this software.' : mod.desc}
+                          {mod.desc}
                         </span>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        {isOwned ? (
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#16a34a' }}>
-                            Owned
-                          </span>
-                        ) : (
-                          <>
-                            <span className="checkout-software-rate" style={{ display: 'block' }}>
-                              ₹{isYearly ? '560' : '740'}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                              / user / mo
-                            </span>
-                          </>
-                        )}
+                        <span className="checkout-software-rate" style={{ display: 'block' }}>
+                          ₹{isYearly ? '560' : '740'}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                          / user / mo
+                        </span>
                       </div>
                     </div>
                   );
@@ -1087,7 +1059,7 @@ export default function CheckoutPage() {
                       type="text"
                       className="form-field-input"
                       required
-                      placeholder="Rahul Sharma"
+                      placeholder="Enter your full name"
                       value={formData.yourName}
                       onChange={(e) => setFormData({ ...formData, yourName: e.target.value })}
                     />
@@ -1132,7 +1104,7 @@ export default function CheckoutPage() {
                       type="email"
                       className="form-field-input"
                       required
-                      placeholder="rahul@abc.com"
+                      placeholder="you@company.com"
                       value={formData.email}
                       onChange={(e) => {
                         const newEmail = e.target.value;
@@ -1155,7 +1127,7 @@ export default function CheckoutPage() {
                       <input
                         type="tel"
                         required
-                        placeholder="98765 43210"
+                        placeholder="10-digit mobile number"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       />
@@ -1171,7 +1143,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       className="form-field-input"
-                      placeholder="ABC Pvt Ltd"
+                      placeholder="Enter company / business name"
                       value={formData.companyName}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     />
@@ -1179,24 +1151,23 @@ export default function CheckoutPage() {
 
                   {/* VAT */}
                   <div className="form-field-group">
-                    <label className="form-field-label">VAT</label>
+                    <label className="form-field-label">VAT / GSTIN</label>
                     <input
                       type="text"
                       className="form-field-input"
-                      placeholder="29ABCDE1234F1Z5"
+                      placeholder="GSTIN / Tax ID (optional)"
                       value={formData.vat}
                       onChange={(e) => setFormData({ ...formData, vat: e.target.value })}
                     />
                   </div>
 
-                  {/* Street and Number * */}
+                  {/* Street and Number */}
                   <div className="form-field-group full-width">
-                    <label className="form-field-label">Street and Number *</label>
+                    <label className="form-field-label">Street and Number</label>
                     <input
                       type="text"
                       className="form-field-input"
-                      required
-                      placeholder="123, MG Road"
+                      placeholder="Street address (optional)"
                       value={formData.streetAndNumber}
                       onChange={(e) => setFormData({ ...formData, streetAndNumber: e.target.value })}
                     />
@@ -1205,14 +1176,13 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
-                  {/* City * */}
+                  {/* City */}
                   <div className="form-field-group">
-                    <label className="form-field-label">City *</label>
+                    <label className="form-field-label">City</label>
                     <input
                       type="text"
                       className="form-field-input"
-                      required
-                      placeholder="Bengaluru"
+                      placeholder="City (optional)"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     />
@@ -1221,14 +1191,13 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
-                  {/* Zip Code * */}
+                  {/* Zip Code */}
                   <div className="form-field-group">
-                    <label className="form-field-label">Zip Code *</label>
+                    <label className="form-field-label">Zip Code</label>
                     <input
                       type="text"
                       className="form-field-input"
-                      required
-                      placeholder="560001"
+                      placeholder="PIN / Postal Code"
                       value={formData.zipCode}
                       onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                     />
@@ -1239,10 +1208,9 @@ export default function CheckoutPage() {
 
                   {/* Country * */}
                   <div className="form-field-group">
-                    <label className="form-field-label">Country *</label>
+                    <label className="form-field-label">Country</label>
                     <select
                       className="form-field-select"
-                      required
                       value={formData.country}
                       onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                     >
@@ -1252,16 +1220,15 @@ export default function CheckoutPage() {
                     </select>
                   </div>
 
-                  {/* State / Province * */}
+                  {/* State / Province */}
                   <div className="form-field-group">
-                    <label className="form-field-label">State / Province *</label>
+                    <label className="form-field-label">State / Province</label>
                     <select
                       className="form-field-select"
-                      required
                       value={formData.stateProvince}
                       onChange={(e) => setFormData({ ...formData, stateProvince: e.target.value })}
                     >
-                      <option value="">State / Province...</option>
+                      <option value="">State / Province (optional)...</option>
                       {INDIAN_STATES.map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
@@ -1284,8 +1251,19 @@ export default function CheckoutPage() {
                   <button
                     type="submit"
                     className="checkout-primary-btn"
+                    disabled={isSendingOtp}
                   >
-                    Continue to Payment <ArrowRight size={16} />
+                    {isSendingOtp ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <RefreshCw size={15} className="animate-spin" />
+                        <span>Sending verification code...</span>
+                      </span>
+                    ) : (
+                      <>
+                        <span>Continue to Payment</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
