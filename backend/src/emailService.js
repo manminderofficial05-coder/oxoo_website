@@ -164,7 +164,7 @@ async function sendInvoiceAndCredentialsEmail({
   orderNumber,
   amount,
   billingCycle = 'monthly',
-  planName = 'Single Software',
+  planName = 'Standard Pack',
   selectedApps = [],
   password = 'oxoo123',
   loginUrl = 'http://localhost:5173/login'

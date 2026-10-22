@@ -131,7 +131,7 @@ export default function CustomerDashboard() {
           company: storedUser?.organization || ovData?.company || 'My Organization',
           email: storedUser?.email || ovData?.email || 'admin@organization.com',
           avatar: (storedUser?.name || ovData?.customerName || 'C').charAt(0).toUpperCase(),
-          currentPlan: storedUser?.plan || ovData?.currentPlan || (mergedApps.length > 1 ? 'Custom Softwares' : 'Single Software'),
+          currentPlan: storedUser?.plan || ovData?.currentPlan || (mergedApps.length > 1 ? 'Custom Pack' : 'Standard Pack'),
           purchasedApps: mergedApps,
           activeAppsCount: activeCount > 0 ? activeCount : (ovData?.activeAppsCount || 0),
           totalPurchasedApps: mergedApps.length > 0 ? mergedApps.length : (ovData?.totalPurchasedApps || 0)

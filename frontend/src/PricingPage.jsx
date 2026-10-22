@@ -173,27 +173,16 @@ export default function PricingPage() {
               >
                 Start Free Demo <ArrowRight size={14} />
               </Link>
-
-              <Link
-                to="/apps"
-                className="card-secondary-btn"
-              >
-                <Grid size={13} /> Go to All Apps
-              </Link>
-
-              <div className="card-footer-note">
-                No cost · No commitment · 14 days access
-              </div>
             </div>
           </div>
 
-          {/* Card 2: Single Software (Monthly 740 / Yearly 560) */}
+          {/* Card 2: Standard Pack (Monthly 740 / Yearly 560) */}
           <div className="pricing-card">
             <div className="card-top-banner banner-coral">
               Best for Small Business
             </div>
             <div className="card-content-body">
-              <h2 className="card-plan-title">Single Software</h2>
+              <h2 className="card-plan-title">Standard Pack</h2>
               <p className="card-plan-tagline">Buy one software at affordable price</p>
 
               <div className="card-price-row">
@@ -241,30 +230,18 @@ export default function PricingPage() {
                 className="card-cta-btn btn-coral"
                 onClick={() => handleGoToCheckout('single')}
               >
-                Buy One Software <ArrowRight size={14} />
+                Buy Standard Pack <ArrowRight size={14} />
               </button>
-
-              <button
-                type="button"
-                className="card-secondary-btn"
-                onClick={() => handleGoToCheckout('single', true)}
-              >
-                Start Free Trial
-              </button>
-
-              <div className="card-footer-note">
-                Full access · All features included · Cancel anytime
-              </div>
             </div>
           </div>
 
-          {/* Card 3: Custom Softwares (Monthly 1280 / Yearly 980 for 2 softwares) */}
+          {/* Card 3: Custom Pack (Monthly 1280 / Yearly 980 for 2 softwares) */}
           <div className="pricing-card featured-card">
             <div className="card-top-banner banner-mint">
               Most Popular for Growing Business
             </div>
             <div className="card-content-body">
-              <h2 className="card-plan-title">Custom Softwares</h2>
+              <h2 className="card-plan-title">Custom Pack</h2>
               <p className="card-plan-tagline">Choose 2 or more software and get advanced features</p>
 
               <div className="card-price-row">
@@ -315,20 +292,8 @@ export default function PricingPage() {
                 className="card-cta-btn btn-mint"
                 onClick={() => handleGoToCheckout('custom')}
               >
-                Create Custom Plan <ArrowRight size={14} />
+                Buy Custom Pack <ArrowRight size={14} />
               </button>
-
-              <button
-                type="button"
-                className="card-secondary-btn"
-                onClick={() => handleGoToCheckout('custom', true)}
-              >
-                Start Free Trial
-              </button>
-
-              <div className="card-footer-note">
-                Full access · Scalable · Cancel anytime
-              </div>
             </div>
           </div>
         </section>
@@ -342,7 +307,7 @@ export default function PricingPage() {
               Explore All 48 Business Applications
             </h2>
             <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-              Included across our Single Software and Custom Softwares packages.
+              Included across our Standard Pack and Custom Pack packages.
             </p>
           </div>
 

@@ -421,7 +421,7 @@ export default function CheckoutPage() {
       ).map((m) => m.name);
 
       const planNameFormatted =
-        activePlan === 'single' ? 'Single Software' : 'Custom Softwares';
+        activePlan === 'single' ? 'Standard Pack' : 'Custom Pack';
 
       // 1. Create Order on backend
       const orderRes = await createPaymentOrder({
@@ -656,7 +656,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="checkout-pill-sub">
                     {selectedAppIds.length <= 1
-                      ? 'per user / month (Single Software)'
+                      ? 'per user / month (Standard Pack)'
                       : `for ${selectedAppIds.length} softwares (+₹740 each addl)`}
                   </div>
                 </div>
@@ -686,7 +686,7 @@ export default function CheckoutPage() {
               {/* Configuration Row: Licensed Users & Current Selected Package */}
               <div className="checkout-config-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontSize: '0.9rem', color: '#334155' }}>
-                  Selected: <b>{selectedAppIds.length <= 1 ? 'Single Software' : 'Custom Softwares'}</b> ({selectedAppIds.length} application{selectedAppIds.length > 1 ? 's' : ''})
+                  Selected: <b>{selectedAppIds.length <= 1 ? 'Standard Pack' : 'Custom Pack'}</b> ({selectedAppIds.length} application{selectedAppIds.length > 1 ? 's' : ''})
                 </div>
 
                 <div className="checkout-counter-group">
@@ -715,7 +715,7 @@ export default function CheckoutPage() {
                   Select Softwares ({selectedAppIds.length} selected):
                 </h3>
                 <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                  Pick 1 software for Single Software, or 2+ for Custom Softwares
+                  Pick 1 software for Standard Pack, or 2+ for Custom Pack
                 </span>
               </div>
 
@@ -790,7 +790,7 @@ export default function CheckoutPage() {
               <div className="checkout-summary-bar">
                 <div>
                   <div className="checkout-summary-text">
-                    Plan: <b>{activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b> · {selectedAppIds.length} Software{selectedAppIds.length > 1 ? 's' : ''} · {userCount} User{userCount > 1 ? 's' : ''}
+                    Plan: <b>{activePlan === 'single' ? 'Standard Pack' : 'Custom Pack'}</b> · {selectedAppIds.length} Software{selectedAppIds.length > 1 ? 's' : ''} · {userCount} User{userCount > 1 ? 's' : ''}
                   </div>
                   <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
                     Billing: {isYearly ? `Yearly (12 Months at ₹${totals.ratePerUser}/user/mo)` : `Monthly (1 Month at ₹${totals.ratePerUser}/user/mo)`}
@@ -875,7 +875,7 @@ export default function CheckoutPage() {
               <div className="cart-review-breakdown">
                 <div className="cart-breakdown-row">
                   <span>Selected Plan:</span>
-                  <b>{activePlan === 'single' ? 'Single Software' : 'Custom Softwares'}</b>
+                  <b>{activePlan === 'single' ? 'Standard Pack' : 'Custom Pack'}</b>
                 </div>
                 <div className="cart-breakdown-row">
                   <span>Billing Period:</span>
@@ -1503,7 +1503,7 @@ export default function CheckoutPage() {
                 <div>
                   <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Plan:</span>
                   <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
-                    {activePlan === 'single' ? 'Single Software' : 'Custom Softwares'} ({userCount} User{userCount > 1 ? 's' : ''})
+                    {activePlan === 'single' ? 'Standard Pack' : 'Custom Pack'} ({userCount} User{userCount > 1 ? 's' : ''})
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

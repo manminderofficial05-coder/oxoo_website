@@ -685,7 +685,7 @@ app.get('/api/customer/overview', async (req, res, next) => {
       customerName: effectiveName,
       email: effectiveEmail,
       avatar: effectiveName.charAt(0).toUpperCase() || 'C',
-      currentPlan: latestOrder?.plan_name || org?.plan || (purchasedApps.length > 1 ? 'Custom Softwares' : 'Single Software'),
+      currentPlan: latestOrder?.plan_name || org?.plan || (purchasedApps.length > 1 ? 'Custom Pack' : 'Standard Pack'),
       status: org?.status || 'Active',
       nextBillingDate: org?.next_billing ? new Date(org.next_billing).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '30 Days',
       mrr: org?.mrr || (latestOrder ? Number(latestOrder.total_amount) : 0),
@@ -737,7 +737,7 @@ app.get('/api/customer/billing', async (req, res, next) => {
 
     res.json({
       currentPlan: {
-        name: 'Single Software',
+        name: 'Standard Pack',
         amount: 0,
         currency: '₹',
         cycle: 'Monthly',
@@ -1204,7 +1204,7 @@ const PRICING_CONFIG = {
   },
   singleApp: {
     id: 'single-app',
-    name: 'Single Software',
+    name: 'Standard Pack',
     tagline: 'Buy one software at affordable price',
     monthlyPrice: 740,
     yearlyPrice: 560,
@@ -1225,7 +1225,7 @@ const PRICING_CONFIG = {
   },
   customApps: {
     id: 'custom-apps',
-    name: 'Custom Softwares',
+    name: 'Custom Pack',
     tagline: 'Choose 2 or more software and get advanced features',
     monthlyBasePrice: 1280,
     yearlyBasePrice: 980,
@@ -1306,7 +1306,7 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
 
   return {
     planId: planId || (appsCount > 1 ? 'custom-apps' : 'single-app'),
-    planName: planId === 'custom-apps' || appsCount > 1 ? 'Custom Softwares' : 'Single Software',
+    planName: planId === 'custom-apps' || appsCount > 1 ? 'Custom Pack' : 'Standard Pack',
     userCount: users,
     billingCycle,
     appsCount,
