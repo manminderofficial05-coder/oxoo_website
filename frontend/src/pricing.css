@@ -117,7 +117,8 @@
   padding: 0 16px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
+  gap: 20px;
+  align-items: stretch;
 }
 
 .pricing-card {
@@ -127,6 +128,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
+  height: 100%;
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
@@ -144,10 +146,14 @@
 
 /* Card Top Ribbon / Banner */
 .card-top-banner {
-  padding: 6px 12px;
+  padding: 8px 12px;
+  min-height: 34px;
+  box-sizing: border-box;
   font-size: 0.72rem;
   font-weight: 700;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   letter-spacing: 0.01em;
 }
 
@@ -167,7 +173,7 @@
 }
 
 .card-content-body {
-  padding: 16px 20px 14px;
+  padding: 20px 22px 18px;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -177,13 +183,15 @@
   font-size: 1.25rem;
   font-weight: 800;
   color: #0f172a;
-  margin-bottom: 2px;
+  margin-bottom: 14px;
 }
 
 .card-plan-tagline {
   font-size: 0.76rem;
   color: #64748b;
-  margin-bottom: 10px;
+  min-height: 34px;
+  margin-bottom: 12px;
+  line-height: 1.35;
 }
 
 /* Price Row */
@@ -248,7 +256,9 @@
 .price-unit-caption {
   font-size: 0.72rem;
   color: #64748b;
-  margin-bottom: 6px;
+  min-height: 38px;
+  margin-bottom: 8px;
+  line-height: 1.35;
 }
 
 .price-extra-note {
@@ -256,9 +266,19 @@
   font-weight: 600;
   color: #475569;
   background: #f1f5f9;
-  padding: 4px 8px;
+  padding: 5px 8px;
   border-radius: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.price-extra-note.invisible-note {
+  visibility: hidden;
+  user-select: none;
+  background: transparent;
 }
 
 /* Feature Checklists */

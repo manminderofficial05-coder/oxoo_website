@@ -135,13 +135,13 @@ export default function PricingPage() {
             </div>
             <div className="card-content-body">
               <h2 className="card-plan-title">Free Demo</h2>
-              <p className="card-plan-tagline">Experience OXOO with live demo</p>
 
               <div className="card-price-row">
                 <span className="price-currency blue">Rs</span>
                 <span className="price-val blue">0</span>
               </div>
               <div className="price-unit-caption">Completely Free</div>
+              <div className="price-extra-note invisible-note">&nbsp;</div>
 
               {/* Free Demo goes directly to all apps as requested */}
               <Link
@@ -160,7 +160,6 @@ export default function PricingPage() {
             </div>
             <div className="card-content-body">
               <h2 className="card-plan-title">Standard Pack</h2>
-              <p className="card-plan-tagline">Buy one software at affordable price</p>
 
               <div className="card-price-row">
                 <span className="price-currency coral">Rs</span>
@@ -178,6 +177,7 @@ export default function PricingPage() {
                   </span>
                 )}
               </div>
+              <div className="price-extra-note invisible-note">&nbsp;</div>
 
               <button
                 type="button"
@@ -196,7 +196,6 @@ export default function PricingPage() {
             </div>
             <div className="card-content-body">
               <h2 className="card-plan-title">Custom Pack</h2>
-              <p className="card-plan-tagline">Choose 2 or more software and get advanced features</p>
 
               <div className="card-price-row">
                 <span className="price-currency mint">Rs</span>

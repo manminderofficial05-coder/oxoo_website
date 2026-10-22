@@ -1072,32 +1072,10 @@ export default function CheckoutPage() {
                   <div className="form-field-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <label className="form-field-label" style={{ marginBottom: 0 }}>Email *</label>
-                      {isEmailVerified ? (
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', background: '#dcfce7', padding: '2px 8px', borderRadius: '10px' }}>
+                      {isEmailVerified && (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', background: '#dcfce7', padding: '3px 9px', borderRadius: '9999px', border: '1px solid #bbf7d0' }}>
                           <CheckCircle2 size={12} /> Email Verified
                         </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleTriggerEmailOtp}
-                          disabled={isSendingOtp || !formData.email.trim()}
-                          style={{
-                            background: '#eff6ff',
-                            color: '#2563eb',
-                            border: '1px solid #bfdbfe',
-                            borderRadius: '6px',
-                            padding: '2px 8px',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <KeyRound size={11} />
-                          {isSendingOtp ? 'Sending...' : 'Verify Email (OTP)'}
-                        </button>
                       )}
                     </div>
                     <input
