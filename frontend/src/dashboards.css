@@ -1250,52 +1250,536 @@
 }
 
 /* --------------------------------------------------------------------------
-   RESPONSIVE DESIGN (Tablets & Mobile)
+   CUSTOMER PORTAL: ADVANCED TAB VIEWS (10 VIEWS)
+   Reports, Analytics, Notifications, Settings, Security, Team, Support
    -------------------------------------------------------------------------- */
-@media (max-width: 1280px) {
-  .oxoo-apps-horizontal-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .oxoo-admin-bottom-grid {
-    grid-template-columns: 1fr;
-  }
-  .oxoo-summary-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+
+/* Top Bar Portal Pill */
+.oxoo-portal-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  color: #0284c7;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
+/* Team Management Stat Summary Pills */
+.oxoo-team-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.oxoo-team-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.oxoo-team-stat-pill:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.oxoo-team-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.oxoo-team-stat-icon.blue { background: #e0f2fe; color: #0284c7; }
+.oxoo-team-stat-icon.green { background: #ecfdf5; color: #10b981; }
+.oxoo-team-stat-icon.yellow { background: #fef3c7; color: #f59e0b; }
+.oxoo-team-stat-icon.purple { background: #f3e8ff; color: #8b5cf6; }
+
+.oxoo-team-stat-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-team-stat-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-team-stat-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Filter Controls Bar (Search + Dropdown + Buttons) */
+.oxoo-filter-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.oxoo-filter-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  max-width: 600px;
+}
+
+.oxoo-table-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 14px;
+  flex: 1;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.oxoo-table-search-box:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.oxoo-table-search-box input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.oxoo-select-filter {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 13px;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Support Center Filter Tabs */
+.oxoo-filter-pills-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.oxoo-filter-pill-btn {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oxoo-filter-pill-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.oxoo-filter-pill-btn.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+}
+
+.oxoo-filter-count-badge {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.oxoo-filter-pill-btn.active .oxoo-filter-count-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Pagination Footer */
+.oxoo-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12.5px;
+  color: #64748b;
+  margin-top: 8px;
+}
+
+.oxoo-pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oxoo-page-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-page-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.oxoo-page-btn.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+/* Reports & Analytics Grid */
+.oxoo-analytics-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.oxoo-usage-chart-wrap {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+}
+
+.oxoo-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.oxoo-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.oxoo-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* Top Features Progress Breakdown */
+.oxoo-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.oxoo-feature-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oxoo-feature-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.oxoo-feature-bar-bg {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.oxoo-feature-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Notifications Tab */
+.oxoo-notifications-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.oxoo-notification-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  transition: all 0.2s;
+}
+
+.oxoo-notification-card:hover {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.oxoo-notification-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-notification-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.oxoo-notification-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.oxoo-notification-desc {
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.oxoo-notification-time {
+  font-size: 11.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* Settings Subtabs Bar */
+.oxoo-settings-subnav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+  padding-bottom: 2px;
+}
+
+.oxoo-settings-tab-btn {
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-settings-tab-btn:hover {
+  color: #0f172a;
+}
+
+.oxoo-settings-tab-btn.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+}
+
+/* Profile Card in Account Profile */
+.oxoo-profile-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.oxoo-profile-avatar-big {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 800;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.3);
+}
+
+/* Modern Switch Toggle */
+.oxoo-switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.oxoo-switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.oxoo-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.oxoo-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .oxoo-slider {
+  background-color: #0284c7;
+}
+
+input:checked + .oxoo-slider:before {
+  transform: translateX(20px);
+}
+
+/* Security Item Row */
+.oxoo-security-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 16px;
+}
+
+.oxoo-security-row:last-child {
+  border-bottom: none;
+}
+
+.oxoo-security-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.oxoo-security-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.oxoo-outline-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-outline-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* Customer Brand Tag in Header */
+.oxoo-customer-brand-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* Responsive Overrides */
 @media (max-width: 1024px) {
-  .oxoo-apps-activity-row {
-    grid-template-columns: 1fr;
+  .oxoo-team-stats-row {
+    grid-template-columns: repeat(2, 1fr);
   }
-  .oxoo-charts-row {
-    grid-template-columns: 1fr;
-  }
-  .oxoo-admin-top-split {
+  .oxoo-analytics-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 768px) {
-  .oxoo-sidebar {
-    position: fixed;
-    transform: translateX(-100%);
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
-  }
-  .oxoo-sidebar.open {
-    transform: translateX(0);
-  }
-  .oxoo-summary-grid {
-    grid-template-columns: 1fr;
-  }
-  .oxoo-apps-horizontal-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .oxoo-content-canvas {
-    padding: 16px;
-    gap: 20px;
-  }
-  .oxoo-top-header {
-    padding: 0 16px;
-  }
-}
