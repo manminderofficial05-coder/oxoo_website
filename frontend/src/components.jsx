@@ -356,7 +356,7 @@ export function Header() {
         <div className="nav-actions">
           {/* Quick Launch Buttons: HRMS (Finance Employee Login) & Inventory */}
           <a
-            href="https://oxoo-finance.onrender.com/?service_key=OXOO-FIN-2026-SECURE-KEY&role=employee&view=employee-login&mode=employee&login_type=employee"
+            href="https://oxoo-finance.onrender.com/?role=employee&mode=employee"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-app-pill nav-app-pill-hrms"
@@ -367,7 +367,7 @@ export function Header() {
           </a>
 
           <a
-            href="https://oxoo-finance.onrender.com/?service_key=OXOO-FIN-2026-SECURE-KEY&role=admin&auto_login=true&module=inventory&app=inventory"
+            href="/demo/supply-chain"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-app-pill nav-app-pill-inventory"

@@ -435,14 +435,14 @@ export default function CustomerDashboard() {
 
     // 1. Finance Software (Opens Oxoo Finance directly into Admin Dashboard)
     if (app.id === 'finance') {
-      const financeUrl = `https://oxoo-finance.onrender.com/?${ssoParams.toString()}`;
+      const financeUrl = `https://oxoo-finance.onrender.com/#/admin?${ssoParams.toString()}`;
       window.open(financeUrl, '_blank');
       return;
     }
 
-    // 2. HRMS Software (Opens HRMS Admin suite with Finance Service Key)
+    // 2. HRMS Software (Opens HRMS Admin suite directly)
     if (app.id === 'hrms') {
-      const hrmsUrl = `https://oxoo-finance.onrender.com/?${ssoParams.toString()}&module=hrms&view=admin-hrms`;
+      const hrmsUrl = `https://oxoo-finance.onrender.com/#/admin?${ssoParams.toString()}&module=hrms&view=admin-hrms`;
       window.open(hrmsUrl, '_blank');
       return;
     }
