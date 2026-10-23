@@ -354,24 +354,28 @@ export function Header() {
 
         {/* Right Action Items: Customer Login & Admin Login OR Logged-in Profile */}
         <div className="nav-actions">
-          {/* Quick Launch Buttons: HRMS & Inventory */}
-          <Link
-            to="/apps/hrms"
+          {/* Quick Launch Buttons: HRMS (Finance Employee Login) & Inventory */}
+          <a
+            href="https://oxoo-finance.onrender.com/?service_key=OXOO-FIN-2026-SECURE-KEY&role=employee&view=employee-login&mode=employee&login_type=employee"
+            target="_blank"
+            rel="noopener noreferrer"
             className="nav-app-pill nav-app-pill-hrms"
-            title="Launch HRMS"
+            title="HRMS Employee Login (Oxoo Finance Suite)"
           >
             <Users size={16} className="nav-app-pill-icon" />
             <span>HRMS</span>
-          </Link>
+          </a>
 
-          <Link
-            to="/apps/inventory"
+          <a
+            href="https://oxoo-finance.onrender.com/?service_key=OXOO-FIN-2026-SECURE-KEY&role=admin&auto_login=true&module=inventory&app=inventory"
+            target="_blank"
+            rel="noopener noreferrer"
             className="nav-app-pill nav-app-pill-inventory"
-            title="Launch Inventory"
+            title="Launch Inventory Suite"
           >
             <Package size={16} className="nav-app-pill-icon" />
             <span>Inventory</span>
-          </Link>
+          </a>
 
           <div className="nav-actions-divider" />
 

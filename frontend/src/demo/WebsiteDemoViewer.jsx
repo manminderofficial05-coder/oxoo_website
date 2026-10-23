@@ -216,7 +216,10 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     return config.src;
   };
 
-  const demoSrc = resolveDemoSrc(activeDemoId, activeAppObj?.slug);
+  const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
+  const rawDemoSrc = resolveDemoSrc(activeDemoId, activeAppObj?.slug);
+  const sep = rawDemoSrc.includes('?') ? '&' : '?';
+  const demoSrc = `${rawDemoSrc}${sep}service_key=${OXOO_FINANCE_SERVICE_KEY}&role=admin&auto_login=true&company=${encodeURIComponent(company)}`;
   const demoTitle = `${displayAppName ? `Oxoo ${displayAppName} · ` : ''}${activeConfig.title}`;
 
   // Demo Email OTP Verification Gate States (Enforces OTP verification before live demo begins!)

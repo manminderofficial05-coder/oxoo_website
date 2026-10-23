@@ -29,6 +29,7 @@ import CheckoutPage from './CheckoutPage';
 import CustomerLoginPage from './CustomerLoginPage';
 import AdminLoginPage from './AdminLoginPage';
 import ResetPasswordPage from './ResetPasswordPage';
+import EmployeeLoginPage from './EmployeeLoginPage';
 
 function useScrollTop() {
   const location = useLocation();
@@ -1764,6 +1765,11 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/customer" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
       <Route path="/dashboard" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
+
+      {/* Employee Authentication (HRMS & Finance Suite) */}
+      <Route path="/employee/login" element={<EmployeeLoginPage />} />
+      <Route path="/employee-login" element={<EmployeeLoginPage />} />
+      <Route path="/hrms/login" element={<EmployeeLoginPage />} />
 
       {/* Administrator Authentication & Console (Isolated at /admin) */}
       <Route path="/admin/login" element={<AdminLoginPage />} />

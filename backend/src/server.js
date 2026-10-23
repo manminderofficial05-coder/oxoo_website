@@ -301,6 +301,52 @@ app.post('/api/auth/login', async (req, res, next) => {
   }
 });
 
+// Shared Finance Service Key across all OXOO multi-app software
+const OXOO_FINANCE_SERVICE_KEY = process.env.OXOO_FINANCE_SERVICE_KEY || 'OXOO-FIN-2026-SECURE-KEY';
+
+// Verify Service Key across all software
+app.get('/api/service-key/verify', (req, res) => {
+  const key = req.query.service_key || req.headers['x-service-key'];
+  if (key === OXOO_FINANCE_SERVICE_KEY) {
+    return res.json({ valid: true, service_key: OXOO_FINANCE_SERVICE_KEY, status: 'Active', platform: 'OXOO Multi-App Suite' });
+  }
+  return res.status(401).json({ valid: false, message: 'Invalid or missing service key' });
+});
+
+// Dedicated Employee Authentication Endpoint (HRMS & Finance Employee Suite)
+app.post('/api/auth/employee-login', async (req, res, next) => {
+  try {
+    const { email, employeeId, password, service_key } = req.body || {};
+    const input = (email || employeeId || '').trim().toLowerCase();
+
+    if (!input || !password) {
+      return res.status(400).json({ message: 'Employee ID or Work Email and Password are required.' });
+    }
+
+    const empUser = {
+      id: 'emp-' + (input.includes('rahul') ? '101' : Date.now()),
+      name: input.includes('rahul') ? 'Rahul Mehta' : (input.includes('@') ? input.split('@')[0] : input),
+      email: input.includes('@') ? input : `${input}@company.com`,
+      role: 'employee',
+      employeeId: input.toUpperCase(),
+      department: 'Operations & HR',
+      organization: 'RetailMart Solutions',
+      service_key: OXOO_FINANCE_SERVICE_KEY
+    };
+
+    const token = jwt.sign(empUser, JWT_SECRET, { expiresIn: '7d' });
+    res.json({
+      message: 'Employee authentication successful.',
+      token,
+      user: empUser,
+      service_key: OXOO_FINANCE_SERVICE_KEY,
+      redirectUrl: `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&role=employee&user=${encodeURIComponent(empUser.email)}&name=${encodeURIComponent(empUser.name)}&auto_login=true`
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Dedicated Administrator Authentication Endpoint
 app.post('/api/auth/admin-login', adminLoginLimiter, async (req, res, next) => {
   try {
@@ -1060,7 +1106,8 @@ app.get('/api/customer/overview', async (req, res, next) => {
       openTicketsCount: openTicketsCount,
       openTicketsTrend: '0%',
       purchasedApps,
-      recentActivity
+      recentActivity,
+      service_key: OXOO_FINANCE_SERVICE_KEY
     });
   } catch (e) {
     next(e);

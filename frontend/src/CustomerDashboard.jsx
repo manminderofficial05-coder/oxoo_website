@@ -398,10 +398,10 @@ export default function CustomerDashboard() {
   // Shared secret service key matching Oxoo Finance & other software
   const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
 
-  // App Launch Handler (passing service key & customer logo to destination application)
+  // App Launch Handler: Passes Finance Service Key and automatically detects as Admin to open Admin Dashboard without login
   const handleOpenApp = (app) => {
     if (!app.entitled) {
-      showToast(`${app.name} is not included in your Single Software plan. Click Upgrade to access.`);
+      showToast(`${app.name} is not included in your ${overview.currentPlan || 'Single Software'} plan. Click Upgrade to access.`);
       setSelectedPlanToUpgrade('Enterprise');
       setUpgradeModalOpen(true);
       return;
@@ -410,15 +410,67 @@ export default function CustomerDashboard() {
     const companySlug = overview.company || 'RetailMart Solutions';
     const cleanCompName = companySlug.replace(/\.(oxoo|com|ai)$/i, '');
 
+    // Unified SSO & Service Key parameters:
+    // Automatically detected by destination software as Admin, immediately opening Admin Dashboard without login
+    const ssoParams = new URLSearchParams({
+      service_key: OXOO_FINANCE_SERVICE_KEY,
+      user: overview.email || '',
+      email: overview.email || '',
+      name: overview.customerName || 'Customer Admin',
+      company: companySlug,
+      company_name: cleanCompName,
+      storage_id: overview.storageId || 'STG-08643413',
+      role: 'admin',
+      user_type: 'admin',
+      is_admin: 'true',
+      auth_role: 'admin',
+      auto_login: 'true',
+      login_type: 'admin',
+      view: 'admin',
+      target: 'admin-dashboard',
+      redirect: 'dashboard',
+      plan: overview.currentPlan || 'Standard Pack',
+      app: app.id
+    });
+
+    // 1. Finance Software (Opens Oxoo Finance directly into Admin Dashboard)
     if (app.id === 'finance') {
-      const financeUrl = `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&user=${encodeURIComponent(overview.email)}&company=${encodeURIComponent(companySlug)}&company_name=${encodeURIComponent(cleanCompName)}&storage_id=${encodeURIComponent(overview.storageId)}`;
+      const financeUrl = `https://oxoo-finance.onrender.com/?${ssoParams.toString()}`;
       window.open(financeUrl, '_blank');
       return;
     }
 
-    navigate(`/apps/${app.id}`, {
-      state: { companyName: overview.company, appName: app.name, serviceKey: OXOO_FINANCE_SERVICE_KEY }
-    });
+    // 2. HRMS Software (Opens HRMS Admin suite with Finance Service Key)
+    if (app.id === 'hrms') {
+      const hrmsUrl = `https://oxoo-finance.onrender.com/?${ssoParams.toString()}&module=hrms&view=admin-hrms`;
+      window.open(hrmsUrl, '_blank');
+      return;
+    }
+
+    // 3. Inventory / Supply Chain Suite
+    if (app.id === 'inventory' || app.id === 'supply-chain') {
+      const invUrl = `/demo/supply-chain?${ssoParams.toString()}`;
+      window.open(invUrl, '_blank');
+      return;
+    }
+
+    // 4. Sales Suite
+    if (app.id === 'sales') {
+      const salesUrl = `/demo/sales?${ssoParams.toString()}`;
+      window.open(salesUrl, '_blank');
+      return;
+    }
+
+    // 5. Marketing & AI Suite
+    if (app.id === 'marketing') {
+      const mktUrl = `/demo/ai?${ssoParams.toString()}`;
+      window.open(mktUrl, '_blank');
+      return;
+    }
+
+    // Fallback for any other custom multi-app module:
+    const customUrl = `/apps/${app.id}?${ssoParams.toString()}`;
+    window.open(customUrl, '_blank');
   };
 
   // Sparkline mini SVG helper
