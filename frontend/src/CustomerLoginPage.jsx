@@ -457,43 +457,21 @@ export default function CustomerLoginPage() {
             </div>
           )}
 
-          {/* Quick Direct Bypass */}
+          {/* Security Assurance Footer */}
           <div style={{
-            marginTop: '20px',
+            marginTop: '24px',
             paddingTop: '16px',
-            borderTop: '1px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <Link
-              to="/dashboard"
-              style={{
-                fontSize: '12.5px',
-                fontWeight: 600,
-                color: '#0284c7',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              Enter Customer Portal directly without login <ArrowRight size={13} />
-            </Link>
-          </div>
-
-          {/* Switch to Admin Login */}
-          <div style={{
-            marginTop: '12px',
-            padding: '10px',
-            borderRadius: '8px',
-            background: '#f8fafc',
+            borderTop: '1px solid #f1f5f9',
             textAlign: 'center',
-            fontSize: '12px',
-            color: '#64748b'
+            fontSize: '11.5px',
+            color: '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
           }}>
-            Need administrator controls?{' '}
-            <Link to="/admin/login" style={{ color: '#714b67', fontWeight: 700, textDecoration: 'none' }}>
-              Go to Admin Login ➔
-            </Link>
+            <Lock size={12} color="#0284c7" />
+            <span>Secure 256-Bit SSL Customer Portal • Protected by OXOO Shield</span>
           </div>
         </div>
       </main>

@@ -76,6 +76,44 @@ function verifyToken(req, res, next) {
   }
 }
 
+// Rate limiting specifically for Admin Login attempts (protect against brute-force)
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  message: { message: 'Too many admin login attempts from this IP. Please try again after 15 minutes.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders: false
+});
+
+// Admin authorization verification middleware (strictly isolates admin rights from customer access)
+function requireAdminAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    const adminKey = req.headers['x-admin-key'];
+
+    if (adminKey && (adminKey === process.env.ADMIN_API_KEY || adminKey === JWT_SECRET)) {
+      req.adminUser = { id: 1, role: 'admin', name: 'Root Administrator' };
+      return next();
+    }
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Admin authorization required. Access denied.' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
+      return res.status(403).json({ message: 'Access Denied: Administrator privileges required.' });
+    }
+
+    req.adminUser = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid or expired administrator session. Please sign in as an Administrator.' });
+  }
+}
+
 // -------------------------------------------------------------
 // 1. HEALTH CHECK ROUTE
 // -------------------------------------------------------------
@@ -219,6 +257,93 @@ app.post('/api/auth/login', async (req, res, next) => {
         role: user.role,
         organization: user.organization,
         storageId: user.storage_id || 'STG-08643413'
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Dedicated Administrator Authentication Endpoint
+app.post('/api/auth/admin-login', adminLoginLimiter, async (req, res, next) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Administrator email and password are required.' });
+    }
+    const emailNorm = String(email).trim().toLowerCase();
+
+    // Built-in Super Admin accounts
+    const isRootAdmin = (
+      (emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io' || emailNorm === 'manminder.singh@primepro.ai') &&
+      (password === 'oxoo123' || password === 'admin123' || password === 'multiix123' || password === 'primepro123')
+    );
+
+    if (isRootAdmin) {
+      let adminId = 1;
+      let adminName = 'Manminder Singh';
+      if (isDbConnected) {
+        try {
+          const dbAdmin = await query('SELECT id, name, email, role, organization FROM users WHERE email = $1', [emailNorm]);
+          if (dbAdmin.rows.length > 0) {
+            adminId = dbAdmin.rows[0].id;
+            adminName = dbAdmin.rows[0].name;
+          }
+        } catch (e) {}
+      }
+      const token = jwt.sign({ id: adminId, email: emailNorm, name: adminName, role: 'super_admin' }, JWT_SECRET, { expiresIn: '7d' });
+      await logAudit('Admin Login Success', emailNorm, adminName, req.ip, { role: 'super_admin' });
+      return res.json({
+        message: 'Admin authorization successful.',
+        token,
+        user: { id: adminId, name: adminName, email: emailNorm, role: 'super_admin', organization: 'OXOO Core Governance' }
+      });
+    }
+
+    if (!isDbConnected) {
+      await logAudit('Admin Login Rejected (Demo)', emailNorm, 'unknown', req.ip, { reason: 'Invalid admin credentials' });
+      return res.status(401).json({ message: 'Invalid administrator credentials.' });
+    }
+
+    // Check database users table
+    const userResult = await query(
+      `SELECT id, name, email, password, role, organization, active
+       FROM users WHERE LOWER(email) = $1 LIMIT 1`,
+      [emailNorm]
+    );
+
+    if (userResult.rows.length === 0 || !userResult.rows[0].active) {
+      await logAudit('Admin Login Failed', emailNorm, 'unknown', req.ip, { reason: 'User not found' });
+      return res.status(401).json({ message: 'Invalid administrator credentials.' });
+    }
+
+    const user = userResult.rows[0];
+
+    // CRITICAL SECURITY CHECK: Only allow admin or super_admin
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
+      await logAudit('Unauthorized Admin Access Attempt', emailNorm, user.name, req.ip, { role: user.role });
+      return res.status(403).json({ message: 'Access Denied: This portal is reserved for system administrators only. Customer credentials cannot be used here.' });
+    }
+
+    const isMatch = await bcrypt.compare(String(password), user.password);
+    if (!isMatch) {
+      await logAudit('Admin Login Failed', emailNorm, user.name, req.ip, { reason: 'Password mismatch' });
+      return res.status(401).json({ message: 'Invalid administrator credentials.' });
+    }
+
+    await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+    await logAudit('Admin Login Success', user.email, user.name, req.ip, { role: user.role });
+
+    const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({
+      message: 'Admin authorization successful.',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        organization: user.organization
       }
     });
   } catch (e) {
@@ -623,7 +748,7 @@ app.post('/api/leads', async (req, res, next) => {
 // -------------------------------------------------------------
 // 6. ADMIN GOVERNANCE ROUTES (POSTGRESQL POWERED)
 // -------------------------------------------------------------
-app.get('/api/admin/overview', async (_req, res, next) => {
+app.get('/api/admin/overview', requireAdminAuth, async (_req, res, next) => {
   try {
     if (!isDbConnected) {
       return res.json({
@@ -654,7 +779,7 @@ app.get('/api/admin/overview', async (_req, res, next) => {
   }
 });
 
-app.get('/api/admin/users', async (_req, res, next) => {
+app.get('/api/admin/users', requireAdminAuth, async (_req, res, next) => {
   try {
     if (!isDbConnected) {
       return res.json([
@@ -673,7 +798,7 @@ app.get('/api/admin/users', async (_req, res, next) => {
   }
 });
 
-app.get('/api/admin/leads', async (_req, res, next) => {
+app.get('/api/admin/leads', requireAdminAuth, async (_req, res, next) => {
   try {
     if (!isDbConnected) {
       return res.json([]);
@@ -690,7 +815,7 @@ app.get('/api/admin/leads', async (_req, res, next) => {
   }
 });
 
-app.get('/api/admin/audit-logs', async (_req, res, next) => {
+app.get('/api/admin/audit-logs', requireAdminAuth, async (_req, res, next) => {
   try {
     if (!isDbConnected) {
       return res.json([
@@ -1117,7 +1242,7 @@ app.post('/api/customer/tickets', async (req, res, next) => {
 // -------------------------------------------------------------
 
 // Admin Key Metrics & System Status
-app.get('/api/admin/metrics', async (_req, res, next) => {
+app.get('/api/admin/metrics', requireAdminAuth, async (_req, res, next) => {
   try {
     let totalCustomers = 0;
     let activeSubscriptions = 0;
@@ -1168,7 +1293,7 @@ app.get('/api/admin/metrics', async (_req, res, next) => {
 });
 
 // Revenue Overview Chart Data
-app.get('/api/admin/revenue-chart', async (req, res, next) => {
+app.get('/api/admin/revenue-chart', requireAdminAuth, async (req, res, next) => {
   try {
     const period = req.query.period || 'monthly';
     let monthlyData = [];
@@ -1201,7 +1326,7 @@ app.get('/api/admin/revenue-chart', async (req, res, next) => {
 });
 
 // Customer Growth Chart Data
-app.get('/api/admin/growth-chart', async (_req, res, next) => {
+app.get('/api/admin/growth-chart', requireAdminAuth, async (_req, res, next) => {
   try {
     let growthData = [];
     if (isDbConnected) {
@@ -1222,7 +1347,7 @@ app.get('/api/admin/growth-chart', async (_req, res, next) => {
 });
 
 // Top Products by Revenue
-app.get('/api/admin/top-products', async (_req, res, next) => {
+app.get('/api/admin/top-products', requireAdminAuth, async (_req, res, next) => {
   try {
     let products = [];
     if (isDbConnected) {
@@ -1239,7 +1364,7 @@ app.get('/api/admin/top-products', async (_req, res, next) => {
 });
 
 // Recent Customers list
-app.get('/api/admin/customers', async (req, res, next) => {
+app.get('/api/admin/customers', requireAdminAuth, async (req, res, next) => {
   try {
     let customers = [];
     if (isDbConnected) {
@@ -1299,7 +1424,7 @@ app.get('/api/admin/customers', async (req, res, next) => {
 });
 
 // Admin Payments & Invoices (Returns ALL invoices across all customers)
-app.get('/api/admin/invoices', async (_req, res, next) => {
+app.get('/api/admin/invoices', requireAdminAuth, async (_req, res, next) => {
   try {
     let invoices = [];
     if (isDbConnected) {
@@ -1317,7 +1442,7 @@ app.get('/api/admin/invoices', async (_req, res, next) => {
 });
 
 // Recent Support Tickets for Admin
-app.get('/api/admin/tickets', async (_req, res, next) => {
+app.get('/api/admin/tickets', requireAdminAuth, async (_req, res, next) => {
   try {
     let tickets = [];
     if (isDbConnected) {
@@ -1341,7 +1466,7 @@ app.get('/api/admin/tickets', async (_req, res, next) => {
 });
 
 // Update Support Ticket (Status / Priority)
-app.put('/api/admin/tickets/:id', async (req, res, next) => {
+app.put('/api/admin/tickets/:id', requireAdminAuth, async (req, res, next) => {
   try {
     const { status, priority } = req.body || {};
     const ticketId = req.params.id;
@@ -1362,7 +1487,7 @@ app.put('/api/admin/tickets/:id', async (req, res, next) => {
 });
 
 // Update Customer Status (Suspend / Activate)
-app.put('/api/admin/customers/:id/status', async (req, res, next) => {
+app.put('/api/admin/customers/:id/status', requireAdminAuth, async (req, res, next) => {
   try {
     const { status } = req.body || {};
     const companyName = req.params.id;

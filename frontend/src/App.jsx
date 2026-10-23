@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import JoinMosaic from './JoinMosaic';
-import { Routes, Route, Link, useParams, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useParams, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, ArrowUpRight, Check, CalendarDays, Search, Sparkles, ShieldCheck,
@@ -1578,15 +1578,92 @@ function ContactPage() {
 }
 
 // -------------------------------------------------------------
-// SIGN IN ROUTER (/signin & /login compatibility)
+// STRICT ROUTE PROTECTION GUARDS (ISOLATING CUSTOMER & ADMIN)
 // -------------------------------------------------------------
-function SignInRouter() {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  if (searchParams.get('role') === 'admin') {
-    return <AdminLoginPage />;
+function AdminProtectedRoute({ children }) {
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
+    try {
+      const token = localStorage.getItem('oxoo_admin_token');
+      const userStr = localStorage.getItem('oxoo_admin_user');
+      if (token && userStr) {
+        const u = JSON.parse(userStr);
+        return u.role === 'admin' || u.role === 'super_admin';
+      }
+    } catch (e) {}
+    return false;
+  });
+
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem('oxoo_admin_token');
+        const userStr = localStorage.getItem('oxoo_admin_user');
+        if (token && userStr) {
+          const u = JSON.parse(userStr);
+          setIsAdminAuthenticated(u.role === 'admin' || u.role === 'super_admin');
+          return;
+        }
+      } catch (e) {}
+      setIsAdminAuthenticated(false);
+    };
+
+    window.addEventListener('oxoo_admin_auth_change', checkAuth);
+    window.addEventListener('storage', checkAuth);
+    return () => {
+      window.removeEventListener('oxoo_admin_auth_change', checkAuth);
+      window.removeEventListener('storage', checkAuth);
+    };
+  }, []);
+
+  // When visiting /admin or /admin/dashboard without admin credentials, show the Admin Login form!
+  if (!isAdminAuthenticated) {
+    return <AdminLoginPage onLoginSuccess={() => setIsAdminAuthenticated(true)} />;
   }
-  return <CustomerLoginPage />;
+
+  return children;
+}
+
+function CustomerProtectedRoute({ children }) {
+  const [isCustomerAuthenticated, setIsCustomerAuthenticated] = useState(() => {
+    try {
+      const token = localStorage.getItem('oxoo_token');
+      const userStr = localStorage.getItem('oxoo_user');
+      if (token && userStr) {
+        const u = JSON.parse(userStr);
+        return Boolean(u && (u.id || u.email));
+      }
+    } catch (e) {}
+    return false;
+  });
+
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem('oxoo_token');
+        const userStr = localStorage.getItem('oxoo_user');
+        if (token && userStr) {
+          const u = JSON.parse(userStr);
+          setIsCustomerAuthenticated(Boolean(u && (u.id || u.email)));
+          return;
+        }
+      } catch (e) {}
+      setIsCustomerAuthenticated(false);
+    };
+
+    window.addEventListener('oxoo_auth_change', checkAuth);
+    window.addEventListener('storage', checkAuth);
+    return () => {
+      window.removeEventListener('oxoo_auth_change', checkAuth);
+      window.removeEventListener('storage', checkAuth);
+    };
+  }, []);
+
+  // When visiting /customer or /dashboard without customer credentials, redirect to customer login
+  if (!isCustomerAuthenticated) {
+    return <CustomerLoginPage />;
+  }
+
+  return children;
 }
 
 // -------------------------------------------------------------
@@ -1679,17 +1756,21 @@ export default function App() {
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/buy" element={<CheckoutPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      {/* Customer Authentication & Dashboard (Strictly Isolated & Safe) */}
       <Route path="/customer/login" element={<CustomerLoginPage />} />
       <Route path="/customer-login" element={<CustomerLoginPage />} />
+      <Route path="/signin" element={<CustomerLoginPage />} />
+      <Route path="/login" element={<CustomerLoginPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/customer" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
+      <Route path="/dashboard" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
+
+      {/* Administrator Authentication & Console (Isolated at /admin) */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin-login" element={<AdminLoginPage />} />
-      <Route path="/signin" element={<SignInRouter />} />
-      <Route path="/login" element={<SignInRouter />} />
-      <Route path="/customer" element={<CustomerDashboard />} />
-      <Route path="/dashboard" element={<CustomerDashboard />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+      <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+      <Route path="/admin/*" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

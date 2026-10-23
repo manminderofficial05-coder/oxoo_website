@@ -166,9 +166,16 @@ export function Header() {
         const token = localStorage.getItem('oxoo_token');
         if (stored && token) {
           setCurrentUser(JSON.parse(stored));
-        } else {
-          setCurrentUser(null);
+          return;
         }
+        const adminStored = localStorage.getItem('oxoo_admin_user');
+        const adminToken = localStorage.getItem('oxoo_admin_token');
+        if (adminStored && adminToken) {
+          const u = JSON.parse(adminStored);
+          setCurrentUser({ ...u, role: 'admin' });
+          return;
+        }
+        setCurrentUser(null);
       } catch (e) {
         setCurrentUser(null);
       }
@@ -176,18 +183,23 @@ export function Header() {
     readUser();
     window.addEventListener('storage', readUser);
     window.addEventListener('oxoo_auth_change', readUser);
+    window.addEventListener('oxoo_admin_auth_change', readUser);
     return () => {
       window.removeEventListener('storage', readUser);
       window.removeEventListener('oxoo_auth_change', readUser);
+      window.removeEventListener('oxoo_admin_auth_change', readUser);
     };
   }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('oxoo_token');
     localStorage.removeItem('oxoo_user');
+    localStorage.removeItem('oxoo_admin_token');
+    localStorage.removeItem('oxoo_admin_user');
     setCurrentUser(null);
     setProfileOpen(false);
     window.dispatchEvent(new Event('oxoo_auth_change'));
+    window.dispatchEvent(new Event('oxoo_admin_auth_change'));
     navigate('/');
   };
 
@@ -441,25 +453,14 @@ export function Header() {
               </AnimatePresence>
             </div>
           ) : (
-            <>
-              <Link
-                to="/customer/login"
-                className="nav-customer-login-btn"
-                title="Customer Portal Login"
-              >
-                <User size={15} />
-                <span>Customer Login</span>
-              </Link>
-
-              <Link
-                to="/admin/login"
-                className="nav-admin-login-btn"
-                title="Admin Console Login"
-              >
-                <ShieldCheck size={15} />
-                <span>Admin Login</span>
-              </Link>
-            </>
+            <Link
+              to="/login"
+              className="nav-customer-login-btn"
+              title="Customer Sign In"
+            >
+              <User size={15} />
+              <span>Customer Login</span>
+            </Link>
           )}
 
           <button
@@ -657,8 +658,7 @@ export function Header() {
                     [currentUser.role === 'admin' ? 'Admin Console' : 'Customer Dashboard', currentUser.role === 'admin' ? '/admin' : '/dashboard']
                   ]
                 : [
-                    ['Customer Login', '/customer/login'],
-                    ['Admin Login', '/admin/login']
+                    ['Customer Login', '/login']
                   ]),
               ['Book a Demo / Contact', '/contact']
             ].map(([n, p]) => (

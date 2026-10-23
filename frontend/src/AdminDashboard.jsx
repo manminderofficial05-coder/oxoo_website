@@ -35,6 +35,14 @@ export default function AdminDashboard() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const u = localStorage.getItem('oxoo_admin_user');
+      return u ? JSON.parse(u) : { name: 'Manminder Singh', email: 'manminder.singh@primepro.ai', role: 'Super Administrator' };
+    } catch (e) {
+      return { name: 'Manminder Singh', email: 'manminder.singh@primepro.ai', role: 'Super Administrator' };
+    }
+  });
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -632,10 +640,12 @@ export default function AdminDashboard() {
                 className="oxoo-user-dropdown-btn"
                 onClick={() => setAdminMenuOpen(!adminMenuOpen)}
               >
-                <div className="oxoo-profile-avatar-circle" style={{ width: '34px', height: '34px' }}>M</div>
+                <div className="oxoo-profile-avatar-circle" style={{ width: '34px', height: '34px' }}>
+                  {(adminUser?.name || 'M').charAt(0).toUpperCase()}
+                </div>
                 <div className="oxoo-user-info-text">
-                  <span className="oxoo-user-name">Manminder Singh</span>
-                  <span className="oxoo-user-org">Super Administrator</span>
+                  <span className="oxoo-user-name">{adminUser?.name || 'Administrator'}</span>
+                  <span className="oxoo-user-org">{adminUser?.role === 'super_admin' ? 'Super Administrator' : 'Administrator'}</span>
                 </div>
                 <ChevronDown size={14} color="#64748b" />
               </button>
@@ -660,8 +670,8 @@ export default function AdminDashboard() {
                     }}
                   >
                     <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Manminder Singh</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>manminder.singh@primepro.ai</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{adminUser?.name || 'Administrator'}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>{adminUser?.email || 'admin@oxoo.ai'}</div>
                     </div>
                     <button
                       type="button"
@@ -670,18 +680,17 @@ export default function AdminDashboard() {
                     >
                       Platform Settings
                     </button>
-                    <button
-                      type="button"
-                      style={{ width: '100%', padding: '8px 12px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', color: '#1d4ed8', fontWeight: 600, cursor: 'pointer', borderRadius: '8px' }}
-                      onClick={() => { navigate('/customer'); setAdminMenuOpen(false); }}
-                    >
-                      Customer View
-                    </button>
                     <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
                     <button
                       type="button"
-                      style={{ width: '100%', padding: '8px 12px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', color: '#dc2626', cursor: 'pointer', borderRadius: '8px' }}
-                      onClick={() => navigate('/signin')}
+                      style={{ width: '100%', padding: '8px 12px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', color: '#dc2626', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      onClick={() => {
+                        localStorage.removeItem('oxoo_admin_token');
+                        localStorage.removeItem('oxoo_admin_user');
+                        window.dispatchEvent(new Event('oxoo_admin_auth_change'));
+                        setAdminMenuOpen(false);
+                        navigate('/admin');
+                      }}
                     >
                       Sign Out
                     </button>

@@ -501,6 +501,9 @@ export default function CheckoutPage() {
             plan: planNameFormatted
           };
           localStorage.setItem('oxoo_user', JSON.stringify(userObj));
+          if (!localStorage.getItem('oxoo_token')) {
+            localStorage.setItem('oxoo_token', 'oxoo_cust_' + Date.now());
+          }
         } catch (e) {}
 
         // Trigger global events for immediate UI reactivity

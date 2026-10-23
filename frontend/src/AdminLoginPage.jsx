@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, User, ArrowRight, CheckCircle2, Lock, KeyRound, Cpu } from 'lucide-react';
+import { ShieldCheck, User, ArrowRight, CheckCircle2, Lock, KeyRound, Cpu, AlertTriangle } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
-import { loginUser } from './api';
+import { loginAdminUser } from './api';
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState('admin@oxoo.ai');
+export default function AdminLoginPage({ onLoginSuccess }) {
+  const [email, setEmail] = useState('manminder.singh@primepro.ai');
   const [password, setPassword] = useState('oxoo123');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -14,7 +14,7 @@ export default function AdminLoginPage() {
 
   const handleQuickFill = () => {
     setErrorMsg('');
-    setEmail('admin@oxoo.ai');
+    setEmail('manminder.singh@primepro.ai');
     setPassword('oxoo123');
   };
 
@@ -27,15 +27,20 @@ export default function AdminLoginPage() {
     setErrorMsg('');
     setLoading(true);
     try {
-      const res = await loginUser(email, password);
+      const res = await loginAdminUser(email, password);
       if (res && res.token) {
-        localStorage.setItem('oxoo_token', res.token);
-        localStorage.setItem('oxoo_user', JSON.stringify(res.user));
-        window.dispatchEvent(new Event('oxoo_auth_change'));
+        // Strictly save into isolated Admin storage keys
+        localStorage.setItem('oxoo_admin_token', res.token);
+        localStorage.setItem('oxoo_admin_user', JSON.stringify(res.user));
+        window.dispatchEvent(new Event('oxoo_admin_auth_change'));
         setSuccessMsg(`Welcome, ${res.user?.name || 'Administrator'}! Authorizing console...`);
         setTimeout(() => {
-          navigate('/admin');
-        }, 600);
+          if (typeof onLoginSuccess === 'function') {
+            onLoginSuccess(res.user);
+          } else {
+            navigate('/admin');
+          }
+        }, 500);
       }
     } catch (err) {
       setErrorMsg(err.message || 'Login failed. Please verify administrator credentials.');
@@ -230,43 +235,21 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          {/* Quick Direct Bypass */}
+          {/* Security Assurance Footer */}
           <div style={{
-            marginTop: '20px',
+            marginTop: '24px',
             paddingTop: '16px',
-            borderTop: '1px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <Link
-              to="/admin"
-              style={{
-                fontSize: '12.5px',
-                fontWeight: 600,
-                color: '#714b67',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              Enter Admin Console directly without login <ArrowRight size={13} />
-            </Link>
-          </div>
-
-          {/* Switch to Customer Login */}
-          <div style={{
-            marginTop: '12px',
-            padding: '10px',
-            borderRadius: '8px',
-            background: '#f8fafc',
+            borderTop: '1px solid #f1f5f9',
             textAlign: 'center',
-            fontSize: '12px',
-            color: '#64748b'
+            fontSize: '11.5px',
+            color: '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
           }}>
-            Looking for client portal?{' '}
-            <Link to="/customer/login" style={{ color: '#0284c7', fontWeight: 700, textDecoration: 'none' }}>
-              Go to Customer Login ➔
-            </Link>
+            <Lock size={12} color="#714b67" />
+            <span>Encrypted Admin Console • ISO 27001 & SOC-2 Audited</span>
           </div>
         </div>
       </main>

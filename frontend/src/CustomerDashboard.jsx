@@ -530,18 +530,17 @@ export default function CustomerDashboard() {
                     >
                       Billing & Subscriptions
                     </button>
-                    <button
-                      type="button"
-                      style={{ width: '100%', padding: '8px 12px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', color: '#0284c7', fontWeight: 600, cursor: 'pointer', borderRadius: '8px' }}
-                      onClick={() => { navigate('/admin'); setUserMenuOpen(false); }}
-                    >
-                      Admin Console
-                    </button>
                     <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
                     <button
                       type="button"
                       style={{ width: '100%', padding: '8px 12px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', color: '#dc2626', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      onClick={() => navigate('/signin')}
+                      onClick={() => {
+                        localStorage.removeItem('oxoo_token');
+                        localStorage.removeItem('oxoo_user');
+                        window.dispatchEvent(new Event('oxoo_auth_change'));
+                        setUserMenuOpen(false);
+                        navigate('/login');
+                      }}
                     >
                       <LogOut size={13} /> Sign Out
                     </button>
