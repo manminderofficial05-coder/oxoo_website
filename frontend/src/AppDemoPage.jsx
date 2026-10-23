@@ -133,6 +133,16 @@ export default function AppDemoPage() {
     companyName.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
   );
 
+  // Sync customer demo company name and logo to localStorage so it carries across apps and websites
+  useEffect(() => {
+    if (cleanSubdomain) {
+      try {
+        localStorage.setItem('oxoo_demo_company', `${cleanSubdomain}.oxoo`);
+        localStorage.setItem('oxoo_company_name', cleanSubdomain);
+      } catch (e) {}
+    }
+  }, [cleanSubdomain]);
+
   // Filter apps for dropdown switcher
   const filteredApps = ALL_SYSTEM_APPS.filter((a) =>
     a.name.toLowerCase().includes(searchAppQuery.toLowerCase()) ||
@@ -812,6 +822,44 @@ export default function AppDemoPage() {
                         >
                           <Pencil size={15} color="#58427c" />
                         </button>
+                      </div>
+                    )}
+
+                    {/* Live Brand Logo Preview displayed right here */}
+                    {cleanSubdomain && (
+                      <div
+                        className="company-brand-logo-preview-card"
+                        style={{
+                          marginTop: '12px',
+                          padding: '14px 18px',
+                          background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)',
+                          border: '1.5px solid #bae6fd',
+                          borderRadius: '14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 4px 14px rgba(0, 163, 224, 0.08)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#0369a1' }}>
+                            ✨ Your Live Demo Logo
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#0284c7', background: '#e0f2fe', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                            Live Preview
+                          </span>
+                        </div>
+                        <div style={{ background: '#ffffff', padding: '14px 24px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', display: 'flex', justifyContent: 'center', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)' }}>
+                          <CompanyBrandLogo
+                            companyName={cleanSubdomain}
+                            size="md"
+                            showPill={true}
+                          />
+                        </div>
+                        <p style={{ fontSize: '11.5px', color: '#64748b', marginTop: '8px', marginBottom: 0, textAlign: 'center' }}>
+                          This logo will show at the top of your software and website demos.
+                        </p>
                       </div>
                     )}
                   </div>

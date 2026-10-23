@@ -93,7 +93,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
   const navigate = useNavigate();
 
   const queryParams = new URLSearchParams(location.search);
-  const company = queryParams.get('company') || 'abcd.oxoo';
+  const company = queryParams.get('company') || localStorage.getItem('oxoo_demo_company') || localStorage.getItem('oxoo_company_name') || 'maan.oxoo';
   const targetApp = getAppBySlug(appSlug || 'website-builder') || APPS_DATA[0];
 
   // Specific Slug & Category Mappings
@@ -691,6 +691,15 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
             const cw = e.currentTarget?.contentWindow;
             if (cw && cw.localStorage) {
               cw.localStorage.setItem('hospital-cart-demo:session', '1');
+              cw.localStorage.setItem('oxoo_company_name', company);
+              cw.localStorage.setItem('oxoo_demo_company', company);
+            }
+            if (cw) {
+              cw.postMessage({
+                type: 'OXOO_COMPANY_LOGO',
+                company,
+                companyName: company.replace(/\.(oxoo|com|ai)$/i, '')
+              }, '*');
             }
           } catch (err) {}
         }}

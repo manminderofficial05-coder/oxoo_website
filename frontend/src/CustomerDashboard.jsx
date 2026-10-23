@@ -245,9 +245,11 @@ export default function CustomerDashboard() {
     }
     const slug = (app.id || (app.name ? app.name.toLowerCase().replace(/\s+/g, '-') : 'accounting')).toLowerCase();
 
-    // If opening Finance/Accounting, launch authenticated live suite with service key
+    // If opening Finance/Accounting, launch authenticated live suite with service key & customer company logo
     if (slug === 'finance' || slug.includes('finance') || slug === 'accounting') {
-      const financeUrl = `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&user=${encodeURIComponent(overview?.email || storedUser?.email || 'customer')}`;
+      const comp = overview?.company || storedUser?.organization || storedUser?.companyName || localStorage.getItem('oxoo_demo_company') || 'maan.oxoo';
+      const cleanCompName = comp.replace(/\.(oxoo|com|ai)$/i, '');
+      const financeUrl = `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&user=${encodeURIComponent(overview?.email || storedUser?.email || 'customer')}&company=${encodeURIComponent(comp)}&company_name=${encodeURIComponent(cleanCompName)}&storage_id=${encodeURIComponent(overview?.storageId || 'STG-08643413')}`;
       window.open(financeUrl, '_blank');
       return;
     }
