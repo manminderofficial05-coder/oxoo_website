@@ -3,7 +3,8 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight, Search, ChevronDown, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
-  LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare
+  LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare,
+  Users, Package
 } from 'lucide-react';
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
@@ -353,6 +354,27 @@ export function Header() {
 
         {/* Right Action Items: Customer Login & Admin Login OR Logged-in Profile */}
         <div className="nav-actions">
+          {/* Quick Launch Buttons: HRMS & Inventory */}
+          <Link
+            to="/apps/hrms"
+            className="nav-app-pill nav-app-pill-hrms"
+            title="Launch HRMS"
+          >
+            <Users size={16} className="nav-app-pill-icon" />
+            <span>HRMS</span>
+          </Link>
+
+          <Link
+            to="/apps/inventory"
+            className="nav-app-pill nav-app-pill-inventory"
+            title="Launch Inventory"
+          >
+            <Package size={16} className="nav-app-pill-icon" />
+            <span>Inventory</span>
+          </Link>
+
+          <div className="nav-actions-divider" />
+
           {currentUser ? (
             <div className="nav-profile-dropdown">
               <button

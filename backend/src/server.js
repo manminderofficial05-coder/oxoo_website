@@ -12,6 +12,7 @@ const { categories: fallbackCategories, services: fallbackServices } = require('
 const { sendOtpEmail, verifyOtp, sendInvoiceAndCredentialsEmail, sendPasswordResetEmail } = require('./emailService');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'oxoo-super-secret-jwt-key-2026';
 
@@ -246,6 +247,38 @@ app.post('/api/auth/login', async (req, res, next) => {
     await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
     await logAudit('User Login', user.email, user.name, req.ip);
 
+    // Look up customer's purchased apps and plan from active subscription or order
+    let userPurchasedApps = [];
+    let userPlan = 'Single Software';
+    try {
+      const subRes = await query(
+        `SELECT active_apps, plan FROM subscriptions WHERE (LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%') AND status = 'Active' ORDER BY id DESC LIMIT 1`,
+        [user.organization || '', user.organization || '']
+      );
+      if (subRes.rows.length > 0) {
+        if (subRes.rows[0].plan) userPlan = subRes.rows[0].plan;
+        if (subRes.rows[0].active_apps) {
+          userPurchasedApps = Array.isArray(subRes.rows[0].active_apps)
+            ? subRes.rows[0].active_apps
+            : (typeof subRes.rows[0].active_apps === 'string' ? JSON.parse(subRes.rows[0].active_apps) : []);
+        }
+      }
+      if (userPurchasedApps.length === 0) {
+        const ordRes = await query(
+          `SELECT selected_apps, plan_name FROM orders WHERE (LOWER(customer_email) = LOWER($1) OR LOWER(company_name) = LOWER($2) OR company_name ILIKE '%' || $3 || '%') AND status = 'Paid' ORDER BY id DESC LIMIT 1`,
+          [user.email, user.organization || '', user.organization || '']
+        );
+        if (ordRes.rows.length > 0) {
+          if (ordRes.rows[0].plan_name) userPlan = ordRes.rows[0].plan_name;
+          if (ordRes.rows[0].selected_apps) {
+            userPurchasedApps = Array.isArray(ordRes.rows[0].selected_apps)
+              ? ordRes.rows[0].selected_apps
+              : (typeof ordRes.rows[0].selected_apps === 'string' ? JSON.parse(ordRes.rows[0].selected_apps) : []);
+          }
+        }
+      }
+    } catch (e) {}
+
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       message: 'Login successful.',
@@ -256,7 +289,11 @@ app.post('/api/auth/login', async (req, res, next) => {
         email: user.email,
         role: user.role,
         organization: user.organization,
-        storageId: user.storage_id || 'STG-08643413'
+        storageId: user.storage_id || 'STG-08643413',
+        plan: userPlan,
+        purchasedApps: userPurchasedApps,
+        apps: userPurchasedApps,
+        active_apps: userPurchasedApps
       }
     });
   } catch (e) {

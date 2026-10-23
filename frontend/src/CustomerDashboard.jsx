@@ -173,51 +173,87 @@ export default function CustomerDashboard() {
     { id: '5', title: 'Invoice Generated', desc: 'New invoice INV-2026-06114197 has been generated.', date: '20 Oct 2026, 09:30 AM', category: 'payments', read: false }
   ];
 
-  const allDirectoryApps = [
+  // Base software directory catalog across all OXOO multi-app offerings
+  const BASE_DIRECTORY_APPS = [
     {
       id: 'sales',
       name: 'Sales Software',
       desc: 'Business management & sales tracking',
-      status: 'Active',
-      purchasedDate: '01 Oct 2026',
-      entitled: true,
       color: 'blue'
     },
     {
       id: 'hrms',
       name: 'HRMS',
       desc: 'Employee management system',
-      status: 'Active',
-      purchasedDate: '12 Sep 2026',
-      entitled: true,
       color: 'purple'
     },
     {
       id: 'finance',
       name: 'Finance',
       desc: 'Accounting, invoicing & reports',
-      status: 'Not Purchased',
-      purchasedDate: null,
-      entitled: false,
       color: 'green'
     },
     {
       id: 'marketing',
       name: 'Marketing',
       desc: 'Email campaigns & marketing tools',
-      status: 'Not Purchased',
-      purchasedDate: null,
-      entitled: false,
       color: 'orange'
     }
   ];
 
+  // Helper to accurately match an app against a customer's purchased app entitlements
+  const isAppPurchased = (appId, appName, purchasedList = [], planName = '') => {
+    const plan = String(planName || '').toLowerCase();
+    // Enterprise / Unlimited plans unlock all software
+    if (plan.includes('enterprise') || plan.includes('all apps') || plan.includes('unlimited')) {
+      return true;
+    }
+    if (!Array.isArray(purchasedList) || purchasedList.length === 0) return false;
+
+    const idLower = String(appId || '').toLowerCase().trim();
+    const nameLower = String(appName || '').toLowerCase().trim();
+
+    return purchasedList.some(item => {
+      if (!item) return false;
+      const str = (typeof item === 'string' ? item : (item.name || item.id || '')).toLowerCase().trim();
+      if (!str) return false;
+
+      if (str === idLower || str === nameLower) return true;
+      if (idLower === 'finance' && (str.includes('finance') || str.includes('account'))) return true;
+      if (idLower === 'sales' && str.includes('sale')) return true;
+      if (idLower === 'hrms' && (str.includes('hrms') || str.includes('hr') || str.includes('human'))) return true;
+      if (idLower === 'marketing' && str.includes('market')) return true;
+      if (nameLower.includes(str) || str.includes(nameLower)) return true;
+      return false;
+    });
+  };
+
+  // User purchased apps state
+  const [userPurchasedApps, setUserPurchasedApps] = useState(() => {
+    try {
+      const su = localStorage.getItem('oxoo_user');
+      if (su) {
+        const u = JSON.parse(su);
+        if (u.purchasedApps && u.purchasedApps.length > 0) return u.purchasedApps;
+        if (u.apps && u.apps.length > 0) return u.apps;
+        if (u.active_apps && u.active_apps.length > 0) return u.active_apps;
+      }
+      const lo = localStorage.getItem('oxoo_last_order');
+      if (lo) {
+        const o = JSON.parse(lo);
+        if (o.apps && o.apps.length > 0) return o.apps;
+        if (o.purchasedApps && o.purchasedApps.length > 0) return o.purchasedApps;
+      }
+    } catch (e) {}
+    return ['Finance Software'];
+  });
+
   // Overview Data
   const [overview, setOverview] = useState({
-    customerName: 'Priya Sharma',
+    customerName: 'Customer',
     company: 'RetailMart Solutions',
-    email: 'priya@retailmart.com',
-    avatar: 'P',
+    email: 'customer@oxoo.ai',
+    avatar: 'C',
     currentPlan: 'Single Software',
     nextBillingDate: '30 Days',
     nextBillingExact: '30 Nov 2026',
@@ -231,32 +267,88 @@ export default function CustomerDashboard() {
     storageId: 'STG-08643413'
   });
 
+  // Dynamically compute allDirectoryApps: ONLY purchased software is Active / Entitled (unlocked)
+  // All unpurchased software is Not Purchased / Locked
+  const allDirectoryApps = BASE_DIRECTORY_APPS.map(app => {
+    const entitled = isAppPurchased(app.id, app.name, userPurchasedApps, overview.currentPlan);
+    return {
+      ...app,
+      status: entitled ? 'Active' : 'Not Purchased',
+      entitled: Boolean(entitled),
+      purchasedDate: entitled ? (app.id === 'finance' ? '21 Oct 2026' : (app.id === 'sales' ? '01 Oct 2026' : '12 Sep 2026')) : null
+    };
+  });
+
   const [teamMembers, setTeamMembers] = useState(defaultTeamMembers);
   const [tickets, setTickets] = useState(defaultTickets);
   const [notifications, setNotifications] = useState(defaultNotifications);
 
-  // Sync with local session or customized demo logo if present
+  // Sync with local session or customized demo logo and fetch real backend overview
   useEffect(() => {
-    try {
-      let storedUser = null;
+    async function hydrateCustomer() {
       try {
-        const su = localStorage.getItem('oxoo_user');
-        if (su) storedUser = JSON.parse(su);
-      } catch (e) {}
+        let storedUser = null;
+        try {
+          const su = localStorage.getItem('oxoo_user');
+          if (su) storedUser = JSON.parse(su);
+        } catch (e) {}
 
-      const customCompany = localStorage.getItem('oxoo_demo_company') || localStorage.getItem('oxoo_company_name');
+        const customCompany = localStorage.getItem('oxoo_demo_company') || localStorage.getItem('oxoo_company_name');
 
-      if (storedUser || customCompany) {
-        const effectiveName = storedUser?.name || 'Priya Sharma';
-        const effectiveComp = customCompany || storedUser?.organization || 'RetailMart Solutions';
-        const effectiveEmail = storedUser?.email || 'priya@retailmart.com';
+        let effectiveName = storedUser?.name || 'Customer';
+        let effectiveComp = customCompany || storedUser?.organization || storedUser?.company || 'My Organization';
+        let effectiveEmail = storedUser?.email || 'customer@oxoo.ai';
+        let effectivePlan = storedUser?.plan || 'Single Software';
+
+        // Extract apps from stored user or last order or recent customers
+        let appsList = storedUser?.purchasedApps || storedUser?.apps || storedUser?.active_apps || [];
+
+        if (!appsList || appsList.length === 0) {
+          try {
+            const lo = localStorage.getItem('oxoo_last_order');
+            if (lo) {
+              const parsed = JSON.parse(lo);
+              if (parsed.apps && parsed.apps.length > 0) appsList = parsed.apps;
+              else if (parsed.purchasedApps && parsed.purchasedApps.length > 0) appsList = parsed.purchasedApps;
+            }
+          } catch (e) {}
+        }
+
+        if (!appsList || appsList.length === 0) {
+          try {
+            const rc = localStorage.getItem('oxoo_recent_customers');
+            if (rc) {
+              const list = JSON.parse(rc);
+              const match = list.find(c =>
+                (effectiveComp && c.company && c.company.toLowerCase() === effectiveComp.toLowerCase()) ||
+                (effectiveEmail && c.email && c.email.toLowerCase() === effectiveEmail.toLowerCase())
+              );
+              if (match && match.apps && match.apps.length > 0) {
+                appsList = match.apps;
+              }
+            }
+          } catch (e) {}
+        }
+
+        // Fallback default: if user email is Priya Sharma, default to Sales Software, otherwise Finance Software
+        if (!appsList || appsList.length === 0) {
+          if (effectiveEmail.toLowerCase().includes('priya')) {
+            appsList = ['Sales Software'];
+          } else {
+            appsList = ['Finance Software'];
+          }
+        }
+
+        setUserPurchasedApps(appsList);
 
         setOverview(prev => ({
           ...prev,
           customerName: effectiveName,
           company: effectiveComp,
           email: effectiveEmail,
-          avatar: effectiveName.charAt(0).toUpperCase() || 'P'
+          avatar: effectiveName.charAt(0).toUpperCase() || 'C',
+          currentPlan: effectivePlan,
+          activeAppsCount: appsList.length
         }));
 
         setProfileData(prev => ({
@@ -265,10 +357,42 @@ export default function CustomerDashboard() {
           email: effectiveEmail,
           company: effectiveComp
         }));
+
+        // Fetch fresh overview from backend API
+        try {
+          const apiData = await getCustomerOverview({ email: effectiveEmail, company: effectiveComp });
+          if (apiData) {
+            if (apiData.purchasedApps && apiData.purchasedApps.length > 0) {
+              setUserPurchasedApps(apiData.purchasedApps);
+            }
+            setOverview(prev => ({
+              ...prev,
+              customerName: apiData.customerName || prev.customerName,
+              company: apiData.company || prev.company,
+              email: apiData.email || prev.email,
+              avatar: apiData.avatar || prev.avatar,
+              currentPlan: apiData.currentPlan || prev.currentPlan,
+              storageId: apiData.storageId || prev.storageId,
+              nextBillingDate: apiData.nextBillingDate || prev.nextBillingDate,
+              activeAppsCount: (apiData.purchasedApps && apiData.purchasedApps.length > 0) ? apiData.purchasedApps.length : (appsList.length || 1),
+              monthlyPrice: apiData.mrr ? `₹${Number(apiData.mrr).toLocaleString('en-IN')}` : prev.monthlyPrice,
+              openTicketsCount: typeof apiData.openTicketsCount === 'number' ? apiData.openTicketsCount : prev.openTicketsCount,
+              teamMembersCount: typeof apiData.teamMembersCount === 'number' ? apiData.teamMembersCount : prev.teamMembersCount
+            }));
+          }
+        } catch (apiErr) {
+          console.warn('Backend customer overview call skipped:', apiErr.message);
+        }
+      } catch (e) {
+        console.error('Error hydrating customer data', e);
       }
-    } catch (e) {
-      console.error('Error hydrating customer data', e);
     }
+
+    hydrateCustomer();
+
+    const handleAuthChange = () => hydrateCustomer();
+    window.addEventListener('oxoo_auth_change', handleAuthChange);
+    return () => window.removeEventListener('oxoo_auth_change', handleAuthChange);
   }, []);
 
   // Shared secret service key matching Oxoo Finance & other software
@@ -633,7 +757,7 @@ export default function CustomerDashboard() {
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Active Apps</span>
                       <span className="oxoo-metric-value">{overview.activeAppsCount}</span>
-                      <span className="oxoo-metric-subtitle">of 1 purchased</span>
+                      <span className="oxoo-metric-subtitle">of {overview.activeAppsCount || 1} purchased</span>
                     </div>
                     {renderSparkline('#10b981', '0,24 20,20 40,16 60,12 80,6')}
                   </div>
@@ -706,22 +830,43 @@ export default function CustomerDashboard() {
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '14px' }}>
-                    <div className="oxoo-app-tile" style={{ padding: '20px 16px' }}>
-                      <div className="oxoo-app-icon-box gradient-blue">
-                        <Layers size={26} />
+                    {allDirectoryApps.filter(app => app.entitled).length > 0 ? (
+                      allDirectoryApps.filter(app => app.entitled).map((app) => (
+                        <div key={app.id} className="oxoo-app-tile" style={{ padding: '20px 16px' }}>
+                          <div className={`oxoo-app-icon-box ${app.color === 'blue' ? 'gradient-blue' : ''}`} style={{
+                            background: app.color === 'blue' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
+                              app.color === 'purple' ? '#f3e8ff' :
+                              app.color === 'green' ? '#ecfdf5' : '#fff7ed',
+                            color: app.color === 'blue' ? '#ffffff' :
+                              app.color === 'purple' ? '#8b5cf6' :
+                              app.color === 'green' ? '#10b981' : '#f97316'
+                          }}>
+                            {app.id === 'sales' && <Layers size={26} />}
+                            {app.id === 'hrms' && <Users size={26} />}
+                            {app.id === 'finance' && <BarChart2 size={26} />}
+                            {app.id === 'marketing' && <Megaphone size={26} />}
+                          </div>
+                          <span className="oxoo-app-name" style={{ fontSize: '15px' }}>{app.name}</span>
+                          <span className="oxoo-status-pill active">
+                            <span className="oxoo-status-dot" /> Active
+                          </span>
+                          <button
+                            type="button"
+                            className="oxoo-app-action-btn open"
+                            onClick={() => handleOpenApp(app)}
+                          >
+                            Open App →
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px', gridColumn: '1 / -1' }}>
+                        No active applications yet.{' '}
+                        <span onClick={() => setActiveTab('apps')} style={{ color: '#0284c7', cursor: 'pointer', fontWeight: 600 }}>
+                          Browse Directory →
+                        </span>
                       </div>
-                      <span className="oxoo-app-name" style={{ fontSize: '15px' }}>Sales Software</span>
-                      <span className="oxoo-status-pill active">
-                        <span className="oxoo-status-dot" /> Active
-                      </span>
-                      <button
-                        type="button"
-                        className="oxoo-app-action-btn open"
-                        onClick={() => handleOpenApp({ id: 'sales', name: 'Sales Software', entitled: true })}
-                      >
-                        Open App →
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
 

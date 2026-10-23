@@ -3363,8 +3363,28 @@ export default function AdminDashboard() {
                       type="button"
                       className="oxoo-upgrade-btn"
                       onClick={() => {
+                        const cust = selectedCustomerDetail;
                         setSelectedCustomerDetail(null);
-                        showToast(`Impersonating ${selectedCustomerDetail.name} portal session...`);
+                        const customerApps = (cust && cust.apps && cust.apps.length > 0) ? cust.apps : ['Finance Software'];
+                        const impersonatedUser = {
+                          name: cust.name,
+                          customerName: cust.name,
+                          email: cust.email,
+                          organization: cust.name,
+                          company: cust.name,
+                          plan: cust.plan || 'Standard Pack',
+                          amount: cust.amount || '₹7,929.6',
+                          status: cust.status || 'Active',
+                          apps: customerApps,
+                          purchasedApps: customerApps,
+                          active_apps: customerApps,
+                          role: 'customer'
+                        };
+                        localStorage.setItem('oxoo_user', JSON.stringify(impersonatedUser));
+                        localStorage.setItem('oxoo_demo_company', cust.name);
+                        localStorage.setItem('oxoo_company_name', cust.name);
+                        window.dispatchEvent(new Event('oxoo_auth_change'));
+                        showToast(`Impersonating ${cust.name} portal session...`);
                         navigate('/customer');
                       }}
                     >
