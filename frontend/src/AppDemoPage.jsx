@@ -207,7 +207,7 @@ export default function AppDemoPage() {
         customerName: fullName.trim()
       });
 
-      setOtpCode(''); // Keep empty so user must enter code from email
+      setOtpValue(''); // Keep empty so user must enter code from email
       setIsOtpStep(true);
       setOtpError('');
       setOtpSuccess(`A 6-digit verification code has been sent to ${cleanEmail}`);

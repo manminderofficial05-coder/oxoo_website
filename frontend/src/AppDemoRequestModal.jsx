@@ -192,7 +192,7 @@ export default function AppDemoRequestModal({
         customerName: fullName.trim()
       });
 
-      setOtpCode(''); // Keep empty so user must enter code from email
+      setOtpValue(''); // Keep empty so user must enter code from email
       setIsOtpStep(true);
       setOtpError('');
       setOtpSuccess(`A 6-digit verification code was sent to ${cleanEmail}`);
