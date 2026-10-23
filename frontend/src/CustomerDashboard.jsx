@@ -8,7 +8,8 @@ import {
   CheckCircle2, AlertCircle, Plus, Download, X, Shield, Lock,
   Mail, Phone, Clock, MessageSquare, RefreshCw, Filter, Sparkles,
   Laptop, Cpu, LogOut, Building, Trash2, UserPlus, Send, Calendar,
-  Smartphone, ChevronRight, MoreHorizontal, Eye, ShieldCheck, CheckSquare
+  Smartphone, ChevronRight, MoreHorizontal, Eye, ShieldCheck, CheckSquare,
+  FileSpreadsheet, Upload, History, AlertTriangle
 } from 'lucide-react';
 import {
   getCustomerOverview, getCustomerBilling, upgradeCustomerPlan,
@@ -17,7 +18,7 @@ import {
 } from './api';
 import './dashboards.css';
 
-// Mini customer logo preview badge component
+// Live Customer Brand Logo Preview Badge
 function CustomerBrandBadge({ companyName }) {
   const cleanName = (companyName || 'RetailMart Solutions').replace(/\.(oxoo|com|ai)$/i, '').trim();
   const initial = cleanName.charAt(0).toUpperCase() || 'R';
@@ -26,14 +27,14 @@ function CustomerBrandBadge({ companyName }) {
       display: 'inline-flex',
       alignItems: 'center',
       gap: '8px',
-      padding: '4px 10px',
-      background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(56, 189, 248, 0.12) 100%)',
-      border: '1px solid rgba(56, 189, 248, 0.35)',
+      padding: '4px 12px',
+      background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(56, 189, 248, 0.14) 100%)',
+      border: '1px solid rgba(56, 189, 248, 0.4)',
       borderRadius: '20px'
     }}>
       <div style={{
-        width: '20px',
-        height: '20px',
+        width: '22px',
+        height: '22px',
         borderRadius: '50%',
         background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
         color: '#ffffff',
@@ -41,7 +42,8 @@ function CustomerBrandBadge({ companyName }) {
         fontWeight: 800,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
       }}>
         {initial}
       </div>
@@ -54,26 +56,22 @@ function CustomerBrandBadge({ companyName }) {
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
-  // Navigation tabs: dashboard, apps, billing, team, support, reports, notifications, settings
+
+  // Navigation tabs:
+  // 'dashboard' | 'apps' | 'billing' | 'team' | 'support' | 'reports' | 'notifications' | 'settings'
   const [activeTab, setActiveTab] = useState('dashboard');
-  
-  // Settings subtab: account, security, preferences
-  const [settingsSubTab, setSettingsSubTab] = useState('account');
-  
-  // Billing subtab: invoices, payment_history, subscription_details
-  const [billingSubTab, setBillingSubTab] = useState('invoices');
 
-  // Support ticket filter: all, open, in_progress, resolved, closed
-  const [ticketFilter, setTicketFilter] = useState('all');
+  // Sub-tabs
+  const [settingsSubTab, setSettingsSubTab] = useState('account'); // 'account' | 'security' | 'preferences'
+  const [billingSubTab, setBillingSubTab] = useState('invoices'); // 'invoices' | 'payment_history' | 'subscription_details'
+  const [ticketFilter, setTicketFilter] = useState('all'); // 'all' | 'open' | 'in_progress' | 'resolved' | 'closed'
+  const [notifFilter, setNotifFilter] = useState('all'); // 'all' | 'payments' | 'team' | 'support' | 'system'
+  const [appStatusFilter, setAppStatusFilter] = useState('all'); // 'all' | 'active' | 'not_purchased'
+  const [appCategoryFilter, setAppCategoryFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [ticketCategoryFilter, setTicketCategoryFilter] = useState('all');
 
-  // Notifications filter: all, updates, support, system
-  const [notifFilter, setNotifFilter] = useState('all');
-
-  // App status filter: all, active, not_purchased
-  const [appStatusFilter, setAppStatusFilter] = useState('all');
-
-  const [loading, setLoading] = useState(true);
-  const [toastMessage, setToastMessage] = useState('');
+  // Search states
   const [searchQuery, setSearchQuery] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
   const [ticketSearch, setTicketSearch] = useState('');
@@ -81,16 +79,14 @@ export default function CustomerDashboard() {
 
   // Modals & Popovers
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [selectedPlanToUpgrade, setSelectedPlanToUpgrade] = useState('Enterprise');
+  const [selectedPlanToUpgrade, setSelectedPlanToUpgrade] = useState('Single Software');
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
-  const [notifPopoverOpen, setNotifPopoverOpen] = useState(false);
+  const [changePwdModalOpen, setChangePwdModalOpen] = useState(false);
+  const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Forms
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Member' });
-  const [ticketForm, setTicketForm] = useState({ subject: '', category: 'Technical', description: '', priority: 'Medium' });
+  const [toastMessage, setToastMessage] = useState('');
 
   // Password & Security State
   const [pwdCurrent, setPwdCurrent] = useState('');
@@ -101,15 +97,19 @@ export default function CustomerDashboard() {
   const [pwdError, setPwdError] = useState('');
   const [twoFaEnabled, setTwoFaEnabled] = useState(true);
 
-  // Settings & Preferences
-  const [prefEmailNotifs, setPrefEmailNotifs] = useState(true);
+  // Settings & Preferences State
+  const [prefAccountUpdates, setPrefAccountUpdates] = useState(true);
   const [prefProductUpdates, setPrefProductUpdates] = useState(true);
   const [prefMarketing, setPrefMarketing] = useState(false);
   const [prefLanguage, setPrefLanguage] = useState('English');
   const [prefTimezone, setPrefTimezone] = useState('(GMT+05:30) Asia/Kolkata');
   const [prefCurrency, setPrefCurrency] = useState('INR (₹)');
+  const [prefDateFormat, setPrefDateFormat] = useState('DD/MM/YYYY');
+  const [prefNumberFormat, setPrefNumberFormat] = useState('1,234.56');
+  const [prefDefaultApp, setPrefDefaultApp] = useState('Sales Software');
+  const [prefDashboardLayout, setPrefDashboardLayout] = useState('Standard');
 
-  // Profile Form state
+  // Profile Form State
   const [profileData, setProfileData] = useState({
     name: 'Priya Sharma',
     email: 'priya@retailmart.com',
@@ -118,18 +118,37 @@ export default function CustomerDashboard() {
     website: 'https://retailmart.com',
     country: 'India'
   });
+  const [profileErrors, setProfileErrors] = useState({});
+
+  // Invite Form State
+  const [inviteForm, setInviteForm] = useState({
+    name: '',
+    email: '',
+    role: 'Member',
+    access: 'All Applications'
+  });
+
+  // Ticket Form State
+  const [ticketForm, setTicketForm] = useState({
+    subject: '',
+    category: 'Technical',
+    priority: 'Normal',
+    application: 'Sales Software',
+    description: '',
+    attachment: null
+  });
 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Static reference data matching design image
+  // Canonical Records matching User Specifications
   const defaultInvoices = [
-    { id: '1', invoice_number: 'INV-2026-0614197', date: '21 Oct 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' },
-    { id: '2', invoice_number: 'INV-2026-2761912', date: '21 Oct 2026', plan: 'Single Software', amount: '₹7,929.6', status: 'Paid' },
-    { id: '3', invoice_number: 'INV-2026-1048201', date: '21 Sep 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' },
-    { id: '4', invoice_number: 'INV-2026-0074610', date: '21 Aug 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' }
+    { id: '1', invoice_number: 'INV-2026-06114197', date: '21 Oct 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' },
+    { id: '2', invoice_number: 'INV-2026-27619112', date: '01 Oct 2026', plan: 'Single Software', amount: '₹7,929.6', status: 'Paid' },
+    { id: '3', invoice_number: 'INV-2025-10482021', date: '21 Sep 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' },
+    { id: '4', invoice_number: 'INV-2025-08746100', date: '21 Aug 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' }
   ];
 
   const defaultTeamMembers = [
@@ -140,28 +159,60 @@ export default function CustomerDashboard() {
   ];
 
   const defaultTickets = [
-    { id: '1', number: 'OX00-1283', subject: 'Login issue in Sales App', category: 'Technical', status: 'Open', created: '23 Oct 2026' },
-    { id: '2', number: 'OX00-1282', subject: 'Invoice not generating', category: 'Billing', status: 'In Progress', created: '21 Oct 2026' },
-    { id: '3', number: 'OX00-1256', subject: 'Request for new user', category: 'Account', status: 'Resolved', created: '17 Oct 2026' },
-    { id: '4', number: 'OX00-1234', subject: 'Feature request: Reports', category: 'Feature Request', status: 'Closed', created: '12 Oct 2026' }
+    { id: '1', number: 'OXOO-1283', subject: 'Login issue in Sales App', category: 'Technical', status: 'Open', created: '23 Oct 2026' },
+    { id: '2', number: 'OXOO-1282', subject: 'Invoice not generating', category: 'Billing', status: 'In Progress', created: '21 Oct 2026' },
+    { id: '3', number: 'OXOO-1256', subject: 'Request for new user', category: 'Account', status: 'Resolved', created: '17 Oct 2026' },
+    { id: '4', number: 'OXOO-1234', subject: 'Feature request: Reports', category: 'Feature Request', status: 'Closed', created: '12 Oct 2026' }
   ];
 
   const defaultNotifications = [
-    { id: '1', title: 'Payment Received', desc: 'Your payment of ₹660.8 was successful.', time: '21 Oct 2026, 12:16 PM', category: 'updates', icon: 'credit' },
-    { id: '2', title: 'New Team Member', desc: 'Rahul Mehta has been added to your team.', time: '21 Oct 2026, 11:43 AM', category: 'system', icon: 'user' },
-    { id: '3', title: 'Support Ticket Updated', desc: 'Ticket #OX00-1282 status changed to In Progress.', time: '21 Oct 2026, 10:05 AM', category: 'support', icon: 'ticket' },
-    { id: '4', title: 'Application Access', desc: 'You have been granted access to Sales Software.', time: '20 Oct 2026, 04:15 PM', category: 'system', icon: 'apps' },
-    { id: '5', title: 'Invoice Generated', desc: 'New invoice INV-2026-0614197 has been generated.', time: '20 Oct 2026, 09:30 AM', category: 'updates', icon: 'file' }
+    { id: '1', title: 'Payment Received', desc: 'Your payment of ₹660.8 was successful.', date: '21 Oct 2026, 12:16 PM', category: 'payments', read: false },
+    { id: '2', title: 'New Team Member', desc: 'Rahul Mehta has been added to your team.', date: '20 Oct 2026, 11:42 AM', category: 'team', read: false },
+    { id: '3', title: 'Support Ticket Updated', desc: 'Ticket #OXOO-1282 status changed to In Progress.', date: '20 Oct 2026, 10:15 AM', category: 'support', read: false },
+    { id: '4', title: 'Application Access', desc: 'You have been granted access to Sales Software.', date: '20 Oct 2026, 09:45 AM', category: 'system', read: false },
+    { id: '5', title: 'Invoice Generated', desc: 'New invoice INV-2026-06114197 has been generated.', date: '20 Oct 2026, 09:30 AM', category: 'payments', read: false }
   ];
 
   const allDirectoryApps = [
-    { id: 'sales', name: 'Sales Software', desc: 'Business management & sales tracking', status: 'Active', purchasedDate: '01 Oct 2026', entitled: true, color: 'blue' },
-    { id: 'hrms', name: 'HRMS', desc: 'Employee management system', status: 'Active', purchasedDate: '12 Sep 2026', entitled: true, color: 'purple' },
-    { id: 'finance', name: 'Finance', desc: 'Accounting, invoicing & reports', status: 'Not Purchased', purchasedDate: null, entitled: false, color: 'green' },
-    { id: 'marketing', name: 'Marketing', desc: 'Email campaigns & marketing tools', status: 'Not Purchased', purchasedDate: null, entitled: false, color: 'orange' }
+    {
+      id: 'sales',
+      name: 'Sales Software',
+      desc: 'Business management & sales tracking',
+      status: 'Active',
+      purchasedDate: '01 Oct 2026',
+      entitled: true,
+      color: 'blue'
+    },
+    {
+      id: 'hrms',
+      name: 'HRMS',
+      desc: 'Employee management system',
+      status: 'Active',
+      purchasedDate: '12 Sep 2026',
+      entitled: true,
+      color: 'purple'
+    },
+    {
+      id: 'finance',
+      name: 'Finance',
+      desc: 'Accounting, invoicing & reports',
+      status: 'Not Purchased',
+      purchasedDate: null,
+      entitled: false,
+      color: 'green'
+    },
+    {
+      id: 'marketing',
+      name: 'Marketing',
+      desc: 'Email campaigns & marketing tools',
+      status: 'Not Purchased',
+      purchasedDate: null,
+      entitled: false,
+      color: 'orange'
+    }
   ];
 
-  // Dynamic overview state
+  // Overview Data
   const [overview, setOverview] = useState({
     customerName: 'Priya Sharma',
     company: 'RetailMart Solutions',
@@ -169,9 +220,11 @@ export default function CustomerDashboard() {
     avatar: 'P',
     currentPlan: 'Single Software',
     nextBillingDate: '30 Days',
-    monthlyRate: '₹660.8',
+    nextBillingExact: '30 Nov 2026',
+    monthlyPrice: '₹660.8 / month',
+    cardEnding: '4242',
+    cardExpiry: '12/2028',
     activeAppsCount: 1,
-    totalPurchasedApps: 1,
     teamMembersCount: 1,
     monthlyUsage: 1420,
     openTicketsCount: 0,
@@ -182,7 +235,7 @@ export default function CustomerDashboard() {
   const [tickets, setTickets] = useState(defaultTickets);
   const [notifications, setNotifications] = useState(defaultNotifications);
 
-  // Initialize from session / localStorage if customer customizes their brand or logs in
+  // Sync with local session or customized demo logo if present
   useEffect(() => {
     try {
       let storedUser = null;
@@ -197,7 +250,7 @@ export default function CustomerDashboard() {
         const effectiveName = storedUser?.name || 'Priya Sharma';
         const effectiveComp = customCompany || storedUser?.organization || 'RetailMart Solutions';
         const effectiveEmail = storedUser?.email || 'priya@retailmart.com';
-        
+
         setOverview(prev => ({
           ...prev,
           customerName: effectiveName,
@@ -221,7 +274,7 @@ export default function CustomerDashboard() {
   // Shared secret service key matching Oxoo Finance & other software
   const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
 
-  // App Launch Handler (passing service key & customer logo to the destination software)
+  // App Launch Handler (passing service key & customer logo to destination application)
   const handleOpenApp = (app) => {
     if (!app.entitled) {
       showToast(`${app.name} is not included in your Single Software plan. Click Upgrade to access.`);
@@ -244,7 +297,7 @@ export default function CustomerDashboard() {
     });
   };
 
-  // Sparkline mini SVG
+  // Sparkline mini SVG helper
   const renderSparkline = (color = '#10b981', points = '0,20 20,18 40,22 60,10 80,6') => (
     <svg className="oxoo-metric-sparkline" viewBox="0 0 80 30" fill="none">
       <path
@@ -261,7 +314,7 @@ export default function CustomerDashboard() {
   return (
     <div className="oxoo-dashboard-layout">
       {/* ---------------------------------------------------------
-          1. SIDEBAR (Dark Navy, Logo, 8 Navigation Tabs, Profile)
+          1. SIDEBAR (Dark Navy, OXOO Brand Logo, 8 Navigation Items)
           --------------------------------------------------------- */}
       <aside className={`oxoo-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="oxoo-sidebar-top">
@@ -277,7 +330,7 @@ export default function CustomerDashboard() {
             <span className="oxoo-tagline-text">One Platform. Infinite Possibilities.</span>
           </Link>
 
-          {/* Navigation Menu (8 Items Matching Customer Portal Prompt) */}
+          {/* Navigation Menu */}
           <nav className="oxoo-nav-menu">
             <button
               type="button"
@@ -353,7 +406,7 @@ export default function CustomerDashboard() {
           </nav>
         </div>
 
-        {/* Sidebar Bottom Profile (Priya Sharma / RetailMart Solutions) */}
+        {/* Sidebar Bottom Profile Card */}
         <div className="oxoo-sidebar-bottom">
           <div className="oxoo-fluid-waves-art" />
           <div
@@ -372,10 +425,10 @@ export default function CustomerDashboard() {
       </aside>
 
       {/* ---------------------------------------------------------
-          2. MAIN VIEWPORT (Header & Content Area)
+          2. MAIN VIEWPORT (Header & Dynamic Sections)
           --------------------------------------------------------- */}
       <div className="oxoo-main-viewport">
-        {/* Top Header Bar */}
+        {/* Top Bar Header */}
         <header className="oxoo-top-header">
           <div className="oxoo-header-left">
             <div className="oxoo-search-box">
@@ -391,7 +444,7 @@ export default function CustomerDashboard() {
           </div>
 
           <div className="oxoo-header-right">
-            {/* Customer Brand Logo Preview (Live badge showing customer's demo/brand logo) */}
+            {/* Live Customer Logo Preview */}
             <CustomerBrandBadge companyName={overview.company} />
 
             {/* Customer Portal Pill Badge */}
@@ -400,19 +453,17 @@ export default function CustomerDashboard() {
               <span>Customer Portal</span>
             </div>
 
-            {/* Notification Bell */}
-            <div style={{ position: 'relative' }}>
-              <button
-                type="button"
-                className="oxoo-header-icon-btn"
-                onClick={() => setActiveTab('notifications')}
-                aria-label="Notifications"
-                title="Notifications"
-              >
-                <Bell size={18} />
-                <span className="oxoo-badge-dot" />
-              </button>
-            </div>
+            {/* Notifications Bell */}
+            <button
+              type="button"
+              className="oxoo-header-icon-btn"
+              onClick={() => setActiveTab('notifications')}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell size={18} />
+              <span className="oxoo-badge-dot" />
+            </button>
 
             {/* Help Center Icon */}
             <button
@@ -452,7 +503,7 @@ export default function CustomerDashboard() {
                       position: 'absolute',
                       right: 0,
                       top: '52px',
-                      width: '230px',
+                      width: '240px',
                       background: '#ffffff',
                       borderRadius: '14px',
                       boxShadow: '0 12px 35px rgba(15, 23, 42, 0.15)',
@@ -501,7 +552,7 @@ export default function CustomerDashboard() {
           </div>
         </header>
 
-        {/* Global Toast */}
+        {/* Global Toast Alert */}
         <AnimatePresence>
           {toastMessage && (
             <motion.div
@@ -531,7 +582,7 @@ export default function CustomerDashboard() {
           )}
         </AnimatePresence>
 
-        {/* Content Canvas */}
+        {/* Main Content Area */}
         <main className="oxoo-content-canvas">
           {/* =========================================================
               VIEW 1: DASHBOARD OVERVIEW
@@ -577,15 +628,13 @@ export default function CustomerDashboard() {
                     <div className="oxoo-metric-icon-wrap blue">
                       <LayoutDashboard size={20} />
                     </div>
-                    <span className="oxoo-metric-badge green">
-                      +100%
-                    </span>
+                    <span className="oxoo-metric-badge green">+100%</span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
                       <span className="oxoo-metric-label">Active Apps</span>
                       <span className="oxoo-metric-value">{overview.activeAppsCount}</span>
-                      <span className="oxoo-metric-subtitle">of {overview.totalPurchasedApps} purchased</span>
+                      <span className="oxoo-metric-subtitle">of 1 purchased</span>
                     </div>
                     {renderSparkline('#10b981', '0,24 20,20 40,16 60,12 80,6')}
                   </div>
@@ -597,9 +646,7 @@ export default function CustomerDashboard() {
                     <div className="oxoo-metric-icon-wrap blue">
                       <Users size={20} />
                     </div>
-                    <span className="oxoo-metric-badge green">
-                      +0%
-                    </span>
+                    <span className="oxoo-metric-badge green">+0%</span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
@@ -617,9 +664,7 @@ export default function CustomerDashboard() {
                     <div className="oxoo-metric-icon-wrap blue">
                       <BarChart2 size={20} />
                     </div>
-                    <span className="oxoo-metric-badge green">
-                      +12%
-                    </span>
+                    <span className="oxoo-metric-badge green">+12%</span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
@@ -637,9 +682,7 @@ export default function CustomerDashboard() {
                     <div className="oxoo-metric-icon-wrap purple">
                       <MessageSquare size={20} />
                     </div>
-                    <span className="oxoo-metric-badge red">
-                      +0%
-                    </span>
+                    <span className="oxoo-metric-badge red">+0%</span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
@@ -734,7 +777,7 @@ export default function CustomerDashboard() {
                 </div>
               </div>
 
-              {/* Search & Filter Controls */}
+              {/* Search and Filters */}
               <div className="oxoo-filter-controls-row">
                 <div className="oxoo-filter-left">
                   <div className="oxoo-table-search-box">
@@ -765,7 +808,7 @@ export default function CustomerDashboard() {
                 </button>
               </div>
 
-              {/* 4 Application Cards Grid */}
+              {/* Application Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px', marginTop: '16px' }}>
                 {allDirectoryApps
                   .filter(app => {
@@ -812,7 +855,7 @@ export default function CustomerDashboard() {
                         )}
                         {app.purchasedDate && (
                           <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-                            Purchased on {app.purchasedDate}
+                            Purchased on: {app.purchasedDate}
                           </div>
                         )}
                       </div>
@@ -852,7 +895,7 @@ export default function CustomerDashboard() {
                   </button>
                 </div>
 
-                {/* Plan Card */}
+                {/* Subscription Summary Card */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -870,22 +913,26 @@ export default function CustomerDashboard() {
                       <Crown size={22} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Single Software</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Single Software</span>
+                        <span className="oxoo-status-pill active" style={{ margin: 0, padding: '2px 8px', fontSize: '10px' }}>Active</span>
+                      </div>
                       <div style={{ fontSize: '16px', fontWeight: 700, color: '#0284c7', margin: '2px 0' }}>₹660.8 / month</div>
                       <div style={{ fontSize: '12px', color: '#64748b' }}>Next billing date: 30 Nov 2026</div>
                     </div>
                   </div>
 
+                  {/* Payment Method */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ffffff', padding: '10px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                       <CreditCard size={20} color="#0284c7" />
                       <div>
                         <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>Visa •••• 4242</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Expires 12/2028</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>Expiry: 12/2028</div>
                       </div>
                       <span
                         style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, cursor: 'pointer', marginLeft: '6px' }}
-                        onClick={() => showToast('Payment method update request initiated.')}
+                        onClick={() => showToast('Payment method update dialog initiated.')}
                       >
                         Update
                       </span>
@@ -957,7 +1004,7 @@ export default function CustomerDashboard() {
                                 fontWeight: 600,
                                 cursor: 'pointer'
                               }}
-                              onClick={() => showToast(`Downloaded invoice ${inv.invoice_number}.pdf`)}
+                              onClick={() => showToast(`Invoice ${inv.invoice_number} downloaded successfully.`)}
                             >
                               <Download size={13} /> Download
                             </button>
@@ -992,7 +1039,7 @@ export default function CustomerDashboard() {
                 </button>
               </div>
 
-              {/* 4 Stat Summary Pills */}
+              {/* 4 Summary Cards */}
               <div className="oxoo-team-stats-row">
                 <div className="oxoo-team-stat-pill">
                   <div className="oxoo-team-stat-icon blue">
@@ -1035,7 +1082,7 @@ export default function CustomerDashboard() {
                 </div>
               </div>
 
-              {/* Filter Row */}
+              {/* Search and Filters */}
               <div className="oxoo-filter-controls-row">
                 <div className="oxoo-filter-left">
                   <div className="oxoo-table-search-box">
@@ -1047,16 +1094,21 @@ export default function CustomerDashboard() {
                       onChange={(e) => setTeamSearch(e.target.value)}
                     />
                   </div>
-                  <select className="oxoo-select-filter">
-                    <option>All Roles</option>
-                    <option>Owner</option>
-                    <option>Admin</option>
-                    <option>Member</option>
+                  <select
+                    className="oxoo-select-filter"
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="Owner">Owner</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Member">Member</option>
+                    <option value="Billing Manager">Billing Manager</option>
                   </select>
                 </div>
               </div>
 
-              {/* Members Table */}
+              {/* Team Members Table */}
               <div style={{ overflowX: 'auto' }}>
                 <table className="oxoo-table">
                   <thead>
@@ -1071,7 +1123,11 @@ export default function CustomerDashboard() {
                   </thead>
                   <tbody>
                     {teamMembers
-                      .filter(m => m.name.toLowerCase().includes(teamSearch.toLowerCase()) || m.email.toLowerCase().includes(teamSearch.toLowerCase()))
+                      .filter(m => {
+                        const matchQuery = m.name.toLowerCase().includes(teamSearch.toLowerCase()) || m.email.toLowerCase().includes(teamSearch.toLowerCase());
+                        const matchRole = roleFilter === 'all' || m.role.toLowerCase() === roleFilter.toLowerCase();
+                        return matchQuery && matchRole;
+                      })
                       .map((member) => (
                         <tr key={member.id}>
                           <td>
@@ -1152,7 +1208,7 @@ export default function CustomerDashboard() {
                 </button>
               </div>
 
-              {/* Filter Pills Bar */}
+              {/* Ticket Status Tabs */}
               <div className="oxoo-filter-pills-bar">
                 <button
                   type="button"
@@ -1191,7 +1247,7 @@ export default function CustomerDashboard() {
                 </button>
               </div>
 
-              {/* Search + Category Filter */}
+              {/* Search and Filters */}
               <div className="oxoo-filter-controls-row">
                 <div className="oxoo-filter-left">
                   <div className="oxoo-table-search-box">
@@ -1203,22 +1259,27 @@ export default function CustomerDashboard() {
                       onChange={(e) => setTicketSearch(e.target.value)}
                     />
                   </div>
-                  <select className="oxoo-select-filter">
-                    <option>All Categories</option>
-                    <option>Technical</option>
-                    <option>Billing</option>
-                    <option>Account</option>
-                    <option>Feature Request</option>
+                  <select
+                    className="oxoo-select-filter"
+                    value={ticketCategoryFilter}
+                    onChange={(e) => setTicketCategoryFilter(e.target.value)}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="Technical">Technical</option>
+                    <option value="Billing">Billing</option>
+                    <option value="Account">Account</option>
+                    <option value="Feature Request">Feature Request</option>
+                    <option value="General Inquiry">General Inquiry</option>
                   </select>
                 </div>
               </div>
 
-              {/* Tickets Table */}
+              {/* Support Tickets Table */}
               <div style={{ overflowX: 'auto' }}>
                 <table className="oxoo-table">
                   <thead>
                     <tr>
-                      <th>#</th>
+                      <th>Ticket #</th>
                       <th>Subject</th>
                       <th>Category</th>
                       <th>Status</th>
@@ -1230,12 +1291,13 @@ export default function CustomerDashboard() {
                     {tickets
                       .filter(t => {
                         const matchQuery = t.subject.toLowerCase().includes(ticketSearch.toLowerCase()) || t.number.toLowerCase().includes(ticketSearch.toLowerCase());
-                        const matchFilter = ticketFilter === 'all' ||
+                        const matchStatus = ticketFilter === 'all' ||
                           (ticketFilter === 'open' && t.status === 'Open') ||
                           (ticketFilter === 'in_progress' && t.status === 'In Progress') ||
                           (ticketFilter === 'resolved' && t.status === 'Resolved') ||
                           (ticketFilter === 'closed' && t.status === 'Closed');
-                        return matchQuery && matchFilter;
+                        const matchCat = ticketCategoryFilter === 'all' || t.category === ticketCategoryFilter;
+                        return matchQuery && matchStatus && matchCat;
                       })
                       .map((t) => (
                         <tr key={t.id}>
@@ -1261,7 +1323,7 @@ export default function CustomerDashboard() {
                             <button
                               type="button"
                               style={{ background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer', padding: '6px' }}
-                              onClick={() => showToast(`Viewing ticket ${t.number}`)}
+                              onClick={() => showToast(`Viewing ticket conversation: ${t.number}`)}
                             >
                               <ChevronRight size={18} />
                             </button>
@@ -1290,24 +1352,48 @@ export default function CustomerDashboard() {
           {activeTab === 'reports' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
               <div className="oxoo-section-card">
-                <div className="oxoo-section-header" style={{ marginBottom: '18px' }}>
+                <div className="oxoo-section-header" style={{ marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
                     <h2 className="oxoo-section-title">Reports & Usage Analytics</h2>
                     <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
                       Track your application usage and business insights.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="oxoo-date-badge-btn"
-                    onClick={() => showToast('Date range selected: 01 Oct 2026 - 31 Oct 2026')}
-                  >
-                    <Calendar size={14} color="#0284c7" />
-                    <span>01 Oct 2026 - 31 Oct 2026</span>
-                  </button>
+                  {/* Date Filter & Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="oxoo-date-badge-btn"
+                      onClick={() => showToast('Date range: 01 Oct 2026 – 31 Oct 2026')}
+                    >
+                      <Calendar size={14} color="#0284c7" />
+                      <span>01 Oct 2026 – 31 Oct 2026</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      onClick={() => showToast('Exporting analytics report...')}
+                    >
+                      Export Report
+                    </button>
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      onClick={() => showToast('Downloading CSV report...')}
+                    >
+                      Download CSV
+                    </button>
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      onClick={() => showToast('Downloading PDF report...')}
+                    >
+                      Download PDF
+                    </button>
+                  </div>
                 </div>
 
-                {/* 4 Analytics KPI Cards */}
+                {/* Usage Statistics (4 KPI Cards) */}
                 <div className="oxoo-summary-grid" style={{ marginBottom: '24px' }}>
                   <div className="oxoo-metric-card">
                     <div className="oxoo-metric-top-row">
@@ -1350,12 +1436,12 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
 
-                {/* 2-Column Grid: Usage Trend Chart + Top Features Breakdown */}
+                {/* 2-Column: Usage Trend Chart + Top Features */}
                 <div className="oxoo-analytics-grid">
-                  {/* Left: Usage Trend Chart */}
+                  {/* Usage Trend Chart */}
                   <div className="oxoo-usage-chart-wrap">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', margin: 0 }}>Usage Trend</h3>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', margin: 0 }}>Usage Trend Chart</h3>
                       <div className="oxoo-chart-legend">
                         <div className="oxoo-legend-item">
                           <span className="oxoo-legend-color" style={{ background: '#0284c7' }} />
@@ -1368,7 +1454,6 @@ export default function CustomerDashboard() {
                       </div>
                     </div>
 
-                    {/* SVG Line Chart */}
                     <div style={{ width: '100%', height: '230px', position: 'relative' }}>
                       <svg width="100%" height="100%" viewBox="0 0 600 200" preserveAspectRatio="none">
                         <defs>
@@ -1377,19 +1462,17 @@ export default function CustomerDashboard() {
                             <stop offset="100%" stopColor="#0284c7" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
-                        {/* Grid lines */}
                         <line x1="0" y1="40" x2="600" y2="40" stroke="#f1f5f9" strokeWidth="1" />
                         <line x1="0" y1="80" x2="600" y2="80" stroke="#f1f5f9" strokeWidth="1" />
                         <line x1="0" y1="120" x2="600" y2="120" stroke="#f1f5f9" strokeWidth="1" />
                         <line x1="0" y1="160" x2="600" y2="160" stroke="#f1f5f9" strokeWidth="1" />
 
-                        {/* Area fill */}
                         <polygon
                           fill="url(#blueGrad)"
                           points="30,150 110,130 190,140 280,90 380,105 480,50 560,30 560,190 30,190"
                         />
 
-                        {/* Transactions Line (Blue) */}
+                        {/* Transactions (Blue) */}
                         <polyline
                           fill="none"
                           stroke="#0284c7"
@@ -1398,12 +1481,11 @@ export default function CustomerDashboard() {
                           strokeLinejoin="round"
                           points="30,150 110,130 190,140 280,90 380,105 480,50 560,30"
                         />
-                        {/* Transactions Points */}
                         {[[30,150],[110,130],[190,140],[280,90],[380,105],[480,50],[560,30]].map(([cx, cy], i) => (
                           <circle key={i} cx={cx} cy={cy} r="4" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
                         ))}
 
-                        {/* Active Users Line (Cyan) */}
+                        {/* Active Users (Cyan) */}
                         <polyline
                           fill="none"
                           stroke="#06b6d4"
@@ -1412,14 +1494,12 @@ export default function CustomerDashboard() {
                           strokeLinejoin="round"
                           points="30,170 110,165 190,160 280,145 380,140 480,120 560,110"
                         />
-                        {/* Active Users Points */}
                         {[[30,170],[110,165],[190,160],[280,145],[380,140],[480,120],[560,110]].map(([cx, cy], i) => (
                           <circle key={i} cx={cx} cy={cy} r="3" fill="#ffffff" stroke="#06b6d4" strokeWidth="2" />
                         ))}
                       </svg>
                     </div>
 
-                    {/* X-Axis labels */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
                       <span>01 Oct</span>
                       <span>05 Oct</span>
@@ -1431,7 +1511,7 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
 
-                  {/* Right: Top Features Breakdown */}
+                  {/* Top Features */}
                   <div className="oxoo-usage-chart-wrap">
                     <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', margin: '0 0 16px' }}>
                       Top Features
@@ -1473,18 +1553,33 @@ export default function CustomerDashboard() {
                     Stay updated with important updates and activities.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => showToast('All notifications marked as read.')}
-                >
-                  Mark all as read
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => {
+                      setNotifications(notifications.map(n => ({ ...n, read: true })));
+                      showToast('All notifications marked as read.');
+                    }}
+                  >
+                    Mark all as read
+                  </button>
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => {
+                      setNotifications(notifications.filter(n => !n.read));
+                      showToast('Read notifications cleared.');
+                    }}
+                  >
+                    Clear Read Notifications
+                  </button>
+                </div>
               </div>
 
-              {/* Tabs: All | Updates | Support | System */}
+              {/* Filters: All, Payments, Team, Support, System */}
               <div className="oxoo-filter-pills-bar">
-                {['all', 'updates', 'support', 'system'].map((f) => (
+                {['all', 'payments', 'team', 'support', 'system'].map((f) => (
                   <button
                     key={f}
                     type="button"
@@ -1497,35 +1592,54 @@ export default function CustomerDashboard() {
                 ))}
               </div>
 
-              {/* Notifications List */}
+              {/* Activity Feed */}
               <div className="oxoo-notifications-feed">
                 {notifications
                   .filter(n => notifFilter === 'all' || n.category === notifFilter)
                   .map((notif) => (
                     <div key={notif.id} className="oxoo-notification-card">
                       <div className="oxoo-notification-icon" style={{
-                        background: notif.icon === 'credit' ? '#ecfdf5' :
-                          notif.icon === 'user' ? '#eff6ff' :
-                          notif.icon === 'ticket' ? '#fef3c7' :
-                          notif.icon === 'apps' ? '#f3e8ff' : '#f1f5f9',
-                        color: notif.icon === 'credit' ? '#10b981' :
-                          notif.icon === 'user' ? '#0284c7' :
-                          notif.icon === 'ticket' ? '#d97706' :
-                          notif.icon === 'apps' ? '#8b5cf6' : '#64748b'
+                        background: notif.category === 'payments' ? '#ecfdf5' :
+                          notif.category === 'team' ? '#eff6ff' :
+                          notif.category === 'support' ? '#fef3c7' : '#f3e8ff',
+                        color: notif.category === 'payments' ? '#10b981' :
+                          notif.category === 'team' ? '#0284c7' :
+                          notif.category === 'support' ? '#d97706' : '#8b5cf6'
                       }}>
-                        {notif.icon === 'credit' && <CreditCard size={18} />}
-                        {notif.icon === 'user' && <UserPlus size={18} />}
-                        {notif.icon === 'ticket' && <MessageSquare size={18} />}
-                        {notif.icon === 'apps' && <Layers size={18} />}
-                        {notif.icon === 'file' && <FileText size={18} />}
+                        {notif.category === 'payments' && <CreditCard size={18} />}
+                        {notif.category === 'team' && <UserPlus size={18} />}
+                        {notif.category === 'support' && <MessageSquare size={18} />}
+                        {notif.category === 'system' && <Layers size={18} />}
                       </div>
 
                       <div className="oxoo-notification-content">
                         <span className="oxoo-notification-title">{notif.title}</span>
                         <span className="oxoo-notification-desc">{notif.desc}</span>
+                        <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                          Date: {notif.date}
+                        </span>
                       </div>
 
-                      <span className="oxoo-notification-time">{notif.time}</span>
+                      {/* Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          style={{ background: '#f1f5f9', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
+                          onClick={() => {
+                            setNotifications(notifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                            showToast('Marked as read');
+                          }}
+                        >
+                          Mark as Read
+                        </button>
+                        <button
+                          type="button"
+                          style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '5px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
+                          onClick={() => showToast(`Viewing details: ${notif.title}`)}
+                        >
+                          View Details
+                        </button>
+                      </div>
                     </div>
                   ))}
               </div>
@@ -1563,7 +1677,7 @@ export default function CustomerDashboard() {
               </div>
 
               {/* -------------------------------------------------------
-                  SUBTAB 1: ACCOUNT PROFILE (VIEW 7)
+                  VIEW 7: ACCOUNT PROFILE
                   ------------------------------------------------------- */}
               {settingsSubTab === 'account' && (
                 <div>
@@ -1574,23 +1688,47 @@ export default function CustomerDashboard() {
                     </p>
                   </div>
 
-                  {/* Profile Summary Card */}
+                  {/* Profile Details Header Card */}
                   <div className="oxoo-profile-summary-header">
                     <div className="oxoo-profile-avatar-big">
                       {profileData.name.charAt(0) || 'P'}
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 2px' }}>
                         {profileData.name}
                       </h3>
-                      <div style={{ fontSize: '13px', color: '#0284c7', fontWeight: 600 }}>Owner</div>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>{profileData.company}</div>
+                      <div style={{ fontSize: '13px', color: '#0284c7', fontWeight: 600 }}>
+                        Account Role: Owner
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>
+                        Company: {profileData.company}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      onClick={() => showToast('Select new profile photo dialog')}
+                    >
+                      Change Profile Photo
+                    </button>
                   </div>
 
-                  {/* Form */}
+                  {/* Personal Information Form */}
                   <form onSubmit={(e) => {
                     e.preventDefault();
+                    if (!profileData.name.trim()) {
+                      showToast('Please enter your full name.');
+                      return;
+                    }
+                    if (!profileData.email.includes('@')) {
+                      showToast('Please enter a valid email address.');
+                      return;
+                    }
+                    if (!profileData.phone.trim()) {
+                      showToast('Please enter a valid phone number.');
+                      return;
+                    }
+
                     setOverview(prev => ({
                       ...prev,
                       customerName: profileData.name,
@@ -1598,7 +1736,7 @@ export default function CustomerDashboard() {
                       email: profileData.email,
                       avatar: profileData.name.charAt(0).toUpperCase()
                     }));
-                    showToast('Profile information saved successfully!');
+                    showToast('Profile updated successfully.');
                   }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
                       <div className="oxoo-form-group">
@@ -1666,9 +1804,26 @@ export default function CustomerDashboard() {
                       </div>
                     </div>
 
-                    <div style={{ marginTop: '8px' }}>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                       <button type="submit" className="oxoo-upgrade-btn">
                         Save Changes
+                      </button>
+                      <button
+                        type="button"
+                        className="oxoo-outline-btn"
+                        onClick={() => {
+                          setProfileData({
+                            name: overview.customerName,
+                            email: overview.email,
+                            phone: '+91 98765 43210',
+                            company: overview.company,
+                            website: 'https://retailmart.com',
+                            country: 'India'
+                          });
+                          showToast('Changes cancelled');
+                        }}
+                      >
+                        Cancel
                       </button>
                     </div>
                   </form>
@@ -1676,7 +1831,7 @@ export default function CustomerDashboard() {
               )}
 
               {/* -------------------------------------------------------
-                  SUBTAB 2: SECURITY & LOGIN (VIEW 9)
+                  VIEW 9: SECURITY & LOGIN
                   ------------------------------------------------------- */}
               {settingsSubTab === 'security' && (
                 <div>
@@ -1696,19 +1851,19 @@ export default function CustomerDashboard() {
                         </div>
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Password</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>Last changed 3 months ago</div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>Update your password regularly.</div>
                         </div>
                       </div>
                       <button
                         type="button"
                         className="oxoo-outline-btn"
-                        onClick={() => showToast('Password change form opened below.')}
+                        onClick={() => setChangePwdModalOpen(true)}
                       >
                         Change Password
                       </button>
                     </div>
 
-                    {/* Two-Factor Authentication Toggle */}
+                    {/* Two-Factor Authentication */}
                     <div className="oxoo-security-row">
                       <div className="oxoo-security-info">
                         <div className="oxoo-security-icon-box">
@@ -1717,15 +1872,18 @@ export default function CustomerDashboard() {
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Two-Factor Authentication</div>
                           <div style={{ fontSize: '12px', color: '#64748b' }}>Add an extra layer of security.</div>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: twoFaEnabled ? '#10b981' : '#64748b' }}>
+                            Status: {twoFaEnabled ? 'Enabled' : 'Disabled'}
+                          </div>
                         </div>
                       </div>
-                      <label className="oxoo-switch-toggle">
+                      <label className="oxoo-switch-toggle" title="Enable Two-Factor Authentication">
                         <input
                           type="checkbox"
                           checked={twoFaEnabled}
                           onChange={(e) => {
                             setTwoFaEnabled(e.target.checked);
-                            showToast(`Two-Factor Authentication ${e.target.checked ? 'enabled' : 'disabled'}`);
+                            showToast(e.target.checked ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.');
                           }}
                         />
                         <span className="oxoo-slider" />
@@ -1739,10 +1897,8 @@ export default function CustomerDashboard() {
                           <Smartphone size={18} />
                         </div>
                         <div>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
-                            Authenticator App <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}>(Google Authenticator)</span>
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>Use TOTP app for verification codes</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Authenticator App</div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>Secure your account using an authenticator application.</div>
                         </div>
                       </div>
                       <button
@@ -1762,7 +1918,7 @@ export default function CustomerDashboard() {
                         </div>
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>SMS Authentication</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>Receive login verification codes via SMS</div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>Receive verification codes by SMS.</div>
                         </div>
                       </div>
                       <button
@@ -1782,23 +1938,49 @@ export default function CustomerDashboard() {
                         </div>
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Active Sessions</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>Manage your active sessions and devices.</div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>Manage your active login sessions.</div>
                         </div>
                       </div>
                       <button
                         type="button"
                         className="oxoo-outline-btn"
-                        onClick={() => showToast('Current session: Chrome on Windows (Active now)')}
+                        onClick={() => setSessionsModalOpen(true)}
                       >
                         View Sessions
                       </button>
                     </div>
                   </div>
+
+                  {/* Security Actions Bar */}
+                  <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      onClick={() => showToast('Signed out of current device.')}
+                    >
+                      Sign Out of This Device
+                    </button>
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                      onClick={() => showToast('Your session has been revoked from all other devices.')}
+                    >
+                      Sign Out of All Devices
+                    </button>
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      onClick={() => showToast('Reviewing login history: Last login today from India (IP: 103.21.24.5)')}
+                    >
+                      Review Login History
+                    </button>
+                  </div>
                 </div>
               )}
 
               {/* -------------------------------------------------------
-                  SUBTAB 3: SETTINGS & PREFERENCES (VIEW 10)
+                  VIEW 10: SETTINGS & PREFERENCES
                   ------------------------------------------------------- */}
               {settingsSubTab === 'preferences' && (
                 <div>
@@ -1811,70 +1993,73 @@ export default function CustomerDashboard() {
 
                   <form onSubmit={(e) => {
                     e.preventDefault();
-                    showToast('Preferences saved successfully!');
+                    showToast('Preferences saved successfully.');
                   }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Language */}
-                    <div className="oxoo-form-group">
-                      <label className="oxoo-form-label">Language</label>
-                      <select
-                        className="oxoo-form-select"
-                        value={prefLanguage}
-                        onChange={(e) => setPrefLanguage(e.target.value)}
-                      >
-                        <option value="English">English</option>
-                        <option value="Hindi">Hindi (हिंदी)</option>
-                        <option value="Spanish">Spanish (Español)</option>
-                        <option value="French">French (Français)</option>
-                        <option value="German">German (Deutsch)</option>
-                      </select>
+                    {/* General Preferences */}
+                    <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: '4px 0 0' }}>
+                      General Preferences
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                      <div className="oxoo-form-group">
+                        <label className="oxoo-form-label">Language</label>
+                        <select
+                          className="oxoo-form-select"
+                          value={prefLanguage}
+                          onChange={(e) => setPrefLanguage(e.target.value)}
+                        >
+                          <option value="English">English</option>
+                          <option value="Hindi">Hindi (हिंदी)</option>
+                          <option value="Spanish">Spanish (Español)</option>
+                          <option value="French">French (Français)</option>
+                        </select>
+                      </div>
+
+                      <div className="oxoo-form-group">
+                        <label className="oxoo-form-label">Timezone</label>
+                        <select
+                          className="oxoo-form-select"
+                          value={prefTimezone}
+                          onChange={(e) => setPrefTimezone(e.target.value)}
+                        >
+                          <option value="(GMT+05:30) Asia/Kolkata">(GMT+05:30) Asia/Kolkata</option>
+                          <option value="(GMT+00:00) UTC">(GMT+00:00) UTC</option>
+                          <option value="(GMT-05:00) America/New_York">(GMT-05:00) America/New_York</option>
+                          <option value="(GMT+04:00) Asia/Dubai">(GMT+04:00) Asia/Dubai</option>
+                        </select>
+                      </div>
+
+                      <div className="oxoo-form-group">
+                        <label className="oxoo-form-label">Currency</label>
+                        <select
+                          className="oxoo-form-select"
+                          value={prefCurrency}
+                          onChange={(e) => setPrefCurrency(e.target.value)}
+                        >
+                          <option value="INR (₹)">INR (₹)</option>
+                          <option value="USD ($)">USD ($)</option>
+                          <option value="EUR (€)">EUR (€)</option>
+                          <option value="AED (د.إ)">AED (د.إ)</option>
+                        </select>
+                      </div>
                     </div>
 
-                    {/* Timezone */}
-                    <div className="oxoo-form-group">
-                      <label className="oxoo-form-label">Timezone</label>
-                      <select
-                        className="oxoo-form-select"
-                        value={prefTimezone}
-                        onChange={(e) => setPrefTimezone(e.target.value)}
-                      >
-                        <option value="(GMT+05:30) Asia/Kolkata">(GMT+05:30) Asia/Kolkata</option>
-                        <option value="(GMT+00:00) UTC">(GMT+00:00) UTC</option>
-                        <option value="(GMT-05:00) America/New_York">(GMT-05:00) America/New_York</option>
-                        <option value="(GMT+04:00) Asia/Dubai">(GMT+04:00) Asia/Dubai</option>
-                        <option value="(GMT+08:00) Asia/Singapore">(GMT+08:00) Asia/Singapore</option>
-                      </select>
-                    </div>
+                    {/* Email Notifications */}
+                    <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: '12px 0 0' }}>
+                      Email Notifications
+                    </h3>
 
-                    {/* Currency */}
-                    <div className="oxoo-form-group">
-                      <label className="oxoo-form-label">Currency</label>
-                      <select
-                        className="oxoo-form-select"
-                        value={prefCurrency}
-                        onChange={(e) => setPrefCurrency(e.target.value)}
-                      >
-                        <option value="INR (₹)">INR (₹)</option>
-                        <option value="USD ($)">USD ($)</option>
-                        <option value="EUR (€)">EUR (€)</option>
-                        <option value="GBP (£)">GBP (£)</option>
-                        <option value="AED (د.إ)">AED (د.إ)</option>
-                      </select>
-                    </div>
-
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
-
-                    {/* Toggles */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
-                          <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>Email Notifications</div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>Account Updates</div>
                           <div style={{ fontSize: '12px', color: '#64748b' }}>Receive important updates and alerts.</div>
                         </div>
-                        <label className="oxoo-switch-toggle">
+                        <label className="oxoo-switch-toggle" title="Account Updates">
                           <input
                             type="checkbox"
-                            checked={prefEmailNotifs}
-                            onChange={(e) => setPrefEmailNotifs(e.target.checked)}
+                            checked={prefAccountUpdates}
+                            onChange={(e) => setPrefAccountUpdates(e.target.checked)}
                           />
                           <span className="oxoo-slider" />
                         </label>
@@ -1885,7 +2070,7 @@ export default function CustomerDashboard() {
                           <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>Product Updates</div>
                           <div style={{ fontSize: '12px', color: '#64748b' }}>Get notified about new features.</div>
                         </div>
-                        <label className="oxoo-switch-toggle">
+                        <label className="oxoo-switch-toggle" title="Product Updates">
                           <input
                             type="checkbox"
                             checked={prefProductUpdates}
@@ -1900,7 +2085,7 @@ export default function CustomerDashboard() {
                           <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>Marketing Communications</div>
                           <div style={{ fontSize: '12px', color: '#64748b' }}>Receive tips, offers and best practices.</div>
                         </div>
-                        <label className="oxoo-switch-toggle">
+                        <label className="oxoo-switch-toggle" title="Marketing Communications">
                           <input
                             type="checkbox"
                             checked={prefMarketing}
@@ -1911,9 +2096,86 @@ export default function CustomerDashboard() {
                       </div>
                     </div>
 
-                    <div style={{ marginTop: '10px' }}>
+                    {/* Additional Preferences */}
+                    <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: '12px 0 0' }}>
+                      Additional Preferences
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                      <div className="oxoo-form-group">
+                        <label className="oxoo-form-label">Date Format</label>
+                        <select
+                          className="oxoo-form-select"
+                          value={prefDateFormat}
+                          onChange={(e) => setPrefDateFormat(e.target.value)}
+                        >
+                          <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                          <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                          <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        </select>
+                      </div>
+
+                      <div className="oxoo-form-group">
+                        <label className="oxoo-form-label">Number Format</label>
+                        <select
+                          className="oxoo-form-select"
+                          value={prefNumberFormat}
+                          onChange={(e) => setPrefNumberFormat(e.target.value)}
+                        >
+                          <option value="1,234.56">1,234.56</option>
+                          <option value="1.234,56">1.234,56</option>
+                        </select>
+                      </div>
+
+                      <div className="oxoo-form-group">
+                        <label className="oxoo-form-label">Default Application</label>
+                        <select
+                          className="oxoo-form-select"
+                          value={prefDefaultApp}
+                          onChange={(e) => setPrefDefaultApp(e.target.value)}
+                        >
+                          <option value="Sales Software">Sales Software</option>
+                          <option value="HRMS">HRMS</option>
+                          <option value="Finance">Finance</option>
+                        </select>
+                      </div>
+
+                      <div className="oxoo-form-group">
+                        <label className="oxoo-form-label">Dashboard Layout</label>
+                        <select
+                          className="oxoo-form-select"
+                          value={prefDashboardLayout}
+                          onChange={(e) => setPrefDashboardLayout(e.target.value)}
+                        >
+                          <option value="Standard">Standard</option>
+                          <option value="Compact">Compact</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                       <button type="submit" className="oxoo-upgrade-btn">
                         Save Preferences
+                      </button>
+                      <button
+                        type="button"
+                        className="oxoo-outline-btn"
+                        onClick={() => {
+                          setPrefLanguage('English');
+                          setPrefTimezone('(GMT+05:30) Asia/Kolkata');
+                          setPrefCurrency('INR (₹)');
+                          setPrefAccountUpdates(true);
+                          setPrefProductUpdates(true);
+                          setPrefMarketing(false);
+                          setPrefDateFormat('DD/MM/YYYY');
+                          setPrefNumberFormat('1,234.56');
+                          setPrefDefaultApp('Sales Software');
+                          setPrefDashboardLayout('Standard');
+                          showToast('Settings reset to default.');
+                        }}
+                      >
+                        Reset to Default
                       </button>
                     </div>
                   </form>
@@ -1921,6 +2183,27 @@ export default function CustomerDashboard() {
               )}
             </div>
           )}
+
+          {/* =========================================================
+              SECURITY AND PRIVACY NOTICE (FOOTER)
+              ========================================================= */}
+          <div style={{
+            padding: '16px 20px',
+            background: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            fontSize: '12px',
+            color: '#64748b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            marginTop: '12px'
+          }}>
+            <ShieldCheck size={18} color="#0284c7" />
+            <div>
+              <strong>Security and Privacy:</strong> Your account information is protected. Only authorised team members can access your organisation's data. Your application access depends on your active subscription and assigned permissions.
+            </div>
+          </div>
         </main>
       </div>
 
@@ -2027,9 +2310,9 @@ export default function CustomerDashboard() {
                 joined: 'Today'
               };
               setTeamMembers([newMember, ...teamMembers]);
-              showToast(`Invitation sent to ${inviteForm.email}`);
+              showToast('Invitation sent successfully.');
               setInviteModalOpen(false);
-              setInviteForm({ name: '', email: '', role: 'Member' });
+              setInviteForm({ name: '', email: '', role: 'Member', access: 'All Applications' });
             }}>
               <div className="oxoo-modal-body">
                 <div className="oxoo-form-group">
@@ -2066,6 +2349,21 @@ export default function CustomerDashboard() {
                     <option value="Member">Member</option>
                     <option value="Admin">Admin</option>
                     <option value="Owner">Owner</option>
+                    <option value="Billing Manager">Billing Manager</option>
+                  </select>
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Application Access</label>
+                  <select
+                    className="oxoo-form-select"
+                    value={inviteForm.access}
+                    onChange={(e) => setInviteForm({ ...inviteForm, access: e.target.value })}
+                  >
+                    <option value="All Applications">All Applications</option>
+                    <option value="Sales Software">Sales Software</option>
+                    <option value="HRMS">HRMS</option>
+                    <option value="Finance">Finance</option>
                   </select>
                 </div>
               </div>
@@ -2102,16 +2400,23 @@ export default function CustomerDashboard() {
               if (!ticketForm.subject) return;
               const newTicket = {
                 id: String(Date.now()),
-                number: `OX00-${Math.floor(1000 + Math.random() * 9000)}`,
+                number: `OXOO-${Math.floor(1000 + Math.random() * 9000)}`,
                 subject: ticketForm.subject,
                 category: ticketForm.category,
                 status: 'Open',
                 created: 'Today'
               };
               setTickets([newTicket, ...tickets]);
-              showToast(`Support ticket ${newTicket.number} created!`);
+              showToast('Support ticket created successfully.');
               setTicketModalOpen(false);
-              setTicketForm({ subject: '', category: 'Technical', description: '', priority: 'Medium' });
+              setTicketForm({
+                subject: '',
+                category: 'Technical',
+                priority: 'Normal',
+                application: 'Sales Software',
+                description: '',
+                attachment: null
+              });
             }}>
               <div className="oxoo-modal-body">
                 <div className="oxoo-form-group">
@@ -2126,41 +2431,69 @@ export default function CustomerDashboard() {
                   />
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Category</label>
+                    <select
+                      className="oxoo-form-select"
+                      value={ticketForm.category}
+                      onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })}
+                    >
+                      <option value="Technical">Technical</option>
+                      <option value="Billing">Billing</option>
+                      <option value="Account">Account</option>
+                      <option value="Feature Request">Feature Request</option>
+                      <option value="General Inquiry">General Inquiry</option>
+                    </select>
+                  </div>
+
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Priority</label>
+                    <select
+                      className="oxoo-form-select"
+                      value={ticketForm.priority}
+                      onChange={(e) => setTicketForm({ ...ticketForm, priority: e.target.value })}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Normal">Normal</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Category</label>
+                  <label className="oxoo-form-label">Application</label>
                   <select
                     className="oxoo-form-select"
-                    value={ticketForm.category}
-                    onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })}
+                    value={ticketForm.application}
+                    onChange={(e) => setTicketForm({ ...ticketForm, application: e.target.value })}
                   >
-                    <option value="Technical">Technical</option>
-                    <option value="Billing">Billing</option>
-                    <option value="Account">Account</option>
-                    <option value="Feature Request">Feature Request</option>
+                    <option value="Sales Software">Sales Software</option>
+                    <option value="HRMS">HRMS</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="General">General</option>
                   </select>
                 </div>
 
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Priority</label>
-                  <select
-                    className="oxoo-form-select"
-                    value={ticketForm.priority}
-                    onChange={(e) => setTicketForm({ ...ticketForm, priority: e.target.value })}
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                  </select>
-                </div>
-
-                <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Detailed Description</label>
+                  <label className="oxoo-form-label">Description</label>
                   <textarea
                     rows={4}
                     className="oxoo-form-textarea"
                     placeholder="Describe your issue or question in detail..."
                     value={ticketForm.description}
                     onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Attach Files</label>
+                  <input
+                    type="file"
+                    className="oxoo-form-input"
+                    onChange={(e) => setTicketForm({ ...ticketForm, attachment: e.target.files[0] })}
                   />
                 </div>
               </div>
@@ -2178,6 +2511,164 @@ export default function CustomerDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {changePwdModalOpen && (
+        <div className="oxoo-modal-backdrop" onClick={() => setChangePwdModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()}>
+            <div className="oxoo-modal-header">
+              <h3 className="oxoo-modal-title">Change Account Password</h3>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => setChangePwdModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setPwdSuccess('');
+              setPwdError('');
+
+              if (!pwdCurrent || !pwdNew || !pwdConfirm) {
+                setPwdError('Please complete all password fields.');
+                return;
+              }
+              if (pwdNew.length < 6) {
+                setPwdError('New password must be at least 6 characters.');
+                return;
+              }
+              if (pwdNew !== pwdConfirm) {
+                setPwdError('New password and confirmation do not match.');
+                return;
+              }
+
+              setPwdLoading(true);
+              try {
+                const res = await changePassword({ currentPassword: pwdCurrent, newPassword: pwdNew });
+                showToast('Password updated successfully.');
+                setChangePwdModalOpen(false);
+                setPwdCurrent('');
+                setPwdNew('');
+                setPwdConfirm('');
+              } catch (err) {
+                setPwdError(err.message || 'Failed to update password. Please check your current password.');
+              } finally {
+                setPwdLoading(false);
+              }
+            }}>
+              <div className="oxoo-modal-body">
+                {pwdError && (
+                  <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '12.5px' }}>
+                    {pwdError}
+                  </div>
+                )}
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Current Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={pwdCurrent}
+                    onChange={(e) => setPwdCurrent(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="oxoo-form-input"
+                  />
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">New Password</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={pwdNew}
+                    onChange={(e) => setPwdNew(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="oxoo-form-input"
+                  />
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={pwdConfirm}
+                    onChange={(e) => setPwdConfirm(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="oxoo-form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="oxoo-modal-footer">
+                <button
+                  type="button"
+                  style={{ background: 'none', border: '1px solid #cbd5e1', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => setChangePwdModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="oxoo-upgrade-btn" disabled={pwdLoading}>
+                  {pwdLoading ? 'Saving...' : 'Save Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Active Sessions Modal */}
+      {sessionsModalOpen && (
+        <div className="oxoo-modal-backdrop" onClick={() => setSessionsModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()}>
+            <div className="oxoo-modal-header">
+              <h3 className="oxoo-modal-title">Active Login Sessions</h3>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => setSessionsModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="oxoo-modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Laptop size={20} color="#0284c7" />
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#0f172a' }}>Chrome on Windows 11</strong>
+                      <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600 }}>Active Now • Current Session</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>India (IP: 103.21.24.5)</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Smartphone size={20} color="#64748b" />
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#0f172a' }}>Safari on iPhone 15 Pro</strong>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>Last active: Yesterday at 08:30 PM</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    style={{ background: '#fee2e2', border: 'none', color: '#dc2626', fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => showToast('Session revoked.')}
+                  >
+                    Revoke
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="oxoo-modal-footer">
+              <button
+                type="button"
+                className="oxoo-outline-btn"
+                onClick={() => setSessionsModalOpen(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
