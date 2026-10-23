@@ -413,11 +413,11 @@ app.get('/api/auth/me', verifyToken, async (req, res, next) => {
 // -------------------------------------------------------------
 app.post('/api/auth/send-otp', async (req, res, next) => {
   try {
-    const { email, purpose = 'Verification', customerName = '' } = req.body || {};
+    const { email, phone = '', purpose = 'Verification', customerName = '' } = req.body || {};
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email address is required.' });
     }
-    const result = await sendOtpEmail({ email, purpose, customerName });
+    const result = await sendOtpEmail({ email, phone, purpose, customerName });
     if (!result.success) {
       return res.status(502).json(result);
     }
@@ -433,11 +433,11 @@ app.post('/api/auth/send-otp', async (req, res, next) => {
 
 app.post('/api/auth/verify-otp', async (req, res, next) => {
   try {
-    const { email, otp } = req.body || {};
+    const { email, otp, smsOtp } = req.body || {};
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: 'Email and OTP code are required.' });
     }
-    const result = verifyOtp({ email, otp });
+    const result = verifyOtp({ email, otp, smsOtp });
     if (!result.valid) {
       return res.status(400).json({ success: false, message: result.message });
     }

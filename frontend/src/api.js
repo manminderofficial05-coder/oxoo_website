@@ -411,22 +411,22 @@ export async function getPaymentInvoice(orderNumber) {
   }
 }
 
-export async function sendEmailOtp({ email, purpose = 'Verification', customerName = '' }) {
+export async function sendEmailOtp({ email, phone = '', purpose = 'Verification', customerName = '' }) {
   const r = await fetch(`${API_URL}/api/auth/send-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, purpose, customerName })
+    body: JSON.stringify({ email, phone, purpose, customerName })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Failed to send verification code.');
   return data;
 }
 
-export async function verifyEmailOtp({ email, otp }) {
+export async function verifyEmailOtp({ email, otp, smsOtp }) {
   const r = await fetch(`${API_URL}/api/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, otp })
+    body: JSON.stringify({ email, otp, smsOtp })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Verification code is invalid or expired.');

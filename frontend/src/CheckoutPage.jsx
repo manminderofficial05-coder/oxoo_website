@@ -175,6 +175,8 @@ export default function CheckoutPage() {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [otpValue, setOtpValue] = useState('');
+  const [smsOtpValue, setSmsOtpValue] = useState('');
+  const [isSmsSent, setIsSmsSent] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState('');
@@ -191,7 +193,7 @@ export default function CheckoutPage() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  // Trigger sending OTP to billing email
+  // Trigger sending OTP to billing email (+ optional SMS)
   const handleTriggerEmailOtp = async () => {
     const cleanEmail = (formData.email || '').trim().toLowerCase();
     if (!cleanEmail) {
@@ -208,14 +210,22 @@ export default function CheckoutPage() {
     setOtpError('');
     setOtpSuccess('');
     try {
-      await sendEmailOtp({
+      const resp = await sendEmailOtp({
         email: cleanEmail,
+        phone: (formData.phone || '').trim(),
         purpose: 'OXOO Billing & Payment Verification',
         customerName: (formData.yourName || '').trim()
       });
-      setOtpValue(''); // Keep empty so customer types the code received on email
+      setOtpValue('');
+      setSmsOtpValue('');
+      const smsActive = Boolean(resp && resp.smsSent);
+      setIsSmsSent(smsActive);
       setIsOtpModalOpen(true);
-      setOtpSuccess(`Verification code sent to ${cleanEmail}`);
+      if (smsActive) {
+        setOtpSuccess(`Separate verification codes sent to ${cleanEmail} and +91 ${formData.phone}`);
+      } else {
+        setOtpSuccess(`Verification code sent to ${cleanEmail}`);
+      }
       setResendCooldown(30);
     } catch (err) {
       alert(err.message || 'Failed to send verification code. Please check your email.');
@@ -229,8 +239,13 @@ export default function CheckoutPage() {
     if (e) e.preventDefault();
     setOtpError('');
     const cleanOtp = otpValue.replace(/\D/g, '').trim();
+    const cleanSmsOtp = smsOtpValue.replace(/\D/g, '').trim();
     if (cleanOtp.length !== 6) {
-      setOtpError('Please enter the complete 6-digit verification code.');
+      setOtpError('Please enter the 6-digit email verification code.');
+      return;
+    }
+    if (isSmsSent && cleanSmsOtp.length !== 6) {
+      setOtpError('Please enter the 6-digit SMS code, or click "Verify with Email only".');
       return;
     }
     const cleanEmail = (formData.email || '').trim().toLowerCase();
@@ -238,11 +253,13 @@ export default function CheckoutPage() {
     try {
       await verifyEmailOtp({
         email: cleanEmail,
-        otp: cleanOtp
+        otp: cleanOtp,
+        smsOtp: isSmsSent ? cleanSmsOtp : undefined
       });
       setIsEmailVerified(true);
       setIsOtpModalOpen(false);
       setOtpValue('');
+      setSmsOtpValue('');
       // Successfully verified email! Now proceed to payment step
       setCurrentStep(4);
     } catch (err) {
@@ -1309,28 +1326,83 @@ export default function CheckoutPage() {
                       }}
                     />
                     <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '8px' }}>
-                      Verification code is valid for 10 minutes.
+                      Email code sent to <strong>{formData.email}</strong>. Valid for 10 minutes.
                     </p>
+
+                    {isSmsSent && (
+                      <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #e2e8f0' }}>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          value={smsOtpValue}
+                          onChange={(e) => {
+                            setSmsOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6));
+                            if (otpError) setOtpError('');
+                          }}
+                          placeholder="••••••"
+                          style={{
+                            width: '100%',
+                            height: '52px',
+                            textAlign: 'center',
+                            fontSize: '28px',
+                            fontWeight: 800,
+                            letterSpacing: '10px',
+                            color: '#0f172a',
+                            background: '#f8fafc',
+                            border: '2px solid #cbd5e1',
+                            borderRadius: '12px',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '6px', marginBottom: '8px' }}>
+                          SMS code sent to +91 {formData.phone}
+                        </p>
+                        <div style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsSmsSent(false);
+                              setSmsOtpValue('');
+                              if (otpError) setOtpError('');
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#0284c7',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              textDecoration: 'underline'
+                            }}
+                          >
+                            Don't have phone handy? Verify with Email only
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button
                     type="submit"
-                    disabled={isVerifyingOtp || otpValue.trim().length !== 6}
+                    disabled={isVerifyingOtp || otpValue.trim().length !== 6 || (isSmsSent && smsOtpValue.trim().length !== 6)}
                     style={{
                       width: '100%',
                       height: '48px',
                       borderRadius: '12px',
-                      background: otpValue.trim().length === 6 ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#94a3b8',
+                      background: (otpValue.trim().length === 6 && (!isSmsSent || smsOtpValue.trim().length === 6)) ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#94a3b8',
                       color: '#ffffff',
                       border: 'none',
                       fontSize: '15px',
                       fontWeight: 700,
-                      cursor: otpValue.trim().length === 6 && !isVerifyingOtp ? 'pointer' : 'not-allowed',
+                      cursor: (otpValue.trim().length === 6 && (!isSmsSent || smsOtpValue.trim().length === 6)) && !isVerifyingOtp ? 'pointer' : 'not-allowed',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      boxShadow: otpValue.trim().length === 6 ? '0 8px 20px rgba(22, 163, 74, 0.25)' : 'none',
+                      boxShadow: (otpValue.trim().length === 6 && (!isSmsSent || smsOtpValue.trim().length === 6)) ? '0 8px 20px rgba(22, 163, 74, 0.25)' : 'none',
                       marginBottom: '16px',
                       transition: 'all 0.2s ease'
                     }}

@@ -7,17 +7,17 @@ const otpStore = new Map();
 
 // Helper to create transport with strict connection timeouts and dual port fallback
 function createTransporters() {
-  const user = process.env.EMAIL_USER || 'manminder.singh@primepro.ai';
-  const pass = (process.env.EMAIL_APP_PASSWORD || 'narnntyfyvwomumz').replace(/\s+/g, '');
+  const user = process.env.EMAIL_USER;
+  const pass = (process.env.EMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+  if (!user || !pass) return { primary: null, secondary: null };
 
   const commonTimeouts = {
-    connectionTimeout: 7000, // 7s connection timeout
+    connectionTimeout: 7000,
     greetingTimeout: 7000,
     socketTimeout: 10000,
     dnsTimeout: 5000
   };
 
-  // Primary: port 465 (SSL)
   const primary = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -26,7 +26,6 @@ function createTransporters() {
     ...commonTimeouts
   });
 
-  // Secondary fallback: port 587 (STARTTLS)
   const secondary = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
@@ -112,8 +111,9 @@ async function sendMailWithFallback(mailOptions) {
     }
   }
 
-  // 2. Try Brevo HTTPS REST API (Port 443) if configured
-  if (process.env.BREVO_API_KEY) {
+  // 2. Try Brevo HTTPS REST API (Port 443) or Brevo SMTP relay
+  const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
+  if (brevoApiKey) {
     try {
       const res = await sendViaBrevo({ to, subject, html });
       if (res && res.success) {
@@ -121,48 +121,114 @@ async function sendMailWithFallback(mailOptions) {
         return { success: true, messageId: res.messageId, port: 443, provider: 'brevo' };
       }
     } catch (bErr) {
-      console.warn(`[EmailService] Brevo API attempt failed (${bErr.message}). Falling back...`);
+      console.warn(`[EmailService] Brevo HTTPS API attempt failed (${bErr.message}). Trying Brevo SMTP relay...`);
     }
   }
 
-  // 3. SMTP fallback (Port 465 SSL -> Port 587 STARTTLS)
-  const { primary, secondary } = createTransporters();
-  try {
-    const info = await primary.sendMail(mailOptions);
-    return { success: true, messageId: info.messageId, port: 465, provider: 'smtp-465' };
-  } catch (err465) {
-    console.warn(`[EmailService] Port 465 delivery attempt failed (${err465.message}). Retrying on Port 587...`);
-    try {
-      const info = await secondary.sendMail(mailOptions);
-      return { success: true, messageId: info.messageId, port: 587, provider: 'smtp-587' };
-    } catch (err587) {
-      console.error(`[EmailService] Port 587 delivery attempt also failed (${err587.message})`);
-      throw new Error(`Email delivery failed on all channels (Resend, Brevo, SMTP): ${err587.message || err465.message}`);
+  // 2b. Brevo SMTP relay on ports 587, 2525, 465 (using SMTP key)
+  const brevoKey = (process.env.BREVO_SMTP_KEY || process.env.BREVO_API_KEY || '').trim();
+  const brevoLogin = (process.env.BREVO_SMTP_LOGIN || process.env.EMAIL_USER || 'manminder.singh@primepro.ai').trim();
+  if (brevoKey) {
+    const ports = [587, 2525, 465];
+    for (const port of ports) {
+      try {
+        const relay = nodemailer.createTransport({
+          host: 'smtp-relay.brevo.com',
+          port,
+          secure: port === 465,
+          auth: { user: brevoLogin, pass: brevoKey },
+          connectionTimeout: 8000,
+          greetingTimeout: 8000,
+          socketTimeout: 10000
+        });
+        const sender = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'manminder.singh@primepro.ai';
+        const info = await relay.sendMail({ ...mailOptions, from: `"OXOO" <${sender}>` });
+        console.log(`[EmailService] Delivered via Brevo SMTP relay (port ${port}) to ${to}`);
+        return { success: true, messageId: info.messageId, port, provider: 'brevo-smtp' };
+      } catch (sErr) {
+        console.warn(`[EmailService] Brevo SMTP relay port ${port} attempt failed (${sErr.message}).`);
+      }
     }
   }
+
+  // 3. SMTP fallback (Port 465 SSL -> Port 587 STARTTLS) - only if configured
+  const { primary, secondary } = createTransporters();
+  if (primary && secondary) {
+    try {
+      const info = await primary.sendMail(mailOptions);
+      return { success: true, messageId: info.messageId, port: 465, provider: 'smtp-465' };
+    } catch (err465) {
+      console.warn(`[EmailService] Port 465 delivery attempt failed (${err465.message}). Retrying on Port 587...`);
+      try {
+        const info = await secondary.sendMail(mailOptions);
+        return { success: true, messageId: info.messageId, port: 587, provider: 'smtp-587' };
+      } catch (err587) {
+        console.error(`[EmailService] Port 587 delivery attempt also failed (${err587.message})`);
+        throw new Error(`Email delivery failed on all channels (Resend, Brevo, SMTP): ${err587.message || err465.message}`);
+      }
+    }
+  }
+
+  throw new Error('Email delivery failed: Brevo / Resend credentials failed to authenticate or are not configured.');
 }
 
 const DEFAULT_FROM = process.env.EMAIL_FROM || '"OXOO" <manminder.singh@primepro.ai>';
 
+// Normalize an Indian mobile number to 10 digits (accepts +91 / 91 / 0 prefixes)
+function normalizePhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  const ten = digits.length > 10 ? digits.slice(-10) : digits;
+  return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+}
+
+// Send SMS OTP via Fast2SMS (HTTPS) - Graceful fallback if not configured
+async function sendSmsOtp({ phone, otp }) {
+  const apiKey = (process.env.FAST2SMS_API_KEY || '').trim();
+  if (!apiKey) {
+    return { success: false, skipped: true, reason: 'FAST2SMS_API_KEY not set' };
+  }
+  const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+    method: 'POST',
+    headers: { authorization: apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ route: 'otp', variables_values: otp, numbers: phone, flash: 0 })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.return === false) {
+    throw new Error(`SMS failed: ${data.message || res.status}`);
+  }
+  return { success: true };
+}
+
 /**
- * Generate and send 6-digit OTP for Demo or Billing verification
+ * Generate and send 6-digit OTP for Demo or Billing verification.
+ * If phone & FAST2SMS_API_KEY are configured, a separate SMS OTP is also sent.
  */
-async function sendOtpEmail({ email, purpose = 'Verification', customerName = '' }) {
+async function sendOtpEmail({ email, phone = '', purpose = 'Verification', customerName = '' }) {
   if (!email) throw new Error('Recipient email is required.');
   const normEmail = email.trim().toLowerCase();
 
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate 6-digit OTP for Email
+  const otp = crypto.randomInt(100000, 1000000).toString();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  // Feature toggle: Mobile SMS OTP is turned OFF by default (code is preserved below).
+  // To enable mobile SMS OTP in the future, set ENABLE_SMS_OTP=true in your environment variables (.env).
+  const ENABLE_SMS_OTP = process.env.ENABLE_SMS_OTP === 'true';
+  const hasSmsConfig = ENABLE_SMS_OTP && !!(process.env.FAST2SMS_API_KEY || '').trim();
+  const cleanPhone = (phone && hasSmsConfig) ? normalizePhone(phone) : null;
+  let smsOtp = null;
+  if (cleanPhone) {
+    do { smsOtp = crypto.randomInt(100000, 1000000).toString(); } while (smsOtp === otp);
+  }
 
   otpStore.set(normEmail, {
     otp,
+    smsOtp,
+    phone: cleanPhone,
     expiresAt,
     verified: false,
     attempts: 0
   });
-
-  console.log(`[OTP Generated] ${normEmail} => ${otp}`);
 
   const isDemo = purpose.toLowerCase().includes('demo');
   const subject = isDemo
@@ -232,38 +298,43 @@ async function sendOtpEmail({ email, purpose = 'Verification', customerName = ''
 </html>
   `;
 
-  let deliveryWarning = null;
-  try {
-    const info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html
-    });
-    console.log(`[EmailService] OTP sent to ${normEmail} (Message ID: ${info.messageId}, Port: ${info.port})`);
-  } catch (err) {
-    deliveryWarning = err.message;
-    console.warn(`[EmailService] Notice: Outbound SMTP blocked or delayed (${err.message}). OTP ${otp} active in store for verification.`);
-  }
+  // Attempt Email delivery + Optional SMS delivery
+  const [emailRes, smsRes] = await Promise.allSettled([
+    sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html }),
+    cleanPhone ? sendSmsOtp({ phone: cleanPhone, otp: smsOtp }) : Promise.resolve({ skipped: true })
+  ]);
 
-  if (deliveryWarning) {
+  if (emailRes.status === 'rejected') {
+    otpStore.delete(normEmail);
+    console.error(`[EmailService] Email OTP delivery failed to ${normEmail}:`, emailRes.reason?.message);
     return {
       success: false,
-      message: `Could not send email to ${normEmail}: ${deliveryWarning}. Please configure RESEND_API_KEY in Render Dashboard.`,
-      warning: deliveryWarning
+      message: `Could not send verification email to ${normEmail}: ${emailRes.reason?.message || 'Email delivery failed'}. Please configure Brevo or Resend in Render Dashboard.`
     };
+  }
+
+  let actualSmsSent = false;
+  if (cleanPhone && smsRes.status === 'fulfilled' && smsRes.value?.success) {
+    actualSmsSent = true;
+  } else if (cleanPhone && smsRes.status === 'rejected') {
+    console.warn(`[EmailService] SMS delivery failed (${smsRes.reason?.message}). Falling back to email verification only.`);
+    const entry = otpStore.get(normEmail);
+    if (entry) entry.smsOtp = null;
   }
 
   return {
     success: true,
-    message: 'OTP sent successfully to ' + normEmail
+    smsSent: actualSmsSent,
+    message: actualSmsSent
+      ? `Verification codes sent to ${normEmail} and +91 ${cleanPhone}`
+      : `Verification code sent to ${normEmail}`
   };
 }
 
 /**
  * Verify OTP entered by customer
  */
-function verifyOtp({ email, otp }) {
+function verifyOtp({ email, otp, smsOtp }) {
   if (!email || !otp) return { valid: false, message: 'Email and OTP code are required.' };
   const normEmail = email.trim().toLowerCase();
   const entry = otpStore.get(normEmail);
@@ -284,7 +355,15 @@ function verifyOtp({ email, otp }) {
 
   if (entry.otp !== String(otp).trim()) {
     entry.attempts += 1;
-    return { valid: false, message: `Incorrect code. Please check your email and try again.` };
+    return { valid: false, message: `Incorrect email code. Please check your email and try again.` };
+  }
+
+  // If SMS OTP was dispatched and user supplied an SMS OTP code, verify it
+  if (entry.smsOtp && smsOtp) {
+    if (entry.smsOtp !== String(smsOtp).trim()) {
+      entry.attempts += 1;
+      return { valid: false, message: 'Incorrect SMS code. Please check your mobile messages and try again.' };
+    }
   }
 
   // Verified successfully
