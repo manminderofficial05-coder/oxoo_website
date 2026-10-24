@@ -440,10 +440,9 @@ export default function CustomerDashboard() {
       return;
     }
 
-    // 2. HRMS Software (Opens HRMS Admin suite directly)
+    // 2. HRMS Software (Opens Oxoo Finance Employee Login)
     if (app.id === 'hrms') {
-      const hrmsUrl = `https://oxoo-finance.onrender.com/#/admin?${ssoParams.toString()}&module=hrms&view=admin-hrms`;
-      window.open(hrmsUrl, '_blank');
+      window.open('https://oxoo-finance.onrender.com/', '_blank');
       return;
     }
 

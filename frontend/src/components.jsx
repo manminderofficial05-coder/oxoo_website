@@ -356,7 +356,7 @@ export function Header() {
         <div className="nav-actions">
           {/* Quick Launch Buttons: HRMS (Finance Employee Login) & Inventory */}
           <a
-            href="https://oxoo-finance.onrender.com/?role=employee&mode=employee"
+            href="https://oxoo-finance.onrender.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-app-pill nav-app-pill-hrms"
