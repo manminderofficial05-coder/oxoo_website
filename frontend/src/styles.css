@@ -275,12 +275,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   max-width: 175px;
 }
 
-.brand-logo-img.logo-home-360 {
-  height: 42px;
-  max-width: 175px;
-  object-fit: contain;
-}
-
 .brand-logo-img.logo-icon-only {
   height: 28px;
   width: 28px;
