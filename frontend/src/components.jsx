@@ -9,9 +9,11 @@ import {
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
 
-export function Logo({ light = false, withTagline = false, stacked = false, iconOnly = false, className = '' }) {
+export function Logo({ light = false, withTagline = false, stacked = false, iconOnly = false, className = '', isHome = false }) {
   let src = '/oxoo-logo.png';
-  if (iconOnly) {
+  if (isHome) {
+    src = '/oxoo-360-logo-clean.png';
+  } else if (iconOnly) {
     src = '/oxoo-icon.png';
   } else if (light) {
     src = '/oxoo-logo-white.png';
@@ -24,7 +26,7 @@ export function Logo({ light = false, withTagline = false, stacked = false, icon
       <img
         src={src}
         alt="Oxoo"
-        className={`brand-logo-img ${stacked ? 'logo-stacked' : ''} ${iconOnly ? 'logo-icon-only' : ''}`}
+        className={`brand-logo-img ${stacked ? 'logo-stacked' : ''} ${iconOnly ? 'logo-icon-only' : ''} ${isHome ? 'logo-home-360' : ''}`}
       />
     </Link>
   );
@@ -298,10 +300,12 @@ export function Header() {
     }
   };
 
+  const isHomePage = location.pathname === '/' || location.pathname === '';
+
   return (
     <header className="site-header">
       <div className="nav-inner">
-        <Logo />
+        <Logo isHome={isHomePage} />
 
         <nav className="desktop-nav">
           {/* Apps Dropdown Button */}
