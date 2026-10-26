@@ -24,10 +24,10 @@ export default function LiveDemoExperience() {
 
   // Automatically redirect directly to the live demo / portal without any intermediate cards
   React.useEffect(() => {
-    const websiteSlugs = ['website', 'website-builder', 'ecommerce', 'events', 'blog', 'elearning', 'forum'];
+    const websiteSlugs = ['website', 'website-builder', 'ai-website-builder', 'ecommerce-websites', '3d-websites', 'web-apps-other', 'ecommerce', 'events', 'blog', 'elearning', 'forum'];
     const financeSlugs = ['accounting', 'invoicing', 'expenses', 'sign', 'spreadsheet', 'esg', 'finance'];
 
-    const isWebsiteApp = websiteSlugs.includes(selectedApp.slug?.toLowerCase()) || selectedApp.category === 'Websites';
+    const isWebsiteApp = websiteSlugs.includes(selectedApp.slug?.toLowerCase()) || selectedApp.category === 'Websites' || selectedApp.category === 'Websites & Apps';
     const isFinanceApp = financeSlugs.includes(selectedApp.slug?.toLowerCase()) || selectedApp.category === 'Finance';
 
     const target = (isWebsiteApp || isFinanceApp)

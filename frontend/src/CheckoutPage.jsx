@@ -3,13 +3,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Check, ArrowRight, ArrowLeft, ShieldCheck, Lock, CreditCard,
   Download, Printer, CheckCircle2, Building2, User, Mail, Phone,
-  FileText, QrCode, Sparkles, AlertCircle, RefreshCw, KeyRound, X
+  FileText, QrCode, Sparkles, AlertCircle, RefreshCw, KeyRound, X,
+  Eye, EyeOff
 } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { SOFTWARE_MODULES } from './PricingPage';
 import {
   calculatePricing, createPaymentOrder, verifyPayment, getCustomerOverview,
-  sendEmailOtp, verifyEmailOtp
+  sendEmailOtp, verifyEmailOtp, setupCustomerPassword, checkEmailExists,
+  loginUser, forgotPassword
 } from './api';
 import './checkout.css';
 
@@ -73,8 +75,15 @@ export default function CheckoutPage() {
   const paramBilling = searchParams.get('billing');
   const [isYearly, setIsYearly] = useState(paramBilling === 'yearly');
 
-  // Logged-in user state (null by default for new checkout)
-  const [loggedInUser, setLoggedInUser] = useState(null);
+  // Logged-in user state (initialized from active localStorage session)
+  const [loggedInUser, setLoggedInUser] = useState(() => {
+    try {
+      const u = localStorage.getItem('oxoo_user');
+      return u ? JSON.parse(u) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   // Track apps already purchased
   const [ownedAppIds, setOwnedAppIds] = useState([]);
@@ -97,19 +106,48 @@ export default function CheckoutPage() {
   // Number of licensed users
   const [userCount, setUserCount] = useState(1);
 
-  // Step 3: Company & Billing Details - Clean and empty by default
-  const [formData, setFormData] = useState({
-    yourName: '',
-    email: '',
-    phone: '',
-    companyName: '',
-    vat: '',
-    streetAndNumber: '',
-    city: '',
-    zipCode: '',
-    country: 'India',
-    stateProvince: ''
+  // Step 3: Company & Billing Details - Auto-filled if logged in
+  const [formData, setFormData] = useState(() => {
+    try {
+      const u = localStorage.getItem('oxoo_user');
+      const user = u ? JSON.parse(u) : null;
+      if (user) {
+        return {
+          yourName: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          companyName: user.organization || user.company || '',
+          vat: '',
+          streetAndNumber: '',
+          city: '',
+          zipCode: '',
+          country: 'India',
+          stateProvince: ''
+        };
+      }
+    } catch (e) {}
+    return {
+      yourName: '',
+      email: '',
+      phone: '',
+      companyName: '',
+      vat: '',
+      streetAndNumber: '',
+      city: '',
+      zipCode: '',
+      country: 'India',
+      stateProvince: ''
+    };
   });
+
+  // Account registration detection & inline login state for guest checkout
+  const [isAccountRegistered, setIsAccountRegistered] = useState(false);
+  const [inlineLoginPassword, setInlineLoginPassword] = useState('');
+  const [inlineLoginLoading, setInlineLoginLoading] = useState(false);
+  const [inlineLoginError, setInlineLoginError] = useState('');
+  const [showInlinePassword, setShowInlinePassword] = useState(false);
+  const [forgotSending, setForgotSending] = useState(false);
+  const [forgotStatusMsg, setForgotStatusMsg] = useState('');
 
   // Listen for login/auth changes to automatically sync user details into formData
   useEffect(() => {
@@ -119,6 +157,7 @@ export default function CheckoutPage() {
         const user = u ? JSON.parse(u) : null;
         setLoggedInUser(user);
         if (user) {
+          setIsEmailVerified(true);
           setFormData((prev) => ({
             ...prev,
             yourName: user.name || prev.yourName,
@@ -175,8 +214,6 @@ export default function CheckoutPage() {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [otpValue, setOtpValue] = useState('');
-  const [smsOtpValue, setSmsOtpValue] = useState('');
-  const [isSmsSent, setIsSmsSent] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState('');
@@ -193,9 +230,10 @@ export default function CheckoutPage() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  // Trigger sending OTP to billing email (+ optional SMS)
+  // Trigger sending Email OTP
   const handleTriggerEmailOtp = async () => {
     const cleanEmail = (formData.email || '').trim().toLowerCase();
+    const cleanPhone = (formData.phone || '').trim();
     if (!cleanEmail) {
       setFormErrors((prev) => ({ ...prev, email: 'Please enter your email address' }));
       return;
@@ -205,6 +243,14 @@ export default function CheckoutPage() {
       setFormErrors((prev) => ({ ...prev, email: 'Please enter a valid email address' }));
       return;
     }
+    if (!cleanPhone) {
+      setFormErrors((prev) => ({ ...prev, phone: 'Please enter your mobile phone number' }));
+      return;
+    }
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setFormErrors((prev) => ({ ...prev, phone: 'Mobile number must be exactly 10 digits' }));
+      return;
+    }
 
     setIsSendingOtp(true);
     setOtpError('');
@@ -212,20 +258,13 @@ export default function CheckoutPage() {
     try {
       const resp = await sendEmailOtp({
         email: cleanEmail,
-        phone: (formData.phone || '').trim(),
-        purpose: 'OXOO Billing & Payment Verification',
+        phone: cleanPhone,
+        purpose: 'OXOO Software Purchase Verification',
         customerName: (formData.yourName || '').trim()
       });
       setOtpValue('');
-      setSmsOtpValue('');
-      const smsActive = Boolean(resp && resp.smsSent);
-      setIsSmsSent(smsActive);
       setIsOtpModalOpen(true);
-      if (smsActive) {
-        setOtpSuccess(`Separate verification codes sent to ${cleanEmail} and +91 ${formData.phone}`);
-      } else {
-        setOtpSuccess(`Verification code sent to ${cleanEmail}`);
-      }
+      setOtpSuccess(resp.message || `Verification code sent to ${cleanEmail}`);
       setResendCooldown(30);
     } catch (err) {
       alert(err.message || 'Failed to send verification code. Please check your email.');
@@ -234,18 +273,13 @@ export default function CheckoutPage() {
     }
   };
 
-  // Verify OTP entered by customer
+  // Verify Email OTP entered by customer
   const handleVerifyCheckoutOtp = async (e) => {
     if (e) e.preventDefault();
     setOtpError('');
     const cleanOtp = otpValue.replace(/\D/g, '').trim();
-    const cleanSmsOtp = smsOtpValue.replace(/\D/g, '').trim();
     if (cleanOtp.length !== 6) {
-      setOtpError('Please enter the 6-digit email verification code.');
-      return;
-    }
-    if (isSmsSent && cleanSmsOtp.length !== 6) {
-      setOtpError('Please enter the 6-digit SMS code, or click "Verify with Email only".');
+      setOtpError('Please enter the complete 6-digit email verification code.');
       return;
     }
     const cleanEmail = (formData.email || '').trim().toLowerCase();
@@ -253,14 +287,12 @@ export default function CheckoutPage() {
     try {
       await verifyEmailOtp({
         email: cleanEmail,
-        otp: cleanOtp,
-        smsOtp: isSmsSent ? cleanSmsOtp : undefined
+        otp: cleanOtp
       });
       setIsEmailVerified(true);
       setIsOtpModalOpen(false);
       setOtpValue('');
-      setSmsOtpValue('');
-      // Successfully verified email! Now proceed to payment step
+      // Successfully verified! Proceed to payment step
       setCurrentStep(4);
     } catch (err) {
       setOtpError(err.message || 'Invalid or expired verification code.');
@@ -274,8 +306,79 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState('');
 
-  // Step 5: Verified Payment Result
+  // Step 5: Verified Payment Result & Customer Password Creation
   const [paymentSuccessData, setPaymentSuccessData] = useState(null);
+  const [newAccountPassword, setNewAccountPassword] = useState('');
+  const [confirmAccountPassword, setConfirmAccountPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordSavedSuccess, setPasswordSavedSuccess] = useState(false);
+  const [passwordSetupError, setPasswordSetupError] = useState('');
+
+  // Post-Payment: Setup Customer Dashboard Password
+  const handleSaveCustomerPassword = async (e) => {
+    if (e) e.preventDefault();
+    setPasswordSetupError('');
+
+    const cleanPwd = newAccountPassword.trim();
+    if (cleanPwd.length < 10) {
+      setPasswordSetupError('Password must be at least 10 digits/characters long to comply with account security.');
+      return;
+    }
+    if (cleanPwd !== confirmAccountPassword.trim()) {
+      setPasswordSetupError('Passwords do not match. Please re-type your password to confirm.');
+      return;
+    }
+
+    setIsSavingPassword(true);
+    try {
+      const selectedAppsNames = SOFTWARE_MODULES.filter((m) =>
+        selectedAppIds.includes(m.id)
+      ).map((m) => m.name);
+
+      const resp = await setupCustomerPassword({
+        email: formData.email,
+        phone: formData.phone,
+        password: cleanPwd,
+        orderNumber: paymentSuccessData?.orderNumber,
+        invoiceNumber: paymentSuccessData?.invoiceNumber,
+        companyName: formData.companyName || formData.yourName,
+        customerName: formData.yourName,
+        storageId: paymentSuccessData?.storageId,
+        amount: totals.totalAmount,
+        billingCycle: isYearly ? 'yearly' : 'monthly',
+        planName: activePlan === 'single' ? 'Standard Pack' : 'Custom Pack',
+        selectedApps: selectedAppsNames
+      });
+
+      if (resp.token) {
+        localStorage.setItem('oxoo_token', resp.token);
+      }
+      if (resp.user) {
+        const storedUser = {
+          ...resp.user,
+          purchasedApps: SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((m) => ({
+            id: m.id,
+            name: m.name,
+            category: m.category || 'Business Suite',
+            entitled: true,
+            status: 'Active',
+            demoUrl: m.demoUrl || `/apps/${m.id}`,
+            iconSrc: m.iconSrc
+          }))
+        };
+        localStorage.setItem('oxoo_user', JSON.stringify(storedUser));
+        window.dispatchEvent(new Event('oxoo_auth_change'));
+      }
+
+      setPasswordSavedSuccess(true);
+    } catch (err) {
+      setPasswordSetupError(err.message || 'Failed to setup password. Please try again.');
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
   // Scroll to top on step change
   useEffect(() => {
@@ -360,7 +463,11 @@ export default function CheckoutPage() {
         errs.email = 'Please enter a valid email address';
       }
     }
-    if (!formData.phone.trim()) errs.phone = 'Phone number is required';
+    if (!formData.phone.trim()) {
+      errs.phone = 'Mobile number is required';
+    } else if (!/^[0-9]{10}$/.test(formData.phone.trim())) {
+      errs.phone = 'Mobile number must be exactly 10 digits';
+    }
 
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
@@ -1033,15 +1140,24 @@ export default function CheckoutPage() {
 
                   {/* Phone * */}
                   <div className="form-field-group">
-                    <label className="form-field-label">Phone *</label>
+                    <label className="form-field-label">Phone (10 Digits) *</label>
                     <div className="phone-input-container">
                       <span className="phone-prefix-chip">+91</span>
                       <input
                         type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={10}
                         required
                         placeholder="10-digit mobile number"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setFormData({ ...formData, phone: val });
+                          if (formErrors.phone && val.length === 10) {
+                            setFormErrors((prev) => ({ ...prev, phone: '' }));
+                          }
+                        }}
                       />
                     </div>
                     {formErrors.phone && (
@@ -1300,117 +1416,72 @@ export default function CheckoutPage() {
 
                 <form onSubmit={handleVerifyCheckoutOtp}>
                   <div style={{ marginBottom: '22px' }}>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      autoFocus
-                      value={otpValue}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
-                        setOtpValue(clean);
-                        if (otpError) setOtpError('');
-                      }}
-                      placeholder="••••••"
-                      style={{
-                        width: '100%',
-                        height: '52px',
-                        textAlign: 'center',
-                        fontSize: '28px',
-                        fontWeight: 800,
-                        letterSpacing: '10px',
-                        color: '#0f172a',
-                        background: '#f8fafc',
-                        border: '2px solid #cbd5e1',
-                        borderRadius: '12px',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '8px' }}>
-                      Email code sent to <strong>{formData.email}</strong>. Valid for 10 minutes.
-                    </p>
-
-                    {isSmsSent && (
-                      <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #e2e8f0' }}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          maxLength={6}
-                          value={smsOtpValue}
-                          onChange={(e) => {
-                            setSmsOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6));
-                            if (otpError) setOtpError('');
-                          }}
-                          placeholder="••••••"
-                          style={{
-                            width: '100%',
-                            height: '52px',
-                            textAlign: 'center',
-                            fontSize: '28px',
-                            fontWeight: 800,
-                            letterSpacing: '10px',
-                            color: '#0f172a',
-                            background: '#f8fafc',
-                            border: '2px solid #cbd5e1',
-                            borderRadius: '12px',
-                            outline: 'none',
-                            boxSizing: 'border-box'
-                          }}
-                        />
-                        <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '6px', marginBottom: '8px' }}>
-                          SMS code sent to +91 {formData.phone}
-                        </p>
-                        <div style={{ textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsSmsSent(false);
-                              setSmsOtpValue('');
-                              if (otpError) setOtpError('');
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#0284c7',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              textDecoration: 'underline'
-                            }}
-                          >
-                            Don't have phone handy? Verify with Email only
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    {/* Email OTP Input */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Mail size={15} style={{ color: '#2563eb' }} />
+                          Email Verification Code (6 digits)
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Sent to: {formData.email}</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        autoFocus
+                        value={otpValue}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          setOtpValue(clean);
+                          if (otpError) setOtpError('');
+                        }}
+                        placeholder="••••••"
+                        style={{
+                          width: '100%',
+                          height: '48px',
+                          textAlign: 'center',
+                          fontSize: '26px',
+                          fontWeight: 800,
+                          letterSpacing: '8px',
+                          color: '#0f172a',
+                          background: '#f8fafc',
+                          border: '2px solid #cbd5e1',
+                          borderRadius: '10px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', marginTop: '8px', marginBottom: '0' }}>
+                        Please check your inbox (and spam folder) for the 6-digit verification code.
+                      </p>
+                    </div>
                   </div>
 
                   <button
                     type="submit"
-                    disabled={isVerifyingOtp || otpValue.trim().length !== 6 || (isSmsSent && smsOtpValue.trim().length !== 6)}
+                    disabled={isVerifyingOtp || otpValue.trim().length !== 6}
                     style={{
                       width: '100%',
                       height: '48px',
                       borderRadius: '12px',
-                      background: (otpValue.trim().length === 6 && (!isSmsSent || smsOtpValue.trim().length === 6)) ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#94a3b8',
+                      background: otpValue.trim().length === 6 ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#94a3b8',
                       color: '#ffffff',
                       border: 'none',
                       fontSize: '15px',
                       fontWeight: 700,
-                      cursor: (otpValue.trim().length === 6 && (!isSmsSent || smsOtpValue.trim().length === 6)) && !isVerifyingOtp ? 'pointer' : 'not-allowed',
+                      cursor: otpValue.trim().length === 6 && !isVerifyingOtp ? 'pointer' : 'not-allowed',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      boxShadow: (otpValue.trim().length === 6 && (!isSmsSent || smsOtpValue.trim().length === 6)) ? '0 8px 20px rgba(22, 163, 74, 0.25)' : 'none',
+                      boxShadow: otpValue.trim().length === 6 ? '0 8px 20px rgba(22, 163, 74, 0.25)' : 'none',
                       marginBottom: '16px',
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    {isVerifyingOtp ? 'Verifying code...' : 'Verify & Proceed to Payment →'}
+                    {isVerifyingOtp ? 'Verifying code...' : 'Verify Code & Proceed to Payment →'}
                   </button>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
@@ -1581,56 +1652,260 @@ export default function CheckoutPage() {
           {/* =============================================================== */}
           {currentStep === 5 && (
             <div>
-              {/* Emailed Invoice & Customer Dashboard Login Credentials Banner */}
-              <div
-                className="no-print"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
-                  border: '1.5px solid #93c5fd',
-                  borderRadius: '14px',
-                  padding: '18px 22px',
-                  marginBottom: '20px',
-                  boxShadow: '0 4px 16px rgba(37, 99, 235, 0.08)'
-                }}
-              >
+              {/* =============================================================== */}
+              {/* Account Password Setup Card (10+ Digits, Eye Toggle, PDF Invoice) */}
+              {/* =============================================================== */}
+              {!passwordSavedSuccess ? (
                 <div
+                  className="no-print"
                   style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '12px',
-                    background: '#2563eb',
+                    background: 'linear-gradient(135deg, #091322 0%, #1e293b 100%)',
+                    borderRadius: '16px',
+                    padding: '28px 30px',
                     color: '#ffffff',
-                    display: 'grid',
-                    placeItems: 'center',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                    marginBottom: '24px',
+                    boxShadow: '0 12px 36px rgba(9, 19, 34, 0.25)',
+                    border: '1.5px solid #334155'
                   }}
                 >
-                  <Mail size={24} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '15.5px', fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>Tax Invoice & Customer Login Credentials Emailed!</span>
-                    <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
-                      ✓ Delivered to {formData.email}
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                    <div
+                      style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                        display: 'grid',
+                        placeItems: 'center',
+                        color: '#ffffff',
+                        boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)'
+                      }}
+                    >
+                      <KeyRound size={22} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                        Create Your Customer Dashboard Password
+                      </h2>
+                      <p style={{ fontSize: '13px', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                        Set a secure password (minimum 10 digits/characters) to access your Customer Dashboard and software suite.
+                      </p>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '13px', color: '#334155', marginTop: '4px', lineHeight: 1.5 }}>
-                    Your official Tax Invoice receipt and Customer Dashboard login credentials (<strong style={{ color: '#1e3a8a' }}>Storage ID:</strong> <code>{paymentSuccessData?.storageId || ('STG-' + String(paymentSuccessData?.orderNumber || '').replace(/[^0-9]/g, '').slice(-8))}</code> &bull; <strong style={{ color: '#1e3a8a' }}>User ID:</strong> <code>{formData.email}</code> &bull; <strong style={{ color: '#1e3a8a' }}>Password:</strong> <code>oxoo123</code>) have been sent to your email. You can change your password anytime in dashboard settings.
+
+                  {passwordSetupError && (
+                    <div
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid #ef4444',
+                        color: '#fca5a5',
+                        fontSize: '13px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <AlertCircle size={16} />
+                      <span>{passwordSetupError}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveCustomerPassword} style={{ maxWidth: '640px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      {/* Password Field with Eye Hide/Unhide Toggle */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+                          Create Password (10+ digits / characters)
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={newAccountPassword}
+                            onChange={(e) => {
+                              setNewAccountPassword(e.target.value);
+                              if (passwordSetupError) setPasswordSetupError('');
+                            }}
+                            placeholder="Enter 10+ digits or chars"
+                            style={{
+                              width: '100%',
+                              padding: '12px 42px 12px 14px',
+                              borderRadius: '10px',
+                              background: '#0f172a',
+                              border: `1.5px solid ${newAccountPassword.length >= 10 ? '#22c55e' : '#475569'}`,
+                              color: '#ffffff',
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              color: '#94a3b8',
+                              cursor: 'pointer',
+                              display: 'grid',
+                              placeItems: 'center',
+                              padding: 0
+                            }}
+                            title={showPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '5px', color: newAccountPassword.length >= 10 ? '#4ade80' : '#94a3b8' }}>
+                          <span>{newAccountPassword.length >= 10 ? '✓ Minimum length satisfied' : 'Must be at least 10 characters'}</span>
+                          <span>{newAccountPassword.length}/10 chars</span>
+                        </div>
+                      </div>
+
+                      {/* Confirm Password Field with Eye Hide/Unhide Toggle */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+                          Confirm Password
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={confirmAccountPassword}
+                            onChange={(e) => {
+                              setConfirmAccountPassword(e.target.value);
+                              if (passwordSetupError) setPasswordSetupError('');
+                            }}
+                            placeholder="Re-type your password"
+                            style={{
+                              width: '100%',
+                              padding: '12px 42px 12px 14px',
+                              borderRadius: '10px',
+                              background: '#0f172a',
+                              border: `1.5px solid ${confirmAccountPassword && confirmAccountPassword === newAccountPassword ? '#22c55e' : '#475569'}`,
+                              color: '#ffffff',
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              color: '#94a3b8',
+                              cursor: 'pointer',
+                              display: 'grid',
+                              placeItems: 'center',
+                              padding: 0
+                            }}
+                            title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                        <div style={{ fontSize: '11px', marginTop: '5px', color: confirmAccountPassword && confirmAccountPassword === newAccountPassword ? '#4ade80' : '#94a3b8' }}>
+                          {confirmAccountPassword && confirmAccountPassword === newAccountPassword ? '✓ Passwords match' : 'Must match password above'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Security & Isolated Storage Guidelines */}
+                    <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid #334155', borderRadius: '10px', padding: '12px 16px', marginBottom: '18px', fontSize: '12px', color: '#94a3b8', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontWeight: 600 }}>
+                        <ShieldCheck size={15} />
+                        <span>Security & Storage Compliance Guidelines</span>
+                      </div>
+                      <div>• Password is encrypted with enterprise bcrypt hashing (never stored plain text).</div>
+                      <div>• Assigned Customer Storage ID: <strong style={{ color: '#ffffff' }}>{paymentSuccessData?.storageId || ('STG-' + String(paymentSuccessData?.orderNumber || '').replace(/[^0-9]/g, '').slice(-8))}</strong></div>
+                      <div>• Login details and your official Tax Invoice (PDF attachment) will be emailed to <strong style={{ color: '#ffffff' }}>{formData.email}</strong>.</div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingPassword || newAccountPassword.length < 10 || newAccountPassword !== confirmAccountPassword}
+                      style={{
+                        padding: '12px 24px',
+                        borderRadius: '10px',
+                        background: (newAccountPassword.length >= 10 && newAccountPassword === confirmAccountPassword) ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#475569',
+                        color: '#ffffff',
+                        border: 'none',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        cursor: (newAccountPassword.length >= 10 && newAccountPassword === confirmAccountPassword) && !isSavingPassword ? 'pointer' : 'not-allowed',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: (newAccountPassword.length >= 10 && newAccountPassword === confirmAccountPassword) ? '0 4px 14px rgba(22, 163, 74, 0.4)' : 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {isSavingPassword ? 'Securing & Saving Account...' : 'Save Password & Activate Portal Access →'}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div
+                  className="no-print"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)',
+                    border: '1.5px solid #86efac',
+                    borderRadius: '14px',
+                    padding: '20px 24px',
+                    marginBottom: '20px',
+                    boxShadow: '0 4px 18px rgba(22, 163, 74, 0.12)'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      background: '#16a34a',
+                      color: '#ffffff',
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)'
+                    }}
+                  >
+                    <CheckCircle2 size={26} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span>Password Created & Account Successfully Secured!</span>
+                      <span style={{ fontSize: '11px', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
+                        ✓ Credentials Emailed
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#334155', marginTop: '4px', lineHeight: 1.5 }}>
+                      Your Customer Dashboard login credentials (<strong style={{ color: '#0369a1' }}>User ID:</strong> <code>{formData.email}</code> &bull; <strong style={{ color: '#0369a1' }}>Storage ID:</strong> <code>{paymentSuccessData?.storageId || ('STG-' + String(paymentSuccessData?.orderNumber || '').replace(/[^0-9]/g, '').slice(-8))}</code>) have been activated. Your official <strong>Tax Invoice PDF document</strong> has been attached to the confirmation email sent to <strong>{formData.email}</strong>.
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Actions Banner */}
               <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <CheckCircle2 size={24} style={{ color: '#16a34a' }} />
                   <div>
-                    <b style={{ color: '#166534', fontSize: '1rem', display: 'block' }}>Payment Successful!</b>
-                    <span style={{ color: '#15803d', fontSize: '0.85rem' }}>Your subscription has been verified and activated.</span>
+                    <b style={{ color: '#166534', fontSize: '1rem', display: 'block' }}>Payment Verified & Active!</b>
+                    <span style={{ color: '#15803d', fontSize: '0.85rem' }}>Subscription has been initialized on your dedicated storage instance.</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -1646,7 +1921,7 @@ export default function CheckoutPage() {
                     className="checkout-primary-btn btn-green"
                     style={{ textDecoration: 'none', padding: '10px 18px', fontSize: '0.9rem' }}
                   >
-                    Go to Dashboard →
+                    Open Customer Dashboard →
                   </Link>
                 </div>
               </div>

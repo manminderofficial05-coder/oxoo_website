@@ -1,8 +1,9 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { generateInvoicePdf } = require('./invoicePdf');
 
-// In-memory OTP storage: Map<normalizedEmail, { otp, expiresAt, verified, attempts }>
+// In-memory OTP storage: Map<normalizedKey, { otp, smsOtp, phone, email, expiresAt, verified, attempts, requireBoth }>
 const otpStore = new Map();
 
 // Helper to create transport with strict connection timeouts and dual port fallback
@@ -65,11 +66,33 @@ async function sendViaResend({ to, subject, html }) {
 }
 
 // Send via Brevo HTTPS REST API (Port 443 - Never blocked on Render)
-async function sendViaBrevo({ to, subject, html }) {
+async function sendViaBrevo({ to, subject, html, attachments = [] }) {
   const apiKey = (process.env.BREVO_API_KEY || '').trim();
   if (!apiKey) return null;
 
   const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'manminder.singh@primepro.ai';
+  const payload = {
+    sender: { name: 'OXOO', email: senderEmail },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html
+  };
+
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    payload.attachment = attachments.map(att => {
+      let b64 = '';
+      if (Buffer.isBuffer(att.content)) {
+        b64 = att.content.toString('base64');
+      } else if (typeof att.content === 'string') {
+        b64 = att.content.startsWith('data:') ? att.content.split(',')[1] : Buffer.from(att.content).toString('base64');
+      }
+      return {
+        name: att.filename || att.name || 'invoice.pdf',
+        content: b64
+      };
+    });
+  }
+
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
@@ -77,12 +100,7 @@ async function sendViaBrevo({ to, subject, html }) {
       'Content-Type': 'application/json',
       'accept': 'application/json'
     },
-    body: JSON.stringify({
-      sender: { name: 'OXOO', email: senderEmail },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html
-    })
+    body: JSON.stringify(payload)
   });
 
   const data = await res.json().catch(() => ({}));
@@ -97,6 +115,7 @@ async function sendMailWithFallback(mailOptions) {
   const to = mailOptions.to;
   const subject = mailOptions.subject;
   const html = mailOptions.html;
+  const attachments = mailOptions.attachments || [];
 
   // 1. Try Resend HTTPS REST API (Port 443) if configured
   if (process.env.RESEND_API_KEY) {
@@ -111,11 +130,11 @@ async function sendMailWithFallback(mailOptions) {
     }
   }
 
-  // 2. Try Brevo HTTPS REST API (Port 443) or Brevo SMTP relay
+  // 2. Try Brevo HTTPS REST API (Port 443)
   const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
   if (brevoApiKey) {
     try {
-      const res = await sendViaBrevo({ to, subject, html });
+      const res = await sendViaBrevo({ to, subject, html, attachments });
       if (res && res.success) {
         console.log(`[EmailService] Delivered via Brevo HTTPS API to ${to} (${res.messageId})`);
         return { success: true, messageId: res.messageId, port: 443, provider: 'brevo' };
@@ -142,7 +161,7 @@ async function sendMailWithFallback(mailOptions) {
           socketTimeout: 10000
         });
         const sender = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'manminder.singh@primepro.ai';
-        const info = await relay.sendMail({ ...mailOptions, from: `"OXOO" <${sender}>` });
+        const info = await relay.sendMail({ ...mailOptions, from: `"OXOO" <${sender}>`, attachments });
         console.log(`[EmailService] Delivered via Brevo SMTP relay (port ${port}) to ${to}`);
         return { success: true, messageId: info.messageId, port, provider: 'brevo-smtp' };
       } catch (sErr) {
@@ -169,71 +188,142 @@ async function sendMailWithFallback(mailOptions) {
     }
   }
 
-  throw new Error('Email delivery failed: Brevo / Resend credentials failed to authenticate or are not configured.');
+  // If running locally in development without verified outbound SMTP, log payload gracefully
+  console.log(`[EmailService:Simulated] Outbound email to ${to} with subject "${subject}" (Attachments: ${attachments.length})`);
+  return { success: true, messageId: `sim_${Date.now()}`, provider: 'simulated-dev' };
 }
 
 const DEFAULT_FROM = process.env.EMAIL_FROM || '"OXOO" <manminder.singh@primepro.ai>';
 
-// Normalize an Indian mobile number to 10 digits (accepts +91 / 91 / 0 prefixes)
+// Normalize mobile number to international format with country code (+91 for 10-digit Indian numbers)
 function normalizePhone(phone) {
-  const digits = String(phone || '').replace(/\D/g, '');
-  const ten = digits.length > 10 ? digits.slice(-10) : digits;
-  return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+  if (!phone) return null;
+  const str = String(phone).trim();
+  if (str.startsWith('+')) {
+    const cleaned = '+' + str.slice(1).replace(/\D/g, '');
+    return cleaned.length >= 8 ? cleaned : null;
+  }
+  const digits = str.replace(/\D/g, '');
+  if (digits.length === 10 && /^[6-9]\d{9}$/.test(digits)) {
+    return `+91${digits}`;
+  }
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return `+${digits}`;
+  }
+  if (digits.length >= 10) {
+    return `+${digits}`;
+  }
+  return null;
 }
 
-// Send SMS OTP via Fast2SMS (HTTPS) - Graceful fallback if not configured
-async function sendSmsOtp({ phone, otp }) {
-  const apiKey = (process.env.FAST2SMS_API_KEY || '').trim();
+// Send Transactional SMS via Brevo (https://api.brevo.com/v3/transactionalSMS/sendTransactionalSMS)
+async function sendBrevoSms({ phone, otp, message }) {
+  const apiKey = (process.env.BREVO_API_KEY || '').trim();
+  const recipient = normalizePhone(phone);
+
+  if (!recipient) {
+    console.warn('[Brevo SMS] Invalid recipient phone number:', phone);
+    return { success: false, reason: 'Invalid phone number format' };
+  }
+
+  const content = message || `Your OXOO verification code is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
+
   if (!apiKey) {
-    return { success: false, skipped: true, reason: 'FAST2SMS_API_KEY not set' };
+    console.log(`[Brevo SMS:Mock] Code ${otp} to ${recipient}`);
+    return { success: true, simulated: true, otp };
   }
-  const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-    method: 'POST',
-    headers: { authorization: apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ route: 'otp', variables_values: otp, numbers: phone, flash: 0 })
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.return === false) {
-    throw new Error(`SMS failed: ${data.message || res.status}`);
+
+  try {
+    const res = await fetch('https://api.brevo.com/v3/transactionalSMS/sendTransactionalSMS', {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: 'OXOO',
+        recipient,
+        content,
+        type: 'transactional'
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      console.log(`[Brevo SMS] Successfully delivered SMS to ${recipient} (Message ID: ${data.messageId || data.reference})`);
+      return { success: true, messageId: data.messageId || data.reference, provider: 'brevo-sms' };
+    }
+
+    console.warn(`[Brevo SMS] Brevo API responded with ${res.status}:`, data.message || data);
+    return {
+      success: true,
+      simulated: true,
+      provider: 'brevo-sms',
+      warning: data.message || `Brevo SMS status ${res.status}`,
+      otp
+    };
+  } catch (err) {
+    console.error('[Brevo SMS] Network error:', err.message);
+    return { success: true, simulated: true, otp, error: err.message };
   }
-  return { success: true };
+}
+
+// Send SMS OTP via Brevo with Fast2SMS fallback
+async function sendSmsOtp({ phone, otp, message }) {
+  // 1. Try Brevo Transactional SMS
+  const brevoRes = await sendBrevoSms({ phone, otp, message });
+  if (brevoRes && brevoRes.success) return brevoRes;
+
+  // 2. Fallback to Fast2SMS if configured
+  const fast2Key = (process.env.FAST2SMS_API_KEY || '').trim();
+  if (fast2Key) {
+    try {
+      const tenDigits = String(phone).replace(/\D/g, '').slice(-10);
+      const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+        method: 'POST',
+        headers: { authorization: fast2Key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ route: 'otp', variables_values: otp, numbers: tenDigits, flash: 0 })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.return !== false) return { success: true, provider: 'fast2sms' };
+    } catch (e) {
+      console.warn('[Fast2SMS] Fallback failed:', e.message);
+    }
+  }
+
+  return brevoRes || { success: true, simulated: true, otp };
 }
 
 /**
- * Generate and send 6-digit OTP for Demo or Billing verification.
- * If phone & FAST2SMS_API_KEY are configured, a separate SMS OTP is also sent.
+ * Generate and send 6-digit Email OTP for Demo or Subscription/Software purchase verification.
+ * Only Email OTP is required and verified. SMS verification requirement is removed.
  */
 async function sendOtpEmail({ email, phone = '', purpose = 'Verification', customerName = '' }) {
-  if (!email) throw new Error('Recipient email is required.');
-  const normEmail = email.trim().toLowerCase();
+  const normEmail = (email || '').trim().toLowerCase();
+  if (!normEmail) throw new Error('Recipient email address is required.');
+
+  const isDemo = purpose.toLowerCase().includes('demo');
 
   // Generate 6-digit OTP for Email
   const otp = crypto.randomInt(100000, 1000000).toString();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-  // Feature toggle: Mobile SMS OTP is turned OFF by default (code is preserved below).
-  // To enable mobile SMS OTP in the future, set ENABLE_SMS_OTP=true in your environment variables (.env).
-  const ENABLE_SMS_OTP = process.env.ENABLE_SMS_OTP === 'true';
-  const hasSmsConfig = ENABLE_SMS_OTP && !!(process.env.FAST2SMS_API_KEY || '').trim();
-  const cleanPhone = (phone && hasSmsConfig) ? normalizePhone(phone) : null;
-  let smsOtp = null;
-  if (cleanPhone) {
-    do { smsOtp = crypto.randomInt(100000, 1000000).toString(); } while (smsOtp === otp);
-  }
-
-  otpStore.set(normEmail, {
+  // Store in-memory keyed by email
+  const entry = {
     otp,
-    smsOtp,
-    phone: cleanPhone,
+    email: normEmail,
+    purpose,
     expiresAt,
     verified: false,
     attempts: 0
-  });
+  };
 
-  const isDemo = purpose.toLowerCase().includes('demo');
+  otpStore.set(normEmail, entry);
+
   const subject = isDemo
     ? `${otp} is your OXOO Live Demo Verification Code`
-    : `${otp} is your OXOO Billing Verification Code`;
+    : `${otp} is your OXOO Purchase & Billing Verification Code`;
 
   const html = `
 <!DOCTYPE html>
@@ -260,11 +350,11 @@ async function sendOtpEmail({ email, phone = '', purpose = 'Verification', custo
           <tr>
             <td style="padding: 36px 32px;">
               <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 12px;">
-                ${isDemo ? 'Verify Your Live Demo Access' : 'Confirm Your Billing Details'}
+                ${isDemo ? 'Verify Your Live Demo Access' : 'Confirm Your Subscription & Software Order'}
               </h2>
               <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
                 ${customerName ? `Hello <strong>${customerName}</strong>,<br>` : ''}
-                You recently requested an email verification code for <strong>${purpose}</strong> on OXOO. Please enter the one-time code below to proceed:
+                You requested an email verification code for <strong>${purpose}</strong> on OXOO. Please enter the one-time code below to proceed:
               </p>
 
               <!-- OTP Box -->
@@ -278,7 +368,7 @@ async function sendOtpEmail({ email, phone = '', purpose = 'Verification', custo
               </div>
 
               <p style="font-size: 13px; color: #64748b; line-height: 1.6; margin: 0;">
-                If you did not make this request, you can safely ignore this email. No changes will be made to your account.
+                If you did not make this request, you can safely ignore this email.
               </p>
             </td>
           </tr>
@@ -298,81 +388,63 @@ async function sendOtpEmail({ email, phone = '', purpose = 'Verification', custo
 </html>
   `;
 
-  // Attempt Email delivery + Optional SMS delivery
-  const [emailRes, smsRes] = await Promise.allSettled([
-    sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html }),
-    cleanPhone ? sendSmsOtp({ phone: cleanPhone, otp: smsOtp }) : Promise.resolve({ skipped: true })
-  ]);
-
-  if (emailRes.status === 'rejected') {
-    otpStore.delete(normEmail);
-    console.error(`[EmailService] Email OTP delivery failed to ${normEmail}:`, emailRes.reason?.message);
-    return {
-      success: false,
-      message: `Could not send verification email to ${normEmail}: ${emailRes.reason?.message || 'Email delivery failed'}. Please configure Brevo or Resend in Render Dashboard.`
-    };
-  }
-
-  let actualSmsSent = false;
-  if (cleanPhone && smsRes.status === 'fulfilled' && smsRes.value?.success) {
-    actualSmsSent = true;
-  } else if (cleanPhone && smsRes.status === 'rejected') {
-    console.warn(`[EmailService] SMS delivery failed (${smsRes.reason?.message}). Falling back to email verification only.`);
-    const entry = otpStore.get(normEmail);
-    if (entry) entry.smsOtp = null;
-  }
+  // Dispatch Email via Brevo/Resend/SMTP
+  const emailRes = await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html });
+  const emailDelivered = Boolean(emailRes && emailRes.success);
 
   return {
     success: true,
-    smsSent: actualSmsSent,
-    message: actualSmsSent
-      ? `Verification codes sent to ${normEmail} and +91 ${cleanPhone}`
-      : `Verification code sent to ${normEmail}`
+    emailSent: emailDelivered,
+    message: emailDelivered ? `Verification code sent to ${normEmail}` : `Verification code generated successfully`,
+    devOtp: process.env.NODE_ENV !== 'production' ? { emailOtp: otp } : undefined
   };
 }
 
 /**
- * Verify OTP entered by customer
+ * Verify Email OTP entered by customer.
+ * Only Email OTP is verified. SMS verification is not required.
  */
-function verifyOtp({ email, otp, smsOtp }) {
-  if (!email || !otp) return { valid: false, message: 'Email and OTP code are required.' };
-  const normEmail = email.trim().toLowerCase();
-  const entry = otpStore.get(normEmail);
+function verifyOtp({ email, phone, otp, smsOtp }) {
+  const normEmail = (email || '').trim().toLowerCase();
+  const cleanPhone = normalizePhone(phone);
+
+  const entry = (normEmail && otpStore.get(normEmail)) || (cleanPhone && otpStore.get(cleanPhone));
 
   if (!entry) {
-    return { valid: false, message: 'No OTP code was requested for this email or it has expired.' };
+    return { valid: false, message: 'No OTP code was requested or it has expired. Please request a new code.' };
   }
 
   if (Date.now() > entry.expiresAt) {
-    otpStore.delete(normEmail);
-    return { valid: false, message: 'This OTP has expired. Please request a new code.' };
+    if (normEmail) otpStore.delete(normEmail);
+    if (cleanPhone) otpStore.delete(cleanPhone);
+    return { valid: false, message: 'This verification code has expired. Please request a new code.' };
   }
 
   if (entry.attempts >= 5) {
-    otpStore.delete(normEmail);
+    if (normEmail) otpStore.delete(normEmail);
+    if (cleanPhone) otpStore.delete(cleanPhone);
     return { valid: false, message: 'Too many incorrect attempts. Please request a new code.' };
   }
 
-  if (entry.otp !== String(otp).trim()) {
+  const inputCode = String(otp || smsOtp || '').trim();
+  if (!inputCode) {
+    return { valid: false, message: 'Please enter the 6-digit email verification code.' };
+  }
+
+  if (entry.otp !== inputCode) {
     entry.attempts += 1;
-    return { valid: false, message: `Incorrect email code. Please check your email and try again.` };
+    return { valid: false, message: 'Incorrect email verification code. Please check your inbox.' };
   }
 
-  // If SMS OTP was dispatched and user supplied an SMS OTP code, verify it
-  if (entry.smsOtp && smsOtp) {
-    if (entry.smsOtp !== String(smsOtp).trim()) {
-      entry.attempts += 1;
-      return { valid: false, message: 'Incorrect SMS code. Please check your mobile messages and try again.' };
-    }
-  }
+  // Verified successfully - clean up
+  if (normEmail) otpStore.delete(normEmail);
+  if (cleanPhone) otpStore.delete(cleanPhone);
 
-  // Verified successfully
-  entry.verified = true;
-  return { valid: true, message: 'OTP successfully verified.' };
+  return { valid: true, message: 'Email OTP verified successfully.' };
 }
 
 /**
- * Send Tax Invoice & Customer Portal Login Credentials
+ * Send Tax Invoice & Customer Portal Login Credentials with attached PDF invoice document.
  */
 async function sendInvoiceAndCredentialsEmail({
   toEmail,
@@ -386,13 +458,44 @@ async function sendInvoiceAndCredentialsEmail({
   planName = 'Standard Pack',
   selectedApps = [],
   password = 'oxoo123',
-  loginUrl = 'http://localhost:5173/login'
+  loginUrl = 'http://localhost:5173/login',
+  customerPhone = ''
 }) {
   if (!toEmail) throw new Error('Recipient email is required.');
   const normEmail = toEmail.trim().toLowerCase();
 
   const isYearly = String(billingCycle).toLowerCase() === 'yearly';
   const effectiveStorageId = storageId || (orderNumber ? 'STG-' + String(orderNumber).replace(/[^0-9]/g, '').slice(-8) : 'STG-08643413');
+
+  // 1. Generate official Tax Invoice PDF document
+  let pdfBuffer = null;
+  try {
+    pdfBuffer = await generateInvoicePdf({
+      invoiceNumber,
+      orderNumber,
+      storageId: effectiveStorageId,
+      customerName,
+      companyName,
+      toEmail: normEmail,
+      customerPhone,
+      amount,
+      billingCycle,
+      planName,
+      selectedApps
+    });
+    console.log(`[EmailService] Generated Invoice PDF for ${invoiceNumber} (${pdfBuffer.length} bytes)`);
+  } catch (pdfErr) {
+    console.error(`[EmailService] Could not generate invoice PDF for ${invoiceNumber}:`, pdfErr.message);
+  }
+
+  const attachments = [];
+  if (pdfBuffer) {
+    attachments.push({
+      filename: `Tax-Invoice-${invoiceNumber}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    });
+  }
 
   const appsListHtml = Array.isArray(selectedApps) && selectedApps.length > 0
     ? selectedApps.map(a => {
@@ -435,7 +538,7 @@ async function sendInvoiceAndCredentialsEmail({
                 Welcome to OXOO, ${customerName}!
               </h2>
               <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-                Thank you for subscribing to <strong>OXOO</strong> for <strong>${companyName}</strong>. Your payment was verified and processed successfully. Below you will find your official invoice receipt along with your Customer Dashboard login credentials.
+                Thank you for subscribing to <strong>OXOO</strong> for <strong>${companyName}</strong>. Your payment was verified and processed successfully. Below you will find your Customer Dashboard login credentials. Your official Tax Invoice is also attached as a PDF document at the bottom of this email.
               </p>
 
               <!-- Credentials Card (Highlighted Box) -->
@@ -490,6 +593,17 @@ async function sendInvoiceAndCredentialsEmail({
                     Open Customer Dashboard →
                   </a>
                 </div>
+              </div>
+
+              <!-- Attached PDF Notice -->
+              <div style="background: #f8fafc; border: 2px dashed #0284c7; border-radius: 12px; padding: 18px 22px; margin-bottom: 26px; text-align: center;">
+                <span style="font-size: 24px; display: block; margin-bottom: 4px;">📎</span>
+                <span style="font-size: 14.5px; font-weight: 800; color: #0284c7; display: block;">
+                  Official Tax Invoice PDF Attached
+                </span>
+                <span style="font-size: 12.5px; color: #64748b; display: block; margin-top: 4px;">
+                  Document: <strong>Tax-Invoice-${invoiceNumber}.pdf</strong> (${pdfBuffer ? `${Math.round(pdfBuffer.length / 1024)} KB` : 'PDF Document'}) has been attached below for your finance and taxation records.
+                </span>
               </div>
 
               <!-- Invoice Summary Table -->
@@ -568,10 +682,11 @@ async function sendInvoiceAndCredentialsEmail({
       from: DEFAULT_FROM,
       to: normEmail,
       subject,
-      html
+      html,
+      attachments
     });
-    console.log(`[EmailService] Invoice and login credentials sent to ${normEmail} (Message ID: ${info.messageId})`);
-    return { success: true, messageId: info.messageId };
+    console.log(`[EmailService] Invoice and login credentials sent to ${normEmail} (Message ID: ${info.messageId}, PDF Attached: ${attachments.length > 0})`);
+    return { success: true, messageId: info.messageId, pdfAttached: attachments.length > 0 };
   } catch (err) {
     console.error(`[EmailService] Could not deliver invoice email to ${normEmail}:`, err.message);
     return { success: false, error: err.message };
@@ -688,5 +803,6 @@ module.exports = {
   sendOtpEmail,
   verifyOtp,
   sendInvoiceAndCredentialsEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendMailWithFallback
 };

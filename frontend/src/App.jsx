@@ -30,6 +30,7 @@ import CustomerLoginPage from './CustomerLoginPage';
 import AdminLoginPage from './AdminLoginPage';
 import ResetPasswordPage from './ResetPasswordPage';
 import EmployeeLoginPage from './EmployeeLoginPage';
+import HelpPage from './HelpPage';
 
 function useScrollTop() {
   const location = useLocation();
@@ -1757,6 +1758,8 @@ export default function App() {
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/buy" element={<CheckoutPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/help" element={<HelpPage />} />
+      <Route path="/help-form" element={<HelpPage />} />
       {/* Customer Authentication & Dashboard (Strictly Isolated & Safe) */}
       <Route path="/customer/login" element={<CustomerLoginPage />} />
       <Route path="/customer-login" element={<CustomerLoginPage />} />

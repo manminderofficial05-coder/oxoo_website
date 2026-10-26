@@ -61,7 +61,11 @@ export function getAppMeta(slugOrApp) {
     'hrms': 'human-resources',
     'supply-chain': 'inventory',
     'supply_chain': 'inventory',
-    'website': 'website-builder'
+    'website': 'ai-website-builder',
+    'website-builder': 'ai-website-builder',
+    'whatsapp-marketing': 'whatsapp-marketing-broadcasts',
+    'whatsapp-booking': 'whatsapp-booking-reminders',
+    'whatsapp-integrations': 'whatsapp-integrations-settings'
   };
   const targetSlug = aliasMap[slug] || slug;
 

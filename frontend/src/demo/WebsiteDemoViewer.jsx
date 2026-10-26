@@ -125,10 +125,10 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
 
     if (cat === 'Productivity' || productivitySlugs.includes(s)) return 'ai-demo';
     if (cat === 'Supply Chain' || supplyChainSlugs.includes(s)) return 'supply-chain-demo';
-    if (cat === 'Sales' || cat === 'Marketing' || salesSlugs.includes(s)) return 'sales-demo';
+    if (cat === 'Sales' || cat === 'Marketing' || cat === 'WhatsApp Chat AI' || salesSlugs.includes(s)) return 'sales-demo';
     if (cat === 'Human Resources' || cat === 'Services' || hrmsSlugs.includes(s)) return 'hrms-demo';
     if (cat === 'Finance' || financeSlugs.includes(s)) return 'finance-demo';
-    if (cat === 'Websites') return 'website-builder-demo';
+    if (cat === 'Websites' || cat === 'Websites & Apps') return 'website-builder-demo';
     return 'finance-demo';
   };
 

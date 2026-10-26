@@ -78,8 +78,6 @@ export default function CustomerDashboard() {
   const [appSearch, setAppSearch] = useState('');
 
   // Modals & Popovers
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [selectedPlanToUpgrade, setSelectedPlanToUpgrade] = useState('Single Software');
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [changePwdModalOpen, setChangePwdModalOpen] = useState(false);
@@ -401,9 +399,7 @@ export default function CustomerDashboard() {
   // App Launch Handler: Passes Finance Service Key and automatically detects as Admin to open Admin Dashboard without login
   const handleOpenApp = (app) => {
     if (!app.entitled) {
-      showToast(`${app.name} is not included in your ${overview.currentPlan || 'Single Software'} plan. Click Upgrade to access.`);
-      setSelectedPlanToUpgrade('Enterprise');
-      setUpgradeModalOpen(true);
+      showToast(`${app.name} is not included in your current subscription plan.`);
       return;
     }
 
@@ -784,13 +780,6 @@ export default function CustomerDashboard() {
                     <span className="oxoo-plan-name">{overview.currentPlan}</span>
                     <span className="oxoo-plan-billing-date">Next billing: {overview.nextBillingDate}</span>
                   </div>
-                  <button
-                    type="button"
-                    className="oxoo-upgrade-btn"
-                    onClick={() => setUpgradeModalOpen(true)}
-                  >
-                    Upgrade Plan
-                  </button>
                 </div>
               </div>
 
@@ -1081,13 +1070,6 @@ export default function CustomerDashboard() {
                       Manage your plans, payment methods and invoices.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="oxoo-upgrade-btn"
-                    onClick={() => setUpgradeModalOpen(true)}
-                  >
-                    Change Plan
-                  </button>
                 </div>
 
                 {/* Subscription Summary Card */}
@@ -2406,82 +2388,7 @@ export default function CustomerDashboard() {
           3. INTERACTIVE MODALS
           --------------------------------------------------------- */}
 
-      {/* Upgrade Plan Modal */}
-      {upgradeModalOpen && (
-        <div className="oxoo-modal-backdrop" onClick={() => setUpgradeModalOpen(false)}>
-          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()}>
-            <div className="oxoo-modal-header">
-              <h3 className="oxoo-modal-title">Upgrade Your OXOO Plan</h3>
-              <button type="button" className="oxoo-modal-close-btn" onClick={() => setUpgradeModalOpen(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              setOverview(prev => ({ ...prev, currentPlan: selectedPlanToUpgrade }));
-              showToast(`Plan successfully upgraded to ${selectedPlanToUpgrade}!`);
-              setUpgradeModalOpen(false);
-            }}>
-              <div className="oxoo-modal-body">
-                <p style={{ fontSize: '13px', color: '#64748b' }}>
-                  Unlock additional applications, higher seat limits, and premium dedicated SLA support.
-                </p>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {[
-                    { name: 'Single Software', price: '₹660.8/mo', seats: '1 User', apps: '1 App (Current)' },
-                    { name: 'Custom Pack', price: '₹2,499/mo', seats: '5 Users', apps: '3 Apps' },
-                    { name: 'Full Suite', price: '₹7,929.6/yr', seats: '15 Users', apps: 'All Apps' },
-                    { name: 'Enterprise', price: 'Custom', seats: 'Unlimited', apps: 'All 24 Apps + SLA' }
-                  ].map((p) => (
-                    <label
-                      key={p.name}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '14px 18px',
-                        borderRadius: '12px',
-                        border: selectedPlanToUpgrade === p.name ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                        background: selectedPlanToUpgrade === p.name ? '#f0f9ff' : '#ffffff',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="radio"
-                          name="upgradePlan"
-                          value={p.name}
-                          checked={selectedPlanToUpgrade === p.name}
-                          onChange={() => setSelectedPlanToUpgrade(p.name)}
-                        />
-                        <div>
-                          <strong style={{ fontSize: '14px', color: '#0f172a' }}>{p.name}</strong>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>{p.seats} • {p.apps}</div>
-                        </div>
-                      </div>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>{p.price}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="oxoo-modal-footer">
-                <button
-                  type="button"
-                  style={{ background: 'none', border: '1px solid #cbd5e1', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => setUpgradeModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="oxoo-upgrade-btn">
-                  Confirm Upgrade to {selectedPlanToUpgrade}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Invite Team Member Modal */}
       {inviteModalOpen && (

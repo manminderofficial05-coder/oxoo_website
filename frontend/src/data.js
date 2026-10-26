@@ -4,7 +4,7 @@ import {
   Building2, Package, Factory, BadgeCheck, CalendarCheck, ClipboardList, Mail, MessageCircle,
   Workflow, FileText, Headset, Bot, Cloud, Plug, Code2, GraduationCap, Stethoscope,
   Store, Hotel, House, Wrench, HeartHandshake, FileCheck, PhoneCall, Radio, FileSpreadsheet,
-  Leaf, Clock, Award, Car
+  Leaf, Clock, Award, Car, Smartphone, MessageSquare
 } from 'lucide-react';
 
 export const categories = [
@@ -23,11 +23,18 @@ export const categories = [
     services: ['CRM', 'Sales', 'Subscriptions', 'POS Shop', 'POS Restaurant', 'Rental']
   },
   {
-    name: 'Websites',
+    name: 'Websites & Apps',
     color: 'cyan',
     icon: Globe,
-    description: 'Build your digital presence and online store.',
-    services: ['Website Builder', 'eCommerce', 'Events', 'Blog', 'eLearning', 'Forum']
+    description: 'Build your digital presence, mobile apps, and custom web platforms.',
+    services: [
+      'AI Website Builder',
+      'Android & iOS Apps',
+      'eCommerce Websites',
+      '3D Websites',
+      'AI Chatbots',
+      'Web Apps & Other'
+    ]
   },
   {
     name: 'Supply Chain',
@@ -51,11 +58,18 @@ export const categories = [
     services: ['Social Marketing', 'Email Marketing', 'SMS Marketing', 'Marketing Automation', 'WhatsApp', 'Surveys']
   },
   {
-    name: 'Services',
+    name: 'WhatsApp Chat AI',
     color: 'green',
-    icon: BriefcaseBusiness,
-    description: 'Deliver projects and customer support smoothly.',
-    services: ['Project', 'Timesheets', 'Planning', 'Appointments', 'Live Chat', 'Helpdesk']
+    icon: MessageCircle,
+    description: 'Automated WhatsApp AI messaging, commerce, marketing flows, and team inbox.',
+    services: [
+      'WhatsApp AI Inbox',
+      'WhatsApp Marketing & Broadcasts',
+      'WhatsApp Flow Builder',
+      'WhatsApp Commerce',
+      'WhatsApp Booking & Reminders',
+      'WhatsApp Integrations & Settings'
+    ]
   },
   {
     name: 'Productivity',
@@ -83,7 +97,13 @@ const iconMap = {
   'POS Restaurant': Store,
   'Rental': ShoppingCart,
 
-  // Websites
+  // Websites & Apps
+  'AI Website Builder': Globe,
+  'Android & iOS Apps': Smartphone,
+  'eCommerce Websites': ShoppingCart,
+  '3D Websites': Boxes,
+  'AI Chatbots': Bot,
+  'Web Apps & Other': Code2,
   'Website Builder': Globe,
   'eCommerce': ShoppingCart,
   'Events': CalendarCheck,
@@ -115,7 +135,15 @@ const iconMap = {
   'WhatsApp': MessageCircle,
   'Surveys': ClipboardList,
 
-  // Services
+  // WhatsApp Chat AI
+  'WhatsApp AI Inbox': MessageSquare,
+  'WhatsApp Marketing & Broadcasts': Megaphone,
+  'WhatsApp Flow Builder': Workflow,
+  'WhatsApp Commerce': ShoppingCart,
+  'WhatsApp Booking & Reminders': CalendarCheck,
+  'WhatsApp Integrations & Settings': Plug,
+
+  // Services (kept for fallback)
   'Project': ClipboardList,
   'Timesheets': Clock,
   'Planning': CalendarCheck,
@@ -149,7 +177,13 @@ const descriptions = {
   'POS Restaurant': 'Floor plan management, kitchen order tickets (KOT), split billing, and table service.',
   'Rental': 'Schedule rentals, manage equipment availability, track returns, and automate deposits.',
 
-  // Websites
+  // Websites & Apps
+  'AI Website Builder': 'Design stunning, mobile-responsive websites with drag-and-drop ease, AI generation and SEO tools.',
+  'Android & iOS Apps': 'Build native iOS and Android mobile apps with real-time push notifications and cloud backend sync.',
+  'eCommerce Websites': 'Launch high-converting online storefronts with cart, payment gateways, and inventory sync.',
+  '3D Websites': 'Create immersive, interactive 3D WebGL experiences and real-time digital showcases.',
+  'AI Chatbots': 'Deploy intelligent conversational AI chatbots for 24/7 customer support and automated sales.',
+  'Web Apps & Other': 'Develop custom, enterprise-grade cloud web applications, portals, and SaaS platforms.',
   'Website Builder': 'Design stunning, mobile-responsive websites with drag-and-drop ease and SEO tools.',
   'eCommerce': 'Launch high-converting online storefronts with cart, payment gateways, and inventory sync.',
   'Events': 'Organize in-person and virtual events, sell tickets, manage badges, and agenda tracks.',
@@ -181,7 +215,15 @@ const descriptions = {
   'WhatsApp': 'Official WhatsApp Cloud API broadcasts, customer care bots, and order notifications.',
   'Surveys': 'Create interactive feedback surveys, NPS scoring, and real-time sentiment analytics.',
 
-  // Services
+  // WhatsApp Chat AI
+  'WhatsApp AI Inbox': 'Unified multi-agent team inbox powered by AI co-pilots for lightning-fast customer replies.',
+  'WhatsApp Marketing & Broadcasts': 'Official WhatsApp Cloud API broadcasts, targeted marketing campaigns, and delivery analytics.',
+  'WhatsApp Flow Builder': 'Visual drag-and-drop no-code flow builder for automated customer journeys and questionnaires.',
+  'WhatsApp Commerce': 'Interactive product catalogs, cart management, and seamless in-chat checkout and payments.',
+  'WhatsApp Booking & Reminders': 'Automated appointment scheduling, instant booking confirmations, and proactive reminders.',
+  'WhatsApp Integrations & Settings': 'Connect Meta Business accounts, configure webhooks, and sync contacts seamlessly with your CRM.',
+
+  // Services (fallback)
   'Project': 'Agile sprints, Gantt charts, task dependencies, milestone tracking, and deliverables.',
   'Timesheets': 'Log billable hours, project time tracking, employee productivity, and invoicing.',
   'Planning': 'Allocate team shifts, manage project workloads, capacity planning, and schedules.',
@@ -205,7 +247,7 @@ export const services = categories.flatMap((category, ci) => category.services.m
   slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
   icon: iconMap[name] || BriefcaseBusiness,
   description: descriptions[name] || `Practical ${name.toLowerCase()} solutions configured around your business workflow.`,
-  featured: ['CRM', 'Accounting', 'eCommerce', 'Inventory', 'Artificial Intelligence', 'Website Builder', 'Project', 'Employees'].includes(name),
+  featured: ['CRM', 'Accounting', 'eCommerce Websites', 'Inventory', 'Artificial Intelligence', 'AI Website Builder', 'WhatsApp AI Inbox', 'Employees'].includes(name),
   index: ci * 10 + si
 })));
 

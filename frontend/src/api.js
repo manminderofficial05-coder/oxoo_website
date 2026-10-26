@@ -31,6 +31,17 @@ export async function submitLead(payload) {
   return data;
 }
 
+export async function submitSupportTicket(payload) {
+  const r = await fetch(`${API_URL}/api/help/tickets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Unable to submit your support ticket.');
+  return data;
+}
+
 export async function loginUser(email, password) {
   try {
     const r = await fetch(`${API_URL}/api/auth/login`, {
@@ -293,9 +304,10 @@ export async function createCustomerTicket(payload) {
 // -------------------------------------------------------------
 // Admin API
 // -------------------------------------------------------------
-export async function getAdminMetrics() {
+export async function getAdminMetrics(params = {}) {
   try {
-    const r = await fetch(`${API_URL}/api/admin/metrics`, {
+    const q = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/metrics${q ? `?${q}` : ''}`, {
       headers: getAdminHeaders()
     });
     if (!r.ok) throw new Error('Admin metrics unavailable');
@@ -305,9 +317,10 @@ export async function getAdminMetrics() {
   }
 }
 
-export async function getAdminRevenueChart(period = 'monthly') {
+export async function getAdminRevenueChart(params = {}) {
   try {
-    const r = await fetch(`${API_URL}/api/admin/revenue-chart?period=${period}`, {
+    const query = typeof params === 'string' ? `view=${params}` : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/revenue-chart${query ? `?${query}` : ''}`, {
       headers: getAdminHeaders()
     });
     if (!r.ok) throw new Error('Revenue chart unavailable');
@@ -317,15 +330,130 @@ export async function getAdminRevenueChart(period = 'monthly') {
   }
 }
 
-export async function getAdminGrowthChart() {
+export async function getAdminGrowthChart(params = {}) {
   try {
-    const r = await fetch(`${API_URL}/api/admin/growth-chart`, {
+    const query = typeof params === 'string' ? `view=${params}` : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/growth-chart${query ? `?${query}` : ''}`, {
       headers: getAdminHeaders()
     });
     if (!r.ok) throw new Error('Growth chart unavailable');
     return await r.json();
   } catch {
     return null;
+  }
+}
+
+export async function getAdminDemoAnalytics(params = {}) {
+  try {
+    const query = typeof params === 'string' ? `view=${params}` : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/demo-analytics${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Demo analytics unavailable');
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAdminPaymentAnalytics(params = {}) {
+  try {
+    const query = typeof params === 'string' ? `filter=${params}` : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/payment-analytics${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Payment analytics unavailable');
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAdminProductRevenue(params = {}) {
+  try {
+    const query = typeof params === 'string' ? `filter=${params}` : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/product-revenue${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Product revenue unavailable');
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAdminProductCustomers(params = {}) {
+  try {
+    const query = typeof params === 'string' ? `filter=${params}` : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/product-customers${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Product customers unavailable');
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAdminCountryAnalytics(params = {}) {
+  try {
+    const query = typeof params === 'string' ? `filter=${params}` : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/country-analytics${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Country analytics unavailable');
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAdminActivity() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/activity`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Activity unavailable');
+    return await r.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function getAdminSystemStatus() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/system-status`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('System status unavailable');
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function logDemoEvent(payload) {
+  try {
+    const r = await fetch(`${API_URL}/api/demo/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await r.json();
+  } catch {
+    return { success: false };
+  }
+}
+
+export async function getAdminDemoEvents() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/demo-events`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) return { success: false, events: [] };
+    return await r.json();
+  } catch {
+    return { success: false, events: [] };
   }
 }
 
@@ -341,40 +469,136 @@ export async function getAdminTopProducts() {
   }
 }
 
-export async function getAdminCustomers() {
+export async function getAdminCustomers(params = {}) {
   try {
-    const r = await fetch(`${API_URL}/api/admin/customers`, {
+    const queryParams = new URLSearchParams();
+    if (params.search) queryParams.set('search', params.search);
+    if (params.status && params.status !== 'All Status') queryParams.set('status', params.status);
+    if (params.plan && params.plan !== 'All Plans') queryParams.set('plan', params.plan);
+    if (params.country && params.country !== 'All Countries') queryParams.set('country', params.country);
+    if (params.paymentStatus && params.paymentStatus !== 'All Payment Status') queryParams.set('paymentStatus', params.paymentStatus);
+    if (params.app && params.app !== 'All Applications') queryParams.set('app', params.app);
+    if (params.page) queryParams.set('page', params.page);
+    if (params.limit) queryParams.set('limit', params.limit);
+
+    const qStr = queryParams.toString();
+    const r = await fetch(`${API_URL}/api/admin/customers${qStr ? '?' + qStr : ''}`, {
       headers: getAdminHeaders()
     });
     if (!r.ok) throw new Error('Admin customers unavailable');
     return await r.json();
-  } catch {
+  } catch (err) {
+    console.error('getAdminCustomers error:', err.message);
     return null;
   }
 }
 
-export async function getAdminTickets() {
+export async function getAdminCustomerDetails(customerId) {
   try {
-    const r = await fetch(`${API_URL}/api/admin/tickets`, {
+    const r = await fetch(`${API_URL}/api/admin/customers/${encodeURIComponent(customerId)}`, {
       headers: getAdminHeaders()
     });
-    if (!r.ok) throw new Error('Admin tickets unavailable');
+    if (!r.ok) throw new Error('Customer details unavailable');
     return await r.json();
-  } catch {
+  } catch (err) {
+    console.error('getAdminCustomerDetails error:', err.message);
     return null;
   }
 }
 
-export async function getAdminInvoices() {
+export async function getAdminSubscriptions(params = {}) {
   try {
-    const r = await fetch(`${API_URL}/api/admin/invoices`, {
+    const queryParams = new URLSearchParams();
+    if (params.search) queryParams.set('search', params.search);
+    if (params.status && params.status !== 'All Statuses' && params.status !== 'All Status') queryParams.set('status', params.status);
+    if (params.plan && params.plan !== 'All Plans') queryParams.set('plan', params.plan);
+    if (params.cycle && params.cycle !== 'All Billing Cycles') queryParams.set('cycle', params.cycle);
+    if (params.paymentStatus && params.paymentStatus !== 'All Payment Statuses') queryParams.set('paymentStatus', params.paymentStatus);
+    if (params.warningStatus && params.warningStatus !== 'All Renewal Warnings') queryParams.set('warningStatus', params.warningStatus);
+    if (params.country && params.country !== 'All Countries') queryParams.set('country', params.country);
+    if (params.autoRenewal && params.autoRenewal !== 'All') queryParams.set('autoRenewal', params.autoRenewal);
+    if (params.page) queryParams.set('page', params.page);
+    if (params.limit) queryParams.set('limit', params.limit);
+
+    const qStr = queryParams.toString();
+    const r = await fetch(`${API_URL}/api/admin/subscriptions${qStr ? '?' + qStr : ''}`, {
       headers: getAdminHeaders()
     });
-    if (!r.ok) throw new Error('Admin invoices unavailable');
+    if (!r.ok) throw new Error('Admin subscriptions unavailable');
     return await r.json();
-  } catch {
-    return [];
+  } catch (err) {
+    console.error('getAdminSubscriptions error:', err.message);
+    return null;
   }
+}
+
+export async function getAdminSubscriptionWarnings() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/subscriptions/warnings-followups`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Subscription warnings queue unavailable');
+    return await r.json();
+  } catch (err) {
+    console.error('getAdminSubscriptionWarnings error:', err.message);
+    return null;
+  }
+}
+
+export async function getAdminSubscriptionDetails(subscriptionId) {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Subscription details unavailable');
+    return await r.json();
+  } catch (err) {
+    console.error('getAdminSubscriptionDetails error:', err.message);
+    return null;
+  }
+}
+
+export async function updateSubscriptionAutoRenewal(subscriptionId, autoRenewal) {
+  const r = await fetch(`${API_URL}/api/admin/subscriptions/${encodeURIComponent(subscriptionId)}/auto-renewal`, {
+    method: 'PUT',
+    headers: { ...getAdminHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ autoRenewal })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update auto-renewal.');
+  return data;
+}
+
+export async function updateSubscriptionStatus(subscriptionId, status, reason) {
+  const r = await fetch(`${API_URL}/api/admin/subscriptions/${encodeURIComponent(subscriptionId)}/status`, {
+    method: 'PUT',
+    headers: { ...getAdminHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, reason })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update subscription status.');
+  return data;
+}
+
+export async function sendSubscriptionReminder(subscriptionId) {
+  const r = await fetch(`${API_URL}/api/admin/subscriptions/${encodeURIComponent(subscriptionId)}/send-reminder`, {
+    method: 'POST',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to send reminder email.');
+  return data;
+}
+
+export async function addSubscriptionFollowupNote(subscriptionId, payload) {
+  const r = await fetch(`${API_URL}/api/admin/subscriptions/${encodeURIComponent(subscriptionId)}/notes`, {
+    method: 'POST',
+    headers: { ...getAdminHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to save follow-up note.');
+  return data;
 }
 
 export async function updateAdminTicket(id, payload) {
@@ -386,11 +610,20 @@ export async function updateAdminTicket(id, payload) {
   return await r.json();
 }
 
-export async function updateCustomerStatus(companyName, status) {
-  const r = await fetch(`${API_URL}/api/admin/customers/${encodeURIComponent(companyName)}/status`, {
+export async function updateCustomerStatus(customerId, status, reason = '') {
+  const r = await fetch(`${API_URL}/api/admin/customers/${encodeURIComponent(customerId)}/status`, {
     method: 'PUT',
     headers: getAdminHeaders(),
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status, reason })
+  });
+  return await r.json();
+}
+
+export async function updateCustomerSubscription(customerId, payload) {
+  const r = await fetch(`${API_URL}/api/admin/customers/${encodeURIComponent(customerId)}/subscription`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
   });
   return await r.json();
 }
@@ -511,14 +744,38 @@ export async function sendEmailOtp({ email, phone = '', purpose = 'Verification'
   return data;
 }
 
-export async function verifyEmailOtp({ email, otp, smsOtp }) {
+export async function verifyEmailOtp({ email, phone = '', otp, smsOtp }) {
   const r = await fetch(`${API_URL}/api/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, otp, smsOtp })
+    body: JSON.stringify({ email, phone, otp: otp || smsOtp })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Verification code is invalid or expired.');
+  return data;
+}
+
+export async function checkEmailExists(email) {
+  try {
+    const r = await fetch(`${API_URL}/api/auth/check-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    return await r.json();
+  } catch (err) {
+    return { exists: false };
+  }
+}
+
+export async function setupCustomerPassword(payload) {
+  const r = await fetch(`${API_URL}/api/customer/setup-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to setup customer password.');
   return data;
 }
 
@@ -559,6 +816,663 @@ export async function changePassword({ currentPassword, newPassword }) {
   return data;
 }
 
-export { API_URL };
+// -------------------------------------------------------------
+// PRODUCTS & PLANS MANAGEMENT APIS
+// -------------------------------------------------------------
 
+export async function getProductsPlansSummary() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/products-plans/summary`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return {
+      success: true,
+      summary: { totalProducts: 9, totalPlans: 24, activePlans: 18, draftPlans: 3 }
+    };
+  }
+}
+
+export async function getAdminProducts(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/products${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Failed to fetch products');
+    return await r.json();
+  } catch (err) {
+    console.error('getAdminProducts error:', err);
+    return { success: false, products: [] };
+  }
+}
+
+export async function createAdminProduct(payload) {
+  const r = await fetch(`${API_URL}/api/admin/products`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to create product.');
+  return data;
+}
+
+export async function updateAdminProduct(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/products/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update product.');
+  return data;
+}
+
+export async function updateAdminProductStatus(id, status) {
+  const r = await fetch(`${API_URL}/api/admin/products/${encodeURIComponent(id)}/status`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ status })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update product status.');
+  return data;
+}
+
+export async function getAdminPlans(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/plans${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Failed to fetch plans');
+    return await r.json();
+  } catch (err) {
+    console.error('getAdminPlans error:', err);
+    return { success: false, plans: [] };
+  }
+}
+
+export async function createAdminPlan(payload) {
+  const r = await fetch(`${API_URL}/api/admin/plans`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to create plan.');
+  return data;
+}
+
+export async function updateAdminPlan(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/plans/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update plan.');
+  return data;
+}
+
+export async function updateAdminPlanStatus(id, status, reason = '') {
+  const r = await fetch(`${API_URL}/api/admin/plans/${encodeURIComponent(id)}/status`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ status, reason })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update plan status.');
+  return data;
+}
+
+export async function getAdminPlanHistory(id) {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/plans/${encodeURIComponent(id)}/history`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Failed to fetch plan history');
+    return await r.json();
+  } catch (err) {
+    return { success: false, history: [] };
+  }
+}
+
+// =============================================================
+// MODULE 1: APPLICATIONS API
+// =============================================================
+export async function getApplicationsSummary() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/applications/summary`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: true, summary: { total: 9, active: 8, maintenance: 1, health: '100%', healthLabel: 'All services operational' } };
+  }
+}
+
+export async function getAdminApplications(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/applications?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, applications: [] };
+  }
+}
+
+export async function getAdminApplication(id) {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/applications/${encodeURIComponent(id)}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, application: null };
+  }
+}
+
+export async function createAdminApplication(payload) {
+  const r = await fetch(`${API_URL}/api/admin/applications`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to create application.');
+  return data;
+}
+
+export async function updateAdminApplication(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/applications/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update application.');
+  return data;
+}
+
+export async function updateAdminApplicationStatus(id, status) {
+  const r = await fetch(`${API_URL}/api/admin/applications/${encodeURIComponent(id)}/status`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ status })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update application status.');
+  return data;
+}
+
+export async function rotateApplicationServiceKey(id) {
+  const r = await fetch(`${API_URL}/api/admin/applications/${encodeURIComponent(id)}/rotate-key`, {
+    method: 'POST',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to rotate service key.');
+  return data;
+}
+
+export async function checkApplicationHealth(id) {
+  const r = await fetch(`${API_URL}/api/admin/applications/${encodeURIComponent(id)}/health-check`, {
+    method: 'POST',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Health check failed.');
+  return data;
+}
+
+// =============================================================
+// MODULE 2: PAYMENTS & INVOICES API
+// =============================================================
+export async function getInvoicesSummary() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/invoices/summary`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return {
+      success: true,
+      summary: {
+        totalRevenue: 0,
+        totalRevenueFormatted: '₹0',
+        paidAmount: 0,
+        paidFormatted: '₹0',
+        paidCount: 0,
+        pendingAmount: 0,
+        pendingFormatted: '₹0',
+        pendingCount: 0,
+        refundsAmount: 0,
+        refundsFormatted: '₹0',
+        refundsCount: 0
+      }
+    };
+  }
+}
+
+export async function getAdminInvoices(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/invoices?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, invoices: [] };
+  }
+}
+
+export async function getAdminInvoice(id) {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/invoices/${encodeURIComponent(id)}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, invoice: null };
+  }
+}
+
+export function getInvoiceDownloadUrl(id) {
+  return `${API_URL}/api/admin/invoices/${encodeURIComponent(id)}/download-pdf`;
+}
+
+// =============================================================
+// MODULE 3: USERS & ROLES API
+// =============================================================
+export async function getStaffSummary() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/staff/summary`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return {
+      success: true,
+      summary: { totalUsers: 0, superAdmins: 0, financeAdmins: 0, supportTeam: 0, salesTeam: 0 }
+    };
+  }
+}
+
+export async function getAdminStaff(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/staff?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, staff: [] };
+  }
+}
+
+export async function createAdminStaff(payload) {
+  const r = await fetch(`${API_URL}/api/admin/staff`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to add staff member.');
+  return data;
+}
+
+export async function updateAdminStaff(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/staff/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update staff member.');
+  return data;
+}
+
+export async function updateAdminStaffStatus(id, status) {
+  const r = await fetch(`${API_URL}/api/admin/staff/${encodeURIComponent(id)}/status`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ status })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update staff status.');
+  return data;
+}
+
+// =============================================================
+// MODULE 4: SUPPORT TICKETS API
+// =============================================================
+export async function getTicketsSummary() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/tickets/summary`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return {
+      success: true,
+      summary: { totalTickets: 0, openTickets: 0, inProgressTickets: 0, resolvedTickets: 0, closedTickets: 0 }
+    };
+  }
+}
+
+export async function getAdminTickets(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/tickets?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, tickets: [] };
+  }
+}
+
+export async function getAdminTicket(id) {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/tickets/${encodeURIComponent(id)}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('API unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, ticket: null };
+  }
+}
+
+export async function sendTicketReply(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/tickets/${encodeURIComponent(id)}/reply`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  return data;
+}
+
+export async function updateTicketStatus(id, status, payload = {}) {
+  const body = typeof payload === 'string' ? { status, note: payload } : { status, ...payload };
+  const r = await fetch(`${API_URL}/api/admin/tickets/${encodeURIComponent(id)}/status`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(body)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update ticket status.');
+  return data;
+}
+
+export async function assignTicket(id, assigned_to) {
+  const r = await fetch(`${API_URL}/api/admin/tickets/${encodeURIComponent(id)}/assign`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ assigned_to })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to assign ticket.');
+  return data;
+}
+
+export async function submitCustomerTicket(payload) {
+  const r = await fetch(`${API_URL}/api/admin/customer/tickets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to submit ticket.');
+  return data;
+}
+
+// -------------------------------------------------------------
+// MODULE 2: REPORTS & ANALYTICS API
+// -------------------------------------------------------------
+export async function getAdminReports(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/reports?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Reports data unavailable');
+    return await r.json();
+  } catch (err) {
+    console.error('Failed to load reports:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export function getAdminReportsExportUrl(params = {}) {
+  const qs = new URLSearchParams({ ...params, format: 'csv' }).toString();
+  return `${API_URL}/api/admin/reports/export?${qs}`;
+}
+
+// -------------------------------------------------------------
+// MODULE 3: EMAIL & NOTIFICATIONS API
+// -------------------------------------------------------------
+export async function getAdminEmailTemplates(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/email-templates?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Templates unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, templates: [] };
+  }
+}
+
+export async function createAdminEmailTemplate(payload) {
+  const r = await fetch(`${API_URL}/api/admin/email-templates`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to create template');
+  return data;
+}
+
+export async function updateAdminEmailTemplate(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/email-templates/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update template');
+  return data;
+}
+
+export async function deleteAdminEmailTemplate(id) {
+  const r = await fetch(`${API_URL}/api/admin/email-templates/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to delete template');
+  return data;
+}
+
+export async function testAdminEmailTemplate(payload) {
+  const r = await fetch(`${API_URL}/api/admin/email-templates/test`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to send test email');
+  return data;
+}
+
+export async function getAdminNotificationLogs(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/notifications?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Notifications unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, logs: [] };
+  }
+}
+
+export async function retryAdminNotification(id) {
+  const r = await fetch(`${API_URL}/api/admin/notifications/${encodeURIComponent(id)}/retry`, {
+    method: 'POST',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to retry notification');
+  return data;
+}
+
+export async function getAdminNotificationSettings() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/notifications/settings`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Settings unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, settings: {} };
+  }
+}
+
+export async function updateAdminNotificationSettings(settings) {
+  const r = await fetch(`${API_URL}/api/admin/notifications/settings`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ settings })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to save notification settings');
+  return data;
+}
+
+// -------------------------------------------------------------
+// MODULE 4: AUDIT LOGS API
+// -------------------------------------------------------------
+export async function getAdminAuditLogs(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/audit-logs?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Audit logs unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, logs: [] };
+  }
+}
+
+export async function getAdminAuditSessions(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/audit-logs/sessions?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Audit sessions unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, sessions: [] };
+  }
+}
+
+// -------------------------------------------------------------
+// MODULE 5: INTEGRATIONS API
+// -------------------------------------------------------------
+export async function getAdminIntegrations() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/integrations`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Integrations unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, integrations: [] };
+  }
+}
+
+export async function updateAdminIntegration(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/integrations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update integration');
+  return data;
+}
+
+export async function testAdminIntegration(id) {
+  const r = await fetch(`${API_URL}/api/admin/integrations/${encodeURIComponent(id)}/test`, {
+    method: 'POST',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to test integration');
+  return data;
+}
+
+export async function toggleAdminIntegration(id, is_active) {
+  const r = await fetch(`${API_URL}/api/admin/integrations/${encodeURIComponent(id)}/toggle`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ is_active })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to toggle integration');
+  return data;
+}
+
+// -------------------------------------------------------------
+// MODULE 6: SETTINGS API
+// -------------------------------------------------------------
+export async function getAdminPlatformSettings(category) {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/settings/${encodeURIComponent(category)}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Settings unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, settings: {} };
+  }
+}
+
+export async function updateAdminPlatformSettings(category, settings) {
+  const r = await fetch(`${API_URL}/api/admin/settings/${encodeURIComponent(category)}`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ settings })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update settings');
+  return data;
+}
+
+// -------------------------------------------------------------
+// MODULE 7: CLIENT NEEDS & CONTACT INQUIRIES API
+// -------------------------------------------------------------
+export async function getAdminLeads(params = {}) {
+  try {
+    const query = typeof params === 'string' ? params : new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/leads${query ? `?${query}` : ''}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Admin leads unavailable');
+    return await r.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function updateAdminLead(id, updates) {
+  const r = await fetch(`${API_URL}/api/admin/leads/${id}`, {
+    method: 'PATCH',
+    headers: {
+      ...getAdminHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updates)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update lead');
+  return data;
+}
+
+export async function deleteAdminLead(id) {
+  const r = await fetch(`${API_URL}/api/admin/leads/${id}`, {
+    method: 'DELETE',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to delete lead');
+  return data;
+}
+
+export { API_URL };
 

@@ -4,11 +4,11 @@ export const CATEGORIES_LIST = [
   'All Categories',
   'Finance',
   'Sales',
-  'Websites',
+  'Websites & Apps',
   'Supply Chain',
   'Human Resources',
   'Marketing',
-  'Services',
+  'WhatsApp Chat AI',
   'Productivity'
 ];
 
@@ -669,12 +669,20 @@ export const SERVICE_ALIASES = {
   'pos-restaurant': { base: 'pos', name: 'POS Restaurant', category: 'Sales', iconSrc: '/apps/logo-pos.png?v=clean', tagline: 'Restaurant POS, floor plans, kitchen display system (KDS), and split billing.' },
   'rental': { base: 'field-service', name: 'Rental', category: 'Sales', iconSrc: '/apps/logo-field-service.png?v=clean', tagline: 'Equipment rental management, pickup and delivery schedules, and asset tracking.' },
 
-  // Websites
-  'website-builder': { base: 'website', name: 'Website Builder', category: 'Websites', iconSrc: '/apps/logo-website.png?v=clean', tagline: 'Modern responsive websites with drag-and-drop builder and instant SEO optimization.' },
-  'events': { base: 'planning', name: 'Events', category: 'Websites', iconSrc: '/apps/logo-planning.png?v=clean', tagline: 'Online and in-person event management, ticketing, attendee badges, and agendas.' },
-  'blog': { base: 'knowledge', name: 'Blog', category: 'Websites', iconSrc: '/apps/logo-knowledge.png?v=clean', tagline: 'Publish articles, SEO-optimized blog posts, and company news updates.' },
-  'elearning': { base: 'knowledge', name: 'eLearning', category: 'Websites', iconSrc: '/apps/logo-knowledge.png?v=clean', tagline: 'Online courses, video lessons, quizzes, student grading, and certifications.' },
-  'forum': { base: 'discuss', name: 'Forum', category: 'Websites', iconSrc: '/apps/logo-discuss.png?v=clean', tagline: 'Community forum, questions, upvotes, tags, and discussions.' },
+  // Websites & Apps
+  'ai-website-builder': { base: 'website', name: 'AI Website Builder', category: 'Websites & Apps', iconSrc: '/apps/logo-website.png?v=clean', tagline: 'Modern responsive websites with drag-and-drop AI builder and instant SEO optimization.' },
+  'website-builder': { base: 'website', name: 'AI Website Builder', category: 'Websites & Apps', iconSrc: '/apps/logo-website.png?v=clean', tagline: 'Modern responsive websites with drag-and-drop AI builder and instant SEO optimization.' },
+  'android-ios-apps': { base: 'studio', name: 'Android & iOS Apps', category: 'Websites & Apps', iconSrc: '/apps/logo-studio.png?v=clean', tagline: 'Native Android and iOS mobile applications with real-time cloud backend sync.' },
+  'mobile-apps': { base: 'studio', name: 'Android & iOS Apps', category: 'Websites & Apps', iconSrc: '/apps/logo-studio.png?v=clean', tagline: 'Native Android and iOS mobile applications with real-time cloud backend sync.' },
+  'ecommerce-websites': { base: 'ecommerce', name: 'eCommerce Websites', category: 'Websites & Apps', iconSrc: '/apps/logo-ecommerce.png?v=clean', tagline: 'High-converting online store with payment gateways, order management, and stock sync.' },
+  '3d-websites': { base: 'website', name: '3D Websites', category: 'Websites & Apps', iconSrc: '/apps/logo-website.png?v=clean', tagline: 'Interactive 3D WebGL digital experiences, animations, and product visualizers.' },
+  'ai-chatbots': { base: 'ai', name: 'AI Chatbots', category: 'Websites & Apps', iconSrc: '/apps/logo-ai.png?v=clean', tagline: 'Intelligent conversational AI assistants for 24/7 automated support and sales.' },
+  'web-apps-other': { base: 'documents', name: 'Web Apps & Other', category: 'Websites & Apps', iconSrc: '/apps/logo-documents.png?v=clean', tagline: 'Scalable custom web applications, SaaS platforms, portals, and cloud solutions.' },
+  'web-apps': { base: 'documents', name: 'Web Apps & Other', category: 'Websites & Apps', iconSrc: '/apps/logo-documents.png?v=clean', tagline: 'Scalable custom web applications, SaaS platforms, portals, and cloud solutions.' },
+  'events': { base: 'planning', name: 'Events', category: 'Websites & Apps', iconSrc: '/apps/logo-planning.png?v=clean', tagline: 'Online and in-person event management, ticketing, attendee badges, and agendas.' },
+  'blog': { base: 'knowledge', name: 'Blog', category: 'Websites & Apps', iconSrc: '/apps/logo-knowledge.png?v=clean', tagline: 'Publish articles, SEO-optimized blog posts, and company news updates.' },
+  'elearning': { base: 'knowledge', name: 'eLearning', category: 'Websites & Apps', iconSrc: '/apps/logo-knowledge.png?v=clean', tagline: 'Online courses, video lessons, quizzes, student grading, and certifications.' },
+  'forum': { base: 'discuss', name: 'Forum', category: 'Websites & Apps', iconSrc: '/apps/logo-discuss.png?v=clean', tagline: 'Community forum, questions, upvotes, tags, and discussions.' },
 
   // Supply Chain
   'maintenance': { base: 'field-service', name: 'Maintenance', category: 'Supply Chain', iconSrc: '/apps/logo-field-service.png?v=clean', tagline: 'Preventive and corrective equipment maintenance, repair requests, and MTBF metrics.' },
@@ -696,7 +704,18 @@ export const SERVICE_ALIASES = {
   'whatsapp': { base: 'discuss', name: 'WhatsApp', category: 'Marketing', iconSrc: '/apps/logo-discuss.png?v=clean', tagline: 'Official WhatsApp Cloud API broadcasts, automated chatbots, and order support.' },
   'surveys': { base: 'knowledge', name: 'Surveys', category: 'Marketing', iconSrc: '/apps/logo-knowledge.png?v=clean', tagline: 'Customer satisfaction surveys, feedback forms, and NPS scoring.' },
 
-  // Services
+  // WhatsApp Chat AI
+  'whatsapp-ai-inbox': { base: 'discuss', name: 'WhatsApp AI Inbox', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-discuss.png?v=clean', tagline: 'Unified multi-agent team inbox powered by AI co-pilots for lightning-fast replies.' },
+  'whatsapp-marketing': { base: 'email-marketing', name: 'WhatsApp Marketing & Broadcasts', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-email-marketing.png?v=clean', tagline: 'Official WhatsApp Cloud API broadcasts, targeted marketing campaigns, and delivery analytics.' },
+  'whatsapp-marketing-broadcasts': { base: 'email-marketing', name: 'WhatsApp Marketing & Broadcasts', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-email-marketing.png?v=clean', tagline: 'Official WhatsApp Cloud API broadcasts, targeted marketing campaigns, and delivery analytics.' },
+  'whatsapp-flow-builder': { base: 'planning', name: 'WhatsApp Flow Builder', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-planning.png?v=clean', tagline: 'Visual drag-and-drop no-code flow builder for automated customer journeys and questionnaires.' },
+  'whatsapp-commerce': { base: 'ecommerce', name: 'WhatsApp Commerce', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-ecommerce.png?v=clean', tagline: 'Interactive product catalogs, cart management, and seamless in-chat checkout.' },
+  'whatsapp-booking': { base: 'planning', name: 'WhatsApp Booking & Reminders', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-planning.png?v=clean', tagline: 'Automated appointment scheduling, instant booking confirmations, and proactive reminders.' },
+  'whatsapp-booking-reminders': { base: 'planning', name: 'WhatsApp Booking & Reminders', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-planning.png?v=clean', tagline: 'Automated appointment scheduling, instant booking confirmations, and proactive reminders.' },
+  'whatsapp-integrations': { base: 'studio', name: 'WhatsApp Integrations & Settings', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-studio.png?v=clean', tagline: 'Connect Meta Business accounts, configure webhooks, and sync data with your CRM.' },
+  'whatsapp-integrations-settings': { base: 'studio', name: 'WhatsApp Integrations & Settings', category: 'WhatsApp Chat AI', iconSrc: '/apps/logo-studio.png?v=clean', tagline: 'Connect Meta Business accounts, configure webhooks, and sync data with your CRM.' },
+
+  // Services (fallback aliases)
   'planning': { base: 'planning', name: 'Planning', category: 'Services', iconSrc: '/apps/logo-planning.png?v=clean', tagline: 'Shift scheduling, workload capacity, project allocation, and forecasting.' },
   'appointments': { base: 'planning', name: 'Appointments', category: 'Services', iconSrc: '/apps/logo-planning.png?v=clean', tagline: 'Online client booking calendar, automated SMS/email reminders, and calendar sync.' },
   'live-chat': { base: 'discuss', name: 'Live Chat', category: 'Services', iconSrc: '/apps/logo-discuss.png?v=clean', tagline: 'Real-time website visitor chat widget, instant routing, and lead qualification.' },

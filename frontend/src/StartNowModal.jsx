@@ -11,10 +11,10 @@ const CATEGORIES = [
   'All',
   'Finance',
   'Sales',
-  'Websites',
+  'Websites & Apps',
   'Supply Chain',
   'Human Resources',
-  'Services'
+  'WhatsApp Chat AI'
 ];
 
 export default function StartNowModal({
@@ -59,6 +59,7 @@ export default function StartNowModal({
     const matchesCategory =
       categoryFilter === 'All' ||
       app.category.toLowerCase() === categoryFilter.toLowerCase() ||
+      (categoryFilter === 'Websites & Apps' && (app.category === 'Websites' || app.category === 'Websites & Apps')) ||
       (categoryFilter === 'Supply Chain' && (app.category === 'Supply Chain' || app.category === 'Operations'));
 
     return matchesSearch && matchesCategory;
@@ -96,8 +97,8 @@ export default function StartNowModal({
       setLaunchProgress(100);
 
       setTimeout(() => {
-        const websiteSlugs = ['website', 'website-builder', 'ecommerce', 'events', 'blog', 'elearning', 'forum'];
-        const isWebsiteApp = websiteSlugs.includes(app.slug) || app.category === 'Websites';
+        const websiteSlugs = ['website', 'website-builder', 'ai-website-builder', 'ecommerce-websites', '3d-websites', 'web-apps-other', 'ecommerce', 'events', 'blog', 'elearning', 'forum'];
+        const isWebsiteApp = websiteSlugs.includes(app.slug) || app.category === 'Websites' || app.category === 'Websites & Apps';
 
         const targetPath = isWebsiteApp
           ? `/apps/${app.slug}/live-demo?company=demo.oxoo`

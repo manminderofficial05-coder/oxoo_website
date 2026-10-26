@@ -196,16 +196,17 @@ export default function AppDemoRequestModal({
 
     try {
       // Send 6-digit OTP to user's work email
-      await sendEmailOtp({
+      const resp = await sendEmailOtp({
         email: cleanEmail,
+        phone: phoneNumber.trim(),
         purpose: 'OXOO Live Demo Access',
         customerName: fullName.trim()
       });
 
-      setOtpValue(''); // Keep empty so user must enter code from email
+      setOtpValue(''); // Keep empty so user must enter code
       setIsOtpStep(true);
       setOtpError('');
-      setOtpSuccess(`A 6-digit verification code was sent to ${cleanEmail}`);
+      setOtpSuccess(resp.message || `A 6-digit verification code was sent to ${cleanEmail}`);
       setResendCooldown(30);
       setIsSubmitting(false);
     } catch (err) {
@@ -221,12 +222,13 @@ export default function AppDemoRequestModal({
     setOtpError('');
     setOtpSuccess('');
     try {
-      await sendEmailOtp({
+      const resp = await sendEmailOtp({
         email: workEmail.trim(),
+        phone: phoneNumber.trim(),
         purpose: 'OXOO Live Demo Access',
         customerName: fullName.trim()
       });
-      setOtpSuccess(`A fresh verification code was sent to ${workEmail.trim()}`);
+      setOtpSuccess(resp.message || `A fresh verification code was sent to ${workEmail.trim()}`);
       setResendCooldown(30);
     } catch (err) {
       setOtpError(err.message || 'Failed to resend code.');
@@ -340,8 +342,7 @@ export default function AppDemoRequestModal({
                     Verify Your Work Email
                   </h2>
                   <p style={{ fontSize: '14px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-                    Enter the 6-digit verification code sent to <br />
-                    <strong style={{ color: '#0f172a', fontWeight: '700' }}>{workEmail.trim()}</strong>
+                    Enter the 6-digit verification code sent to <strong style={{ color: '#0f172a', fontWeight: '700' }}>{workEmail.trim()}</strong>
                   </p>
                 </div>
 

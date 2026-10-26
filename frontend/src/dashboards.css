@@ -2061,4 +2061,4163 @@ input:checked + .oxoo-slider:before {
   }
 }
 
+/* ==========================================================================
+   OXOO SUPER ADMIN DASHBOARD V2 — PREMIUM SAAS ANALYTICS SYSTEM
+   Exact Match to High-Fidelity Design Specifications
+   ========================================================================== */
 
+/* Layout & Stationary Sidebar */
+.oxoo-layout-v2 {
+  display: flex;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  background-color: #f8fafc;
+  font-family: var(--oxoo-font);
+}
+
+.oxoo-sidebar-v2 {
+  width: 250px;
+  min-width: 250px;
+  height: 100vh;
+  max-height: 100vh;
+  background: #0b132b;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  overflow: hidden;
+  z-index: 100;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
+}
+
+.oxoo-sidebar-v2-top {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 14px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-sidebar-v2-top::-webkit-scrollbar {
+  width: 4px;
+}
+
+.oxoo-sidebar-v2-top::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.oxoo-sidebar-v2-bottom {
+  flex-shrink: 0;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #091024;
+}
+
+/* Brand Logo */
+.oxoo-sidebar-v2-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 6px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 16px;
+  text-decoration: none;
+}
+
+.oxoo-brand-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oxoo-brand-name-3d {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.oxoo-brand-badge-360 {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+
+.oxoo-brand-tagline-v2 {
+  font-size: 9.5px;
+  color: #7dd3fc;
+  margin-top: 4px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+/* Nav Menu V2 */
+.oxoo-nav-v2-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oxoo-nav-v2-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9.5px 14px;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 13.5px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+}
+
+.oxoo-nav-v2-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.oxoo-nav-v2-btn.active {
+  background: #1e6bff;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(30, 107, 255, 0.4);
+}
+
+.oxoo-nav-v2-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Profile Bottom Stationary */
+.oxoo-sidebar-v2-profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.oxoo-sidebar-v2-profile:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.oxoo-profile-v2-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.oxoo-profile-v2-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1e6bff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.oxoo-profile-v2-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.oxoo-profile-v2-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.oxoo-profile-v2-role {
+  font-size: 10.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.oxoo-sidebar-v2-admin-card:hover {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.45) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  transform: translateY(-1px);
+}
+
+/* Main Viewport V2 */
+.oxoo-main-viewport-v2 {
+  flex: 1;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f8fafc;
+}
+
+/* Top Header Bar V2 */
+.oxoo-top-header-v2 {
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #eef2f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  flex-shrink: 0;
+}
+
+.oxoo-header-search-v2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  width: 380px;
+  transition: all 0.2s;
+}
+
+.oxoo-header-search-v2:focus-within {
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.oxoo-header-search-input-v2 {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: #0f172a;
+  width: 100%;
+}
+
+.oxoo-header-right-v2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-portal-btn-v2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #f0f7ff;
+  color: #1e6bff;
+  border: 1px solid #dbeafe;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-portal-btn-v2:hover {
+  background: #e0f2fe;
+}
+
+.oxoo-date-pill-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-date-pill-v2:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.oxoo-icon-circle-btn-v2 {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.oxoo-icon-circle-btn-v2:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.oxoo-unread-badge-v2 {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+}
+
+.oxoo-admin-profile-pill-v2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.oxoo-admin-profile-pill-v2:hover {
+  background: #f8fafc;
+}
+
+/* Dashboard Body Canvas V2 */
+.oxoo-canvas-v2 {
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Row 1: Header & Filter Bar */
+.oxoo-dashboard-title-row-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.oxoo-welcome-title-v2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  margin: 0 0 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-welcome-sub-v2 {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.oxoo-filter-group-v2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-period-pill-box-v2 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.oxoo-period-tab-btn-v2 {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-period-tab-btn-v2:hover {
+  color: #0f172a;
+}
+
+.oxoo-period-tab-btn-v2.active {
+  background: #1e6bff;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.oxoo-refresh-btn-v2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e6bff;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(30, 107, 255, 0.25);
+  transition: all 0.2s;
+}
+
+.oxoo-refresh-btn-v2:hover {
+  background: #1958d6;
+  transform: translateY(-1px);
+}
+
+/* Row 2: 4 Animated KPI Cards */
+.oxoo-kpi-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.oxoo-kpi-card-v2 {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  padding: 18px 20px 14px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.oxoo-kpi-card-v2:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+.oxoo-kpi-top-row-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.oxoo-kpi-icon-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-kpi-icon-wrap-v2 {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-kpi-icon-wrap-v2.blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.oxoo-kpi-icon-wrap-v2.amber {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.oxoo-kpi-icon-wrap-v2.emerald {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.oxoo-kpi-icon-wrap-v2.purple {
+  background: #f5f3ff;
+  color: #8b5cf6;
+}
+
+.oxoo-kpi-card-title-v2 {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.oxoo-kpi-more-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.oxoo-kpi-more-btn:hover {
+  color: #334155;
+  background: #f1f5f9;
+}
+
+.oxoo-kpi-value-row-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.oxoo-kpi-value-big-v2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.oxoo-kpi-trend-pill-v2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.oxoo-kpi-sub-text-v2 {
+  font-size: 11.5px;
+  color: #10b981;
+  font-weight: 500;
+  margin: 0 0 10px 0;
+}
+
+.oxoo-kpi-sparkline-wrap-v2 {
+  height: 38px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.oxoo-kpi-footer-divider-v2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+.oxoo-kpi-stat-col-v2 {
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-kpi-stat-label-v2 {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.oxoo-kpi-stat-val-v2 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Row 3: Revenue Overview & Customer Growth Charts */
+.oxoo-two-col-grid-v2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.oxoo-chart-card-v2 {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-chart-card-header-v2 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.oxoo-chart-title-wrap-v2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-chart-icon-box-v2 {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-chart-icon-box-v2.blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.oxoo-chart-icon-box-v2.green {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.oxoo-chart-icon-box-v2.purple {
+  background: #f5f3ff;
+  color: #8b5cf6;
+}
+
+.oxoo-chart-main-title-v2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.oxoo-chart-sub-title-v2 {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.oxoo-chart-select-v2 {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 5px 10px;
+  outline: none;
+  cursor: pointer;
+}
+
+.oxoo-chart-legend-row-v2 {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.oxoo-legend-item-v2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-legend-dot-v2 {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.oxoo-legend-square-v2 {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+/* Stat Pill Grid in Demo and Payment Analytics */
+.oxoo-stats-pill-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.oxoo-stats-pill-grid-6-v2 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.oxoo-stat-box-v2 {
+  background: #f8fafc;
+  border: 1px solid #eef2f6;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-stat-box-label-v2 {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-stat-box-val-v2 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.oxoo-stat-box-val-v2.blue { color: #2563eb; }
+.oxoo-stat-box-val-v2.purple { color: #8b5cf6; }
+.oxoo-stat-box-val-v2.green { color: #10b981; }
+.oxoo-stat-box-val-v2.amber { color: #f59e0b; }
+.oxoo-stat-box-val-v2.red { color: #ef4444; }
+
+/* Recent Activity V2 */
+.oxoo-activity-item-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.oxoo-activity-item-v2:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.oxoo-activity-left-v2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-activity-icon-v2 {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-activity-icon-v2.amber { background: #fef3c7; color: #d97706; }
+.oxoo-activity-icon-v2.green { background: #ecfdf5; color: #10b981; }
+.oxoo-activity-icon-v2.purple { background: #f5f3ff; color: #8b5cf6; }
+.oxoo-activity-icon-v2.orange { background: #ffedd5; color: #ea580c; }
+.oxoo-activity-icon-v2.indigo { background: #e0e7ff; color: #4f46e5; }
+
+.oxoo-activity-text-v2 {
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-activity-action-v2 {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.oxoo-activity-target-v2 {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.oxoo-activity-right-v2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-activity-time-v2 {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.oxoo-activity-tag-v2 {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.oxoo-activity-tag-v2.new { background: #ecfdf5; color: #059669; }
+.oxoo-activity-tag-v2.payment { background: #ecfdf5; color: #059669; }
+.oxoo-activity-tag-v2.demo { background: #f0f7ff; color: #2563eb; }
+.oxoo-activity-tag-v2.subscription { background: #fff7ed; color: #c2410c; }
+.oxoo-activity-tag-v2.support { background: #eef2ff; color: #4338ca; }
+
+/* System Status V2 (2 Column Grid) */
+.oxoo-status-grid-v2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+  padding: 8px 0;
+}
+
+.oxoo-status-row-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.oxoo-status-service-name-v2 {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-status-indicator-pill-v2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.oxoo-status-all-good-badge-v2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Row 3: 3 Aligned Cards (Product Revenue, Product Customers, Payment Analytics) */
+.oxoo-three-col-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+/* KPI Split Row Layout (Number on Left, Sparkline on Right) */
+.oxoo-kpi-split-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.oxoo-kpi-left-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.oxoo-kpi-right-sparkline {
+  width: 90px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+/* Donut Chart Layout */
+.oxoo-donut-card-layout {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.oxoo-donut-wrap {
+  position: relative;
+  width: 126px;
+  height: 126px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.oxoo-donut-center-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.oxoo-donut-center-val {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+}
+
+.oxoo-donut-center-sub {
+  font-size: 9px;
+  color: #64748b;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.oxoo-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.oxoo-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+}
+
+.oxoo-breakdown-row-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.oxoo-breakdown-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-breakdown-amount {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 11.5px;
+}
+
+.oxoo-breakdown-pct {
+  font-weight: 600;
+  color: #64748b;
+  min-width: 26px;
+  text-align: right;
+  font-size: 11px;
+}
+
+/* Ranked Horizontal Progress Bars for Product Customers */
+.oxoo-prod-cust-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.oxoo-prod-cust-row {
+  display: grid;
+  grid-template-columns: 12px 24px 60px 1fr 58px 30px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.oxoo-prod-cust-rank {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.oxoo-prod-cust-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.oxoo-prod-cust-name {
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.oxoo-prod-cust-track {
+  height: 7px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  overflow: hidden;
+  position: relative;
+}
+
+.oxoo-prod-cust-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.oxoo-prod-cust-users {
+  font-size: 10.5px;
+  color: #64748b;
+  text-align: right;
+}
+
+.oxoo-prod-cust-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  text-align: right;
+}
+
+/* Customers by Country Card (Map + Table) */
+.oxoo-country-card-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.oxoo-world-map-wrap {
+  position: relative;
+  width: 100%;
+  height: 175px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-country-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.oxoo-country-table th {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.oxoo-country-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #f8fafc;
+  color: #1e293b;
+}
+
+.oxoo-country-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Sidebar Bottom Brand Footer */
+.oxoo-sidebar-v2-bottom-brand {
+  padding: 16px 20px;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.oxoo-brand-bottom-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #2563eb 0%, #0b172b 75%);
+  border: 1.5px solid #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Top Nav Date & Quick Filter Group */
+.oxoo-top-header-middle-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-quick-filter-pill-box {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.oxoo-quick-filter-btn {
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.oxoo-quick-filter-btn:hover {
+  color: #0f172a;
+}
+
+.oxoo-quick-filter-btn.active {
+  background: #1e6bff;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(30, 107, 255, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .oxoo-three-col-grid-v2 {
+    grid-template-columns: 1fr;
+  }
+  .oxoo-country-card-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 1200px) {
+  .oxoo-kpi-grid-v2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .oxoo-two-col-grid-v2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .oxoo-kpi-grid-v2 {
+    grid-template-columns: 1fr;
+  }
+  .oxoo-sidebar-v2 {
+    width: 70px;
+    min-width: 70px;
+  }
+  .oxoo-sidebar-v2 .oxoo-brand-tagline-v2,
+  .oxoo-sidebar-v2 .oxoo-nav-v2-btn span,
+  .oxoo-sidebar-v2 .oxoo-profile-v2-info {
+    display: none;
+  }
+  .oxoo-stats-pill-grid-v2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .oxoo-stats-pill-grid-6-v2 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .oxoo-status-grid-v2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   OXOO 360 — CUSTOMERS MANAGEMENT PAGE & DETAILS DRAWER STYLES
+   ========================================================================== */
+
+/* Summary KPI Cards */
+.oxoo-cust-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1200px) {
+  .oxoo-cust-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .oxoo-cust-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.oxoo-cust-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px 14px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.oxoo-cust-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+
+.oxoo-cust-card.active-filter {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.oxoo-cust-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.oxoo-cust-card-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-cust-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.oxoo-cust-card-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.oxoo-cust-card-val {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.oxoo-cust-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.oxoo-cust-trend-badge.up {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.oxoo-cust-trend-badge.down {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.oxoo-cust-card-subtitle {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.oxoo-cust-wave {
+  width: 100%;
+  height: 38px;
+  margin-top: 4px;
+}
+
+/* Filter Toolbar */
+.oxoo-cust-toolbar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oxoo-cust-toolbar-row1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.oxoo-cust-search-wrap {
+  flex: 1;
+  min-width: 280px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.oxoo-cust-search-icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.oxoo-cust-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.oxoo-cust-search-input:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.oxoo-cust-select {
+  padding: 9.5px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.oxoo-cust-select:hover {
+  border-color: #cbd5e1;
+}
+
+.oxoo-cust-select:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+.oxoo-cust-toolbar-row2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.oxoo-cust-toolbar-row2-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.oxoo-cust-date-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-cust-date-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.oxoo-cust-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: #f1f5f9;
+  color: #0284c7;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-cust-clear-btn:hover {
+  background: #e0f2fe;
+}
+
+/* 14-Column Customers Table */
+.oxoo-cust-table-wrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.oxoo-cust-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12.5px;
+}
+
+.oxoo-cust-table thead th {
+  background: #f8fafc;
+  padding: 12px 14px;
+  color: #475569;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.oxoo-cust-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.oxoo-cust-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.oxoo-cust-table tbody tr.row-selected {
+  background: #f0f9ff;
+}
+
+.oxoo-cust-table td {
+  padding: 13px 14px;
+  color: #334155;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.oxoo-cust-id-cell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.oxoo-cust-company-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-cust-logo-sq {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.oxoo-cust-company-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.oxoo-cust-contact-name {
+  color: #334155;
+  font-weight: 500;
+}
+
+.oxoo-cust-email-link {
+  color: #475569;
+  text-decoration: none;
+}
+
+.oxoo-cust-email-link:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
+.oxoo-cust-phone-txt {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  color: #475569;
+}
+
+.oxoo-cust-country-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+/* Status Badges */
+.oxoo-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+}
+
+.oxoo-badge-pill.active {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+}
+
+.oxoo-badge-pill.trialing {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+}
+
+.oxoo-badge-pill.pending {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef3c7;
+}
+
+.oxoo-badge-pill.past-due {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #ffedd5;
+}
+
+.oxoo-badge-pill.suspended {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+}
+
+.oxoo-badge-pill.cancelled {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.oxoo-badge-pill.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.oxoo-badge-pill.paid {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+}
+
+.oxoo-badge-pill.failed {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+}
+
+.oxoo-badge-pill.refunded {
+  background: #fef2f2;
+  color: #e11d48;
+  border: 1px solid #ffe4e6;
+}
+
+/* Actions in Table */
+.oxoo-cust-view-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0284c7;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-cust-view-btn:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+.oxoo-cust-more-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oxoo-cust-more-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Pagination Bar */
+.oxoo-cust-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.oxoo-cust-pag-info {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.oxoo-cust-pag-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.oxoo-cust-pag-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oxoo-cust-pag-btn:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.oxoo-cust-pag-btn.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.oxoo-cust-pag-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   CUSTOMER DETAILS DRAWER (MATCHING RIGHT-SIDE PANEL IN SCREENSHOT)
+   ========================================================================== */
+.oxoo-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 9998;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.oxoo-drawer-panel {
+  width: 540px;
+  max-width: 100vw;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: -10px 0 30px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 9999;
+  animation: slideDrawer 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDrawer {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.oxoo-drawer-header {
+  padding: 20px 24px 14px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.oxoo-drawer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-drawer-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.oxoo-drawer-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-drawer-company-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.oxoo-drawer-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.oxoo-drawer-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-drawer-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Drawer Sub-tabs */
+.oxoo-drawer-tabs-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  overflow-x: auto;
+  gap: 8px;
+}
+
+.oxoo-drawer-tab-btn {
+  padding: 12px 10px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.oxoo-drawer-tab-btn:hover {
+  color: #0f172a;
+}
+
+.oxoo-drawer-tab-btn.active {
+  color: #0284c7;
+}
+
+.oxoo-drawer-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0284c7;
+  border-radius: 2px 2px 0 0;
+}
+
+/* Drawer Content Scrollable Body */
+.oxoo-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #fcfdfe;
+}
+
+/* Drawer Section Block */
+.oxoo-drawer-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.oxoo-drawer-sec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.oxoo-drawer-sec-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.oxoo-drawer-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #0284c7;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.oxoo-drawer-edit-btn:hover {
+  text-decoration: underline;
+}
+
+/* Company Info Grid inside Drawer */
+.oxoo-drawer-comp-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.oxoo-drawer-comp-card-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  background: #0284c7;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.oxoo-drawer-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.oxoo-drawer-info-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+}
+
+.oxoo-drawer-info-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-drawer-info-val {
+  color: #0f172a;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+/* Contact Info List */
+.oxoo-drawer-contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oxoo-drawer-contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.oxoo-drawer-contact-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.oxoo-drawer-contact-text {
+  flex: 1;
+}
+
+.oxoo-drawer-verified-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #059669;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* Account Actions Buttons Row */
+.oxoo-drawer-actions-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.oxoo-act-btn {
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-act-btn.activate {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.oxoo-act-btn.activate:hover {
+  background: #d1fae5;
+}
+
+.oxoo-act-btn.suspend {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.oxoo-act-btn.suspend:hover {
+  background: #fef3c7;
+}
+
+.oxoo-act-btn.close {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.oxoo-act-btn.close:hover {
+  background: #dc2626;
+}
+
+/* Subscription Details Card inside Drawer */
+.oxoo-sub-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oxoo-sub-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oxoo-sub-plan-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-sub-icon-sq {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-sub-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  font-size: 11.5px;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+/* Payment Card inside Drawer */
+.oxoo-inv-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.oxoo-inv-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oxoo-inv-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-inv-amount-tag {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.oxoo-download-inv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0284c7;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: fit-content;
+  align-self: flex-end;
+}
+
+.oxoo-download-inv-btn:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+/* =============================================================
+   OXOO 360 — SUBSCRIPTIONS MANAGEMENT SUITE & FOLLOW-UP PANEL
+   ============================================================= */
+
+/* 1. Summary Cards Grid */
+.oxoo-sub-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .oxoo-sub-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .oxoo-sub-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.oxoo-sub-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.oxoo-sub-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.oxoo-sub-card.selected {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.oxoo-sub-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.oxoo-sub-card-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-sub-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.oxoo-sub-card-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.oxoo-sub-card-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.oxoo-sub-card-trend {
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.oxoo-sub-card-trend.up {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.oxoo-sub-card-trend.down {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.oxoo-sub-card-subtitle {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.oxoo-sub-sparkline-wrap {
+  height: 38px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* 2. Filter Toolbar */
+.oxoo-sub-toolbar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+}
+
+.oxoo-sub-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.oxoo-sub-search-wrap {
+  flex: 1;
+  min-width: 240px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.oxoo-sub-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+}
+
+.oxoo-sub-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border-radius: 9px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+  transition: all 0.2s;
+}
+
+.oxoo-sub-search-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.oxoo-sub-select {
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid #cbd5e1;
+  font-size: 12.5px;
+  color: #334155;
+  background: #ffffff;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-sub-select:focus {
+  border-color: #0284c7;
+}
+
+.oxoo-sub-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0284c7;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.oxoo-sub-clear-btn:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+/* 3. Subscriptions 13-Column Table */
+.oxoo-sub-table-wrap,
+.oxoo-sub-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.oxoo-sub-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.oxoo-sub-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.oxoo-sub-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.oxoo-sub-table tr:hover td {
+  background: #f8fafc;
+}
+
+.oxoo-days-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.oxoo-days-badge.amber {
+  background: #fffbeb;
+  color: #d97706;
+  border-color: #fde68a;
+}
+
+.oxoo-days-badge.blue {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.oxoo-days-badge.red {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.oxoo-days-badge.grey {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.oxoo-autorenew-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.oxoo-autorenew-pill.on {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.oxoo-autorenew-pill.off {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.oxoo-manage-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-manage-btn:hover {
+  background: #f8fafc;
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+/* Subscriptions Pagination Bar */
+.oxoo-sub-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.oxoo-sub-page-info {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-sub-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oxoo-sub-page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.oxoo-sub-page-btn:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.oxoo-sub-page-btn.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+}
+
+.oxoo-sub-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.oxoo-sub-limit-select {
+  height: 32px;
+  padding: 0 10px;
+  margin-left: 8px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.oxoo-sub-limit-select:hover,
+.oxoo-sub-limit-select:focus {
+  border-color: #0284c7;
+}
+
+/* 4. Support & Sales Follow-Up Panel */
+.oxoo-followup-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.oxoo-followup-header {
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oxoo-followup-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-followup-bell-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-followup-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.oxoo-followup-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oxoo-followup-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.oxoo-followup-count-pill {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.oxoo-followup-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.oxoo-followup-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.oxoo-followup-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.oxoo-followup-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.oxoo-followup-table tr:hover td {
+  background: #f8fafc;
+}
+
+.oxoo-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0284c7;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.oxoo-call-btn:hover {
+  background: #f0fdf4;
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+/* 4.1 Generic Data Table & Table Wrap */
+.oxoo-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.oxoo-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.oxoo-data-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.oxoo-data-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.oxoo-data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.oxoo-data-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* 5. Timeline Stepper inside Details Drawer */
+.oxoo-timeline-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  margin-top: 10px;
+  padding-left: 20px;
+}
+
+.oxoo-timeline-stepper::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.oxoo-timeline-node {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.oxoo-timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.oxoo-timeline-dot.completed {
+  border-color: #10b981;
+  background: #10b981;
+  color: #ffffff;
+}
+
+.oxoo-timeline-dot.active {
+  border-color: #f59e0b;
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.oxoo-timeline-dot.overdue {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.oxoo-timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.oxoo-timeline-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.oxoo-timeline-time {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* 6. Email Row in Drawer */
+.oxoo-email-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.oxoo-email-row:hover {
+  background: #f1f5f9;
+}
+
+/* Filter toolbar button */
+.oxoo-sub-btn-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oxoo-sub-btn-filter:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* 7. Full-Page / Slide-Over Subscription Details Drawer */
+.oxoo-sub-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 9999;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.oxoo-sub-drawer {
+  width: 100%;
+  max-width: 460px;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.oxoo-sub-drawer-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.oxoo-sub-drawer-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-sub-drawer-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #0284c7;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-sub-drawer-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.oxoo-sub-drawer-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.oxoo-sub-drawer-tabs {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafafa;
+  overflow-x: auto;
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.oxoo-sub-drawer-tab {
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.oxoo-sub-drawer-tab:hover {
+  color: #0284c7;
+}
+
+.oxoo-sub-drawer-tab.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+  background: #ffffff;
+}
+
+.oxoo-sub-drawer-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Subscription Info Card */
+.oxoo-sub-info-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.oxoo-sub-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.oxoo-sub-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.oxoo-sub-info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.oxoo-sub-info-row .label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.oxoo-sub-info-row .val {
+  color: #0f172a;
+  text-align: right;
+}
+
+/* Quick Action Buttons Row */
+.oxoo-sub-actions-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.oxoo-btn-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.oxoo-btn-action.suspend {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.oxoo-btn-action.suspend:hover {
+  background: #dcfce7;
+}
+
+.oxoo-btn-action.cancel {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.oxoo-btn-action.cancel:hover {
+  background: #fee2e2;
+}
+
+.oxoo-btn-action.autorenew {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.oxoo-btn-action.autorenew:hover {
+  background: #dbeafe;
+}
+
+/* Detailed Vertical Stepper */
+.oxoo-sub-timeline-card,
+.oxoo-sub-emails-card,
+.oxoo-sub-payments-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.oxoo-timeline-step {
+  display: flex;
+  gap: 12px;
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.oxoo-timeline-step:last-child {
+  padding-bottom: 0;
+}
+
+.oxoo-timeline-step .oxoo-timeline-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.oxoo-timeline-step .oxoo-timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  z-index: 2;
+  position: static;
+}
+
+.oxoo-timeline-step.completed .oxoo-timeline-dot {
+  border-color: #10b981;
+  background: #10b981;
+  color: #ffffff;
+}
+
+.oxoo-timeline-step.warning .oxoo-timeline-dot {
+  border-color: #f59e0b;
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.oxoo-timeline-step.scheduled .oxoo-timeline-dot {
+  border-color: #3b82f6;
+  background: #ffffff;
+  color: #3b82f6;
+}
+
+.oxoo-timeline-step.pending .oxoo-timeline-dot {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.oxoo-timeline-step .oxoo-timeline-line {
+  width: 2px;
+  flex: 1;
+  background: #e2e8f0;
+  margin-top: 2px;
+  margin-bottom: -10px;
+}
+
+.oxoo-timeline-step.completed .oxoo-timeline-line {
+  background: #10b981;
+}
+
+.oxoo-timeline-step .oxoo-timeline-content {
+  flex: 1;
+}
+
+.oxoo-timeline-step .oxoo-timeline-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.oxoo-timeline-step .oxoo-timeline-time {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+/* Emails in Drawer */
+.oxoo-sub-emails-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.oxoo-email-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxoo-email-icon.sent { background: #dcfce7; color: #15803d; }
+.oxoo-email-icon.scheduled { background: #dbeafe; color: #1d4ed8; }
+.oxoo-email-icon.pending { background: #fef3c7; color: #b45309; }
+
+.oxoo-email-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.oxoo-email-badge.sent { background: #dcfce7; color: #15803d; }
+.oxoo-email-badge.scheduled { background: #dbeafe; color: #1d4ed8; }
+.oxoo-email-badge.pending { background: #fef3c7; color: #b45309; }
+
+/* -------------------------------------------------------------
+   PRODUCTS & PLANS MANAGEMENT STYLES (OXOO 360)
+   ------------------------------------------------------------- */
+.oxoo-prod-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.oxoo-prod-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.oxoo-prod-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.oxoo-prod-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  flex-shrink: 0;
+}
+
+.oxoo-prod-header-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.oxoo-prod-header-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+/* 4 Summary Cards Grid */
+.oxoo-prod-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .oxoo-prod-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .oxoo-prod-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.oxoo-prod-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.oxoo-prod-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  border-color: #cbd5e1;
+}
+
+.oxoo-prod-card.active-kpi {
+  border-color: #2563eb;
+  background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.oxoo-prod-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.oxoo-prod-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oxoo-prod-card-icon.blue { background: #eff6ff; color: #2563eb; }
+.oxoo-prod-card-icon.purple { background: #faf5ff; color: #9333ea; }
+.oxoo-prod-card-icon.green { background: #f0fdf4; color: #16a34a; }
+.oxoo-prod-card-icon.orange { background: #fff7ed; color: #ea580c; }
+
+.oxoo-prod-card-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.oxoo-prod-card-pill.up { background: #dcfce7; color: #15803d; }
+.oxoo-prod-card-pill.down { background: #fee2e2; color: #b91c1c; }
+.oxoo-prod-card-pill.neutral { background: #f1f5f9; color: #475569; }
+
+.oxoo-prod-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+}
+
+.oxoo-prod-card-num-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.oxoo-prod-card-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.oxoo-prod-card-desc {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.oxoo-prod-spark-wrap {
+  width: 90px;
+  height: 34px;
+}
+
+/* Nav Sub-Tabs & Actions Bar */
+.oxoo-prod-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.oxoo-prod-subtabs {
+  display: inline-flex;
+  background: #e2e8f0;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+}
+
+.oxoo-prod-subtab-btn {
+  border: none;
+  background: transparent;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oxoo-prod-subtab-btn:hover {
+  color: #0f172a;
+}
+
+.oxoo-prod-subtab-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.oxoo-prod-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oxoo-prod-addplan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.oxoo-prod-addplan-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.oxoo-prod-addprod-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.oxoo-prod-addprod-btn:hover {
+  opacity: 0.95;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+/* Filter Bar */
+.oxoo-prod-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  flex-wrap: wrap;
+}
+
+.oxoo-prod-search-input-wrap {
+  flex: 1;
+  min-width: 260px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.oxoo-prod-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.oxoo-prod-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.oxoo-prod-search-input:focus {
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+
+.oxoo-prod-filter-select {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #334155;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+}
+
+.oxoo-prod-filter-select:focus {
+  border-color: #3b82f6;
+}
+
+.oxoo-prod-clear-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.oxoo-prod-clear-btn:hover {
+  background: #eff6ff;
+}
+
+/* Products and Plans Tables */
+.oxoo-prod-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.oxoo-prod-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.oxoo-prod-table thead th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.oxoo-prod-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.oxoo-prod-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.oxoo-prod-table tbody td {
+  padding: 14px 16px;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.oxoo-prod-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-prod-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.oxoo-prod-name-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13.5px;
+  line-height: 1.2;
+}
+
+.oxoo-prod-name-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.oxoo-prod-code-badge {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.oxoo-module-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  margin: 1px 3px 1px 0;
+  white-space: nowrap;
+}
+
+.oxoo-module-more {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 6px;
+  margin-left: 2px;
+}
+
+.oxoo-status-dot-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.oxoo-status-dot-wrap.active { color: #16a34a; }
+.oxoo-status-dot-wrap.draft { color: #d97706; }
+.oxoo-status-dot-wrap.inactive { color: #ef4444; }
+.oxoo-status-dot-wrap.archived { color: #64748b; }
+
+.oxoo-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.oxoo-status-dot.active { background: #16a34a; }
+.oxoo-status-dot.draft { background: #d97706; }
+.oxoo-status-dot.inactive { background: #ef4444; }
+.oxoo-status-dot.archived { background: #64748b; }
+
+/* Table Action Buttons */
+.oxoo-table-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oxoo-btn-action-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oxoo-btn-action-view:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.oxoo-btn-action-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oxoo-btn-action-edit:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.oxoo-btn-action-config {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oxoo-btn-action-config:hover {
+  background: #f8fafc;
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+/* Drawers & Modals */
+.oxoo-prod-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.oxoo-prod-drawer-modal {
+  background: #ffffff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+  animation: oxooModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes oxooModalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.oxoo-prod-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oxoo-prod-drawer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oxoo-prod-drawer-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.oxoo-prod-drawer-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.oxoo-prod-drawer-sub {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.oxoo-prod-drawer-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.oxoo-prod-drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Icon Palette Selector */
+.oxoo-icon-palette {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0 14px 0;
+}
+
+.oxoo-icon-palette-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oxoo-icon-palette-btn.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  transform: scale(1.05);
+}
+
+/* Wizard Steps (Add Plan & Add Product) */
+.oxoo-wizard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 24px;
+  background: #f8fafc;
+  overflow-x: auto;
+}
+
+.oxoo-wizard-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.oxoo-wizard-step-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.oxoo-wizard-step-item.active .oxoo-wizard-step-circle {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.oxoo-wizard-step-item.completed .oxoo-wizard-step-circle {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.oxoo-wizard-step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.oxoo-wizard-step-item.active .oxoo-wizard-step-label {
+  color: #0f172a;
+}
+
+/* Configure Plan Screen / Drawer */
+.oxoo-config-subtabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 24px;
+  background: #ffffff;
+  overflow-x: auto;
+}
+
+.oxoo-config-subtab {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.oxoo-config-subtab:hover {
+  color: #0f172a;
+}
+
+.oxoo-config-subtab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.oxoo-price-highlight-card {
+  background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.oxoo-price-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.oxoo-price-amount {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.oxoo-price-cycle {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   MODULES 1-4 COMPONENT STYLES
+   ========================================================================== */
+
+/* Service Key Masked Badge with Copy */
+.oxoo-service-key-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: #475569;
+}
+
+.oxoo-service-key-pill button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.oxoo-service-key-pill button:hover {
+  color: #0284c7;
+}
+
+/* Role Badges */
+.oxoo-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+.oxoo-role-badge.super-admin {
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
+.oxoo-role-badge.finance-admin {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.oxoo-role-badge.support-staff {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.oxoo-role-badge.sales-staff {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* 4-Step Vertical Payment Timeline */
+.oxoo-payment-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  padding-left: 28px;
+}
+.oxoo-payment-timeline::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #e2e8f0;
+}
+.oxoo-payment-timeline-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.oxoo-payment-timeline-dot {
+  position: absolute;
+  left: -28px;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 2px solid #cbd5e1;
+  color: #cbd5e1;
+}
+.oxoo-payment-timeline-dot.completed {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+.oxoo-payment-timeline-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.oxoo-payment-timeline-time {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Support Tickets Conversation Thread */
+.oxoo-ticket-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px 6px;
+}
+.oxoo-chat-bubble {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.oxoo-chat-bubble.customer {
+  align-self: flex-start;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+.oxoo-chat-bubble.staff {
+  align-self: flex-end;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+.oxoo-chat-bubble.internal-note {
+  align-self: center;
+  width: 92%;
+  max-width: 92%;
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  color: #854d0e;
+}
+.oxoo-chat-bubble-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.oxoo-chat-bubble.customer .oxoo-chat-bubble-header {
+  color: #64748b;
+}
+.oxoo-chat-bubble.staff .oxoo-chat-bubble-header {
+  color: #2563eb;
+}
+.oxoo-chat-bubble.internal-note .oxoo-chat-bubble-header {
+  color: #a16207;
+}
+
+/* Stepper for Add User / Add App */
+.oxoo-drawer-stepper {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 12px 24px;
+  gap: 16px;
+  overflow-x: auto;
+}
+.oxoo-drawer-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+.oxoo-drawer-step-item.active {
+  color: #0284c7;
+  font-weight: 700;
+}
+.oxoo-drawer-step-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+.oxoo-drawer-step-item.active .oxoo-drawer-step-badge {
+  background: #0284c7;
+  color: #fff;
+}

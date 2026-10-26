@@ -36,17 +36,17 @@ export const ALL_APPS_CATEGORIES = [
   },
   {
     id: 'websites',
-    name: 'Websites',
-    headerTitle: 'WEBSITES',
+    name: 'Websites & Apps',
+    headerTitle: 'WEBSITES & APPS',
     underlineColor: '#0891b2',
     titleColor: '#0891b2',
     apps: [
-      { name: 'Website Builder', desc: 'Build and launch high-impact websites.', icon: '/apps/logo-website.png?v=clean', slug: 'website-builder', bgColor: '#eff6ff' },
-      { name: 'eCommerce', desc: 'Sell your products online globally.', icon: '/apps/logo-ecommerce.png?v=clean', slug: 'ecommerce', bgColor: '#fdf2f8' },
-      { name: 'Events', desc: 'Organize virtual and in-person events.', icon: '/apps/logo-planning.png?v=clean', slug: 'events', bgColor: '#fff1f2' },
-      { name: 'Blog', desc: 'Publish SEO articles and company news.', icon: '/apps/logo-knowledge.png?v=clean', slug: 'blog', bgColor: '#faf5ff' },
-      { name: 'eLearning', desc: 'Create video courses and certifications.', icon: '/apps/logo-knowledge.png?v=clean', slug: 'elearning', bgColor: '#f0f9ff' },
-      { name: 'Forum', desc: 'Build community discussions and Q&A.', icon: '/apps/logo-discuss.png?v=clean', slug: 'forum', bgColor: '#ecfdf5' }
+      { name: 'AI Website Builder', desc: 'AI-powered drag-and-drop website generation.', icon: '/apps/logo-website.png?v=clean', slug: 'ai-website-builder', bgColor: '#eff6ff' },
+      { name: 'Android & iOS Apps', desc: 'Native and hybrid mobile applications.', icon: '/apps/logo-studio.png?v=clean', slug: 'android-ios-apps', bgColor: '#ecfdf5' },
+      { name: 'eCommerce Websites', desc: 'High-converting online store platforms.', icon: '/apps/logo-ecommerce.png?v=clean', slug: 'ecommerce-websites', bgColor: '#fdf2f8' },
+      { name: '3D Websites', desc: 'Interactive 3D WebGL digital experiences.', icon: '/apps/logo-website.png?v=clean', slug: '3d-websites', bgColor: '#faf5ff' },
+      { name: 'AI Chatbots', desc: 'Custom trained AI chatbots & assistants.', icon: '/apps/logo-ai.png?v=clean', slug: 'ai-chatbots', bgColor: '#f0f9ff' },
+      { name: 'Web Apps & Other', desc: 'Scalable custom web applications & SaaS.', icon: '/apps/logo-documents.png?v=clean', slug: 'web-apps-other', bgColor: '#fff7ed' }
     ]
   },
   {
@@ -95,18 +95,18 @@ export const ALL_APPS_CATEGORIES = [
     ]
   },
   {
-    id: 'services',
-    name: 'Services',
-    headerTitle: 'SERVICES',
+    id: 'whatsapp-chat-ai',
+    name: 'WhatsApp Chat AI',
+    headerTitle: 'WHATSAPP CHAT AI',
     underlineColor: '#059669',
     titleColor: '#059669',
     apps: [
-      { name: 'Project', desc: 'Plan sprints, milestones and tasks.', icon: '/apps/logo-project.png?v=clean', slug: 'project', bgColor: '#f5f3ff' },
-      { name: 'Timesheets', desc: 'Track billable hours and team time.', icon: '/apps/logo-timesheets.png?v=clean', slug: 'timesheets', bgColor: '#fff7ed' },
-      { name: 'Planning', desc: 'Shift scheduling and resource capacity.', icon: '/apps/logo-planning.png?v=clean', slug: 'planning', bgColor: '#ecfdf5' },
-      { name: 'Appointments', desc: 'Online meeting bookings and calendar.', icon: '/apps/logo-planning.png?v=clean', slug: 'appointments', bgColor: '#fdf2f8' },
-      { name: 'Live Chat', desc: 'Real-time website visitor chat widget.', icon: '/apps/logo-discuss.png?v=clean', slug: 'live-chat', bgColor: '#eff6ff' },
-      { name: 'Helpdesk', desc: 'Customer support tickets and SLA tracking.', icon: '/apps/logo-helpdesk.png?v=clean', slug: 'helpdesk', bgColor: '#fffbeb' }
+      { name: 'WhatsApp AI Inbox', desc: 'Shared team inbox powered by AI agents.', icon: '/apps/logo-discuss.png?v=clean', slug: 'whatsapp-ai-inbox', bgColor: '#ecfdf5' },
+      { name: 'WhatsApp Marketing & Broadcasts', desc: 'Bulk campaign broadcasts & analytics.', icon: '/apps/logo-email-marketing.png?v=clean', slug: 'whatsapp-marketing-broadcasts', bgColor: '#f0fdf4' },
+      { name: 'WhatsApp Flow Builder', desc: 'Visual no-code automated message flows.', icon: '/apps/logo-planning.png?v=clean', slug: 'whatsapp-flow-builder', bgColor: '#eff6ff' },
+      { name: 'WhatsApp Commerce', desc: 'Catalogs, in-chat payments & orders.', icon: '/apps/logo-ecommerce.png?v=clean', slug: 'whatsapp-commerce', bgColor: '#fdf2f8' },
+      { name: 'WhatsApp Booking & Reminders', desc: 'Automated appointments & reminder alerts.', icon: '/apps/logo-planning.png?v=clean', slug: 'whatsapp-booking-reminders', bgColor: '#fffbeb' },
+      { name: 'WhatsApp Integrations & Settings', desc: 'Meta Cloud API, webhooks & CRM sync.', icon: '/apps/logo-studio.png?v=clean', slug: 'whatsapp-integrations-settings', bgColor: '#f5f3ff' }
     ]
   },
   {

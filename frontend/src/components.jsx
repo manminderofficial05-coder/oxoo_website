@@ -4,10 +4,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight, Search, ChevronDown, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
   LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare,
-  Users, Package
+  Users, Package, ExternalLink
 } from 'lucide-react';
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
+
+// Configured HRMS Employee Login URL from environment configuration
+const HRMS_EMPLOYEE_LOGIN_URL =
+  import.meta.env.VITE_HRMS_EMPLOYEE_LOGIN_URL || 'https://oxoo-finance.onrender.com/';
 
 export function Logo({ light = false, withTagline = false, stacked = false, iconOnly = false, className = '' }) {
   let src = '/oxoo-logo.png';
@@ -350,35 +354,19 @@ export function Header() {
             Pricing
           </NavLink>
 
+          <NavLink
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            to="/help"
+            onMouseEnter={() => {
+              if (!appsPinned) setOpenApps(false);
+            }}
+          >
+            Help
+          </NavLink>
         </nav>
 
         {/* Right Action Items: Customer Login & Admin Login OR Logged-in Profile */}
         <div className="nav-actions">
-          {/* Quick Launch Buttons: HRMS (Finance Employee Login) & Inventory */}
-          <a
-            href="https://oxoo-finance.onrender.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-app-pill nav-app-pill-hrms"
-            title="HRMS Employee Login (Oxoo Finance Suite)"
-          >
-            <Users size={16} className="nav-app-pill-icon" />
-            <span>HRMS</span>
-          </a>
-
-          <a
-            href="/demo/supply-chain"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-app-pill nav-app-pill-inventory"
-            title="Launch Inventory Suite"
-          >
-            <Package size={16} className="nav-app-pill-icon" />
-            <span>Inventory</span>
-          </a>
-
-          <div className="nav-actions-divider" />
-
           {currentUser ? (
             <div className="nav-profile-dropdown">
               <button
@@ -674,11 +662,14 @@ export function Header() {
               </div>
             )}
 
+
+
             {[
               ['Home', '/'],
               ['All Apps & Services', '/services'],
               ['Industries We Serve', '/industries'],
               ['Pricing Plans', '/pricing'],
+              ['Help & Support', '/help'],
               ...(currentUser
                 ? [
                     [currentUser.role === 'admin' ? 'Admin Console' : 'Customer Dashboard', currentUser.role === 'admin' ? '/admin' : '/dashboard']
@@ -749,9 +740,10 @@ export function Footer() {
         <div>
           <h4>Company & Plans</h4>
           <Link to="/pricing">Pricing Plans</Link>
+          <Link to="/help">Help & Support</Link>
+          <Link to="/help-form">Submit a Ticket</Link>
           <Link to="/demo">Request Full Demo</Link>
-          <Link to="/contact">Book a Demo</Link>
-          <Link to="/contact">Get a Quote</Link>
+          <Link to="/contact">Contact Sales</Link>
         </div>
       </div>
 
