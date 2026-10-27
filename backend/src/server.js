@@ -9,7 +9,7 @@ const crypto = require('crypto');
 
 const { pool, query, initDb } = require('./db');
 const { categories: fallbackCategories, services: fallbackServices } = require('./seedData');
-const { sendOtpEmail, verifyOtp, sendInvoiceAndCredentialsEmail, sendPasswordResetEmail } = require('./emailService');
+const { sendOtpEmail, verifyOtp, sendInvoiceAndCredentialsEmail, sendPasswordResetEmail, sendAdminSubscriptionDueEmail } = require('./emailService');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -816,6 +816,24 @@ app.post('/api/customer/setup-password', async (req, res, next) => {
       console.error('[setup-password] Error sending credentials & invoice email:', eErr.message);
     }
 
+    // Send admin notification about newly activated customer & subscription schedule
+    try {
+      await sendAdminSubscriptionDueEmail({
+        customerName: customerName || companyName || 'Customer',
+        companyName: companyName || 'My Organization',
+        customerEmail: normEmail,
+        planName: planName || 'Standard Pack',
+        dueDate: billingCycle === 'yearly' ? '12 Months (Annual)' : '30 Days',
+        amount: amount || 0,
+        daysLeft: billingCycle === 'yearly' ? 365 : 30,
+        subscriptionId: effectiveStorageId,
+        isRenewal: false,
+        status: 'Active (New Customer)'
+      });
+    } catch (adminErr) {
+      console.error('[setup-password] Error notifying admin of new subscription:', adminErr.message);
+    }
+
     await logAudit('Customer Account Password Configured', `${effectiveStorageId} (${normEmail})`, normEmail, req.ip, {
       storageId: effectiveStorageId,
       orderNumber,
@@ -838,6 +856,414 @@ app.post('/api/customer/setup-password', async (req, res, next) => {
   } catch (err) {
     console.error('Error in /api/customer/setup-password:', err.message);
     res.status(500).json({ success: false, message: err.message || 'Failed to setup password.' });
+  }
+});
+
+// -------------------------------------------------------------
+// Check If Email Already Owns Software (Duplicate Purchase Prevention)
+// -------------------------------------------------------------
+app.get('/api/customer/check-email-software', async (req, res, next) => {
+  try {
+    const email = (req.query.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.json({ registered: false, ownedApps: [], ownedAppIds: [] });
+    }
+
+    let registered = false;
+    const ownedAppsSet = new Set();
+    const ownedAppIds = [];
+
+    if (isDbConnected) {
+      let matchedCompany = null;
+
+      // 1. Check if user is registered in users table
+      const userRes = await query(`SELECT id, email, organization FROM users WHERE LOWER(email) = $1`, [email]);
+      if (userRes.rows.length > 0) {
+        registered = true;
+        matchedCompany = userRes.rows[0].organization;
+      }
+
+      // 2. Check customer record
+      const custRes = await query(`SELECT selected_apps, company_name FROM customers WHERE LOWER(email) = $1`, [email]);
+      if (custRes.rows.length > 0) {
+        registered = true;
+        custRes.rows.forEach(c => {
+          if (!matchedCompany && c.company_name) matchedCompany = c.company_name;
+          if (c.selected_apps) {
+            const arr = Array.isArray(c.selected_apps) ? c.selected_apps : (typeof c.selected_apps === 'string' ? JSON.parse(c.selected_apps) : []);
+            arr.forEach(a => ownedAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
+          }
+        });
+      }
+
+      // 3. Check orders table
+      const ordRes = await query(`SELECT selected_apps, company_name, status FROM orders WHERE LOWER(customer_email) = $1`, [email]);
+      if (ordRes.rows.length > 0) {
+        ordRes.rows.forEach(o => {
+          if (!matchedCompany && o.company_name) matchedCompany = o.company_name;
+          if (o.status === 'Paid') {
+            registered = true;
+          }
+          if (o.selected_apps) {
+            const arr = Array.isArray(o.selected_apps) ? o.selected_apps : (typeof o.selected_apps === 'string' ? JSON.parse(o.selected_apps) : []);
+            arr.forEach(a => ownedAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
+          }
+        });
+      }
+
+      // 4. Check active subscriptions via matched company or organization
+      if (matchedCompany) {
+        const subRes = await query(
+          `SELECT active_apps, plan FROM subscriptions WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'`,
+          [matchedCompany, matchedCompany]
+        );
+        subRes.rows.forEach(s => {
+          if (s.active_apps) {
+            const arr = Array.isArray(s.active_apps) ? s.active_apps : (typeof s.active_apps === 'string' ? JSON.parse(s.active_apps) : []);
+            arr.forEach(a => ownedAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
+          }
+        });
+
+        const orgRes = await query(
+          `SELECT active_apps, plan FROM organizations WHERE LOWER(name) = LOWER($1) OR name ILIKE '%' || $2 || '%'`,
+          [matchedCompany, matchedCompany]
+        );
+        orgRes.rows.forEach(og => {
+          if (og.active_apps) {
+            const arr = Array.isArray(og.active_apps) ? og.active_apps : (typeof og.active_apps === 'string' ? JSON.parse(og.active_apps) : []);
+            arr.forEach(a => ownedAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
+          }
+        });
+      }
+    }
+
+    const ownedApps = Array.from(ownedAppsSet);
+    ownedApps.forEach(str => {
+      const s = String(str).toLowerCase();
+      if (s.includes('sale') && !ownedAppIds.includes('sales')) ownedAppIds.push('sales');
+      if ((s.includes('supply') || s.includes('chain') || s.includes('inventory')) && !ownedAppIds.includes('supply-chain')) ownedAppIds.push('supply-chain');
+      if ((s.includes('human') || s.includes('resource') || s.includes('hr')) && !ownedAppIds.includes('human-resources')) {
+        ownedAppIds.push('human-resources');
+        if (!ownedAppIds.includes('hrms')) ownedAppIds.push('hrms');
+      }
+      if ((s.includes('productivity') || s.includes('ai')) && !ownedAppIds.includes('productivity')) ownedAppIds.push('productivity');
+      if ((s.includes('finance') || s.includes('account')) && !ownedAppIds.includes('finance')) ownedAppIds.push('finance');
+      if (s.includes('market') && !ownedAppIds.includes('marketing')) ownedAppIds.push('marketing');
+    });
+
+    if (ownedApps.length > 0 || ownedAppIds.length > 0) {
+      registered = true;
+    }
+
+    res.json({
+      registered,
+      ownedApps,
+      ownedAppIds
+    });
+  } catch (err) {
+    console.error('Error in /api/customer/check-email-software:', err.message);
+    res.json({ registered: false, ownedApps: [], ownedAppIds: [] });
+  }
+});
+
+// -------------------------------------------------------------
+// -------------------------------------------------------------
+// Customer Dashboard Subscription Renewal: Step 1: Create Payment Order
+// -------------------------------------------------------------
+app.post('/api/customer/renew-order', async (req, res, next) => {
+  try {
+    const {
+      email,
+      companyName,
+      customerName,
+      customerPhone,
+      softwareId,
+      softwareName = 'Sales Software',
+      billingCycle = 'monthly',
+      amount
+    } = req.body || {};
+
+    const normEmail = (email || '').trim().toLowerCase();
+    const effectiveCompany = companyName || 'My Organization';
+    const curYear = new Date().getFullYear();
+    const orderNumber = `OXOO-RNW-${curYear}-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+
+    const isYearly = billingCycle === 'yearly';
+    const basePrice = isYearly ? 560 * 12 : 740;
+    const tax = basePrice * 0.18;
+    const computedTotal = parseFloat((basePrice + tax).toFixed(2));
+    const safeAmount = amount ? parseFloat(Number(amount).toFixed(2)) : computedTotal;
+    const safeSubtotal = parseFloat((safeAmount / 1.18).toFixed(2));
+    const safeTax = parseFloat((safeAmount - safeSubtotal).toFixed(2));
+    const amountPaise = Math.round(safeAmount * 100);
+
+    const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tqu6q5BYPuxhzd';
+    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'VzzE4JIz1vaKtWJkAqurKwT8';
+
+    let razorpayOrderId = null;
+    try {
+      const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
+      const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: amountPaise,
+          currency: 'INR',
+          receipt: orderNumber.slice(-40),
+          notes: {
+            renewal: 'true',
+            software: softwareName,
+            billingCycle,
+            companyName: effectiveCompany,
+            customerEmail: normEmail
+          }
+        })
+      });
+      const rzpData = await rzpRes.json();
+      if (rzpData && rzpData.id) {
+        razorpayOrderId = rzpData.id;
+      }
+    } catch (rzpErr) {
+      console.warn('[Razorpay Renewal] Order creation notice:', rzpErr.message);
+    }
+
+    if (isDbConnected) {
+      try {
+        await query(
+          `INSERT INTO orders (order_number, company_name, customer_email, customer_name, customer_phone, plan_name, billing_cycle, subtotal, tax_amount, total_amount, currency, status, selected_apps)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'INR', 'Payment Pending', $11)
+           ON CONFLICT (order_number) DO NOTHING`,
+          [
+            orderNumber,
+            effectiveCompany,
+            normEmail,
+            customerName || effectiveCompany,
+            customerPhone || '',
+            `Single Software (Renewal)`,
+            billingCycle,
+            safeSubtotal,
+            safeTax,
+            safeAmount,
+            JSON.stringify([softwareName])
+          ]
+        );
+      } catch (dbErr) {
+        console.warn('[Renewal Order DB] notice:', dbErr.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      orderNumber,
+      razorpayOrderId,
+      razorpayKeyId: RAZORPAY_KEY_ID,
+      amount: safeAmount,
+      amountPaise,
+      currency: 'INR',
+      billingCycle,
+      softwareName
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------------------------------------------------
+// Customer Dashboard Subscription Renewal: Step 2: Verify Payment & Renew
+// -------------------------------------------------------------
+app.post('/api/customer/renew-subscription', async (req, res, next) => {
+  try {
+    const {
+      email,
+      companyName,
+      planName = 'Standard Pack',
+      billingCycle = 'monthly',
+      softwareId,
+      softwareName,
+      paymentMethod = 'Razorpay (UPI / Card)',
+      amount = 560,
+      paymentId,
+      orderNumber: clientOrderNumber
+    } = req.body || {};
+
+    const verifiedPaymentId = paymentId || req.body.payment_id;
+    if (!verifiedPaymentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment verification failed: Valid payment ID is required before renewing subscription.'
+      });
+    }
+
+    const normEmail = (email || '').trim().toLowerCase();
+    const effectiveCompany = companyName || 'My Organization';
+    const renewalInterval = billingCycle === 'yearly' ? '1 year' : '1 month';
+    const curYear = new Date().getFullYear();
+    const invoiceNumber = `INV-${curYear}-RNW-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
+    const orderNumber = clientOrderNumber || `OXOO-RNW-${curYear}-${Date.now().toString().slice(-6)}`;
+    const safeAmount = parseFloat(Number(amount || 0).toFixed(2));
+
+    let updatedRenewalDate = new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 86400000);
+
+    if (isDbConnected) {
+      // Find existing subscription
+      const subRes = await query(
+        `SELECT id, renewal_date, active_apps, status FROM subscriptions
+         WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'
+         ORDER BY id DESC LIMIT 1`,
+        [effectiveCompany, effectiveCompany]
+      );
+
+      if (subRes.rows.length > 0) {
+        const currentSub = subRes.rows[0];
+        const existingRenewal = currentSub.renewal_date ? new Date(currentSub.renewal_date) : new Date();
+        const now = new Date();
+
+        // If renewing before finish (existingRenewal > now), extend from existingRenewal!
+        // If renewing after finish (existingRenewal <= now), extend from now!
+        if (existingRenewal > now) {
+          const upd = await query(
+            `UPDATE subscriptions
+             SET renewal_date = renewal_date + INTERVAL '${renewalInterval}',
+                 status = 'Active',
+                 payment_status = 'Paid',
+                 renewal_warning_status = 'Scheduled',
+                 amount = $1,
+                 billing_cycle = $2,
+                 updated_at = NOW()
+             WHERE id = $3
+             RETURNING renewal_date`,
+            [safeAmount, billingCycle, currentSub.id]
+          );
+          if (upd.rows[0]?.renewal_date) updatedRenewalDate = new Date(upd.rows[0].renewal_date);
+        } else {
+          const upd = await query(
+            `UPDATE subscriptions
+             SET start_date = NOW(),
+                 renewal_date = NOW() + INTERVAL '${renewalInterval}',
+                 status = 'Active',
+                 payment_status = 'Paid',
+                 renewal_warning_status = 'Scheduled',
+                 amount = $1,
+                 billing_cycle = $2,
+                 updated_at = NOW()
+             WHERE id = $3
+             RETURNING renewal_date`,
+            [safeAmount, billingCycle, currentSub.id]
+          );
+          if (upd.rows[0]?.renewal_date) updatedRenewalDate = new Date(upd.rows[0].renewal_date);
+        }
+      } else {
+        // Create new subscription if none found
+        const ins = await query(
+          `INSERT INTO subscriptions (company_name, plan, amount, currency, billing_cycle, status, start_date, renewal_date, active_apps)
+           VALUES ($1, $2, $3, 'INR', $4, 'Active', NOW(), NOW() + INTERVAL '${renewalInterval}', $5)
+           RETURNING renewal_date`,
+          [effectiveCompany, planName, safeAmount, billingCycle, JSON.stringify([softwareName || 'Sales Software'])]
+        );
+        if (ins.rows[0]?.renewal_date) updatedRenewalDate = new Date(ins.rows[0].renewal_date);
+      }
+
+      // Record renewal invoice with payment reference
+      await query(
+        `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items, payment_method)
+         VALUES ($1, $2, $3, $4, 'INR', 'Paid', NOW(), $5, $6)`,
+        [invoiceNumber, effectiveCompany, `${planName} (Renewal)`, safeAmount, JSON.stringify([softwareName || planName]), paymentMethod]
+      );
+
+      // Record or update order with verified payment ID
+      const safeSubtotal = parseFloat((safeAmount / 1.18).toFixed(2));
+      const ordCheck = await query(`SELECT id FROM orders WHERE order_number = $1`, [orderNumber]);
+      if (ordCheck.rows.length > 0) {
+        await query(
+          `UPDATE orders
+           SET status = 'Paid',
+               payment_id = $1,
+               payment_method = $2,
+               total_amount = $3,
+               updated_at = NOW()
+           WHERE order_number = $4`,
+          [verifiedPaymentId, paymentMethod, safeAmount, orderNumber]
+        );
+      } else {
+        await query(
+          `INSERT INTO orders (order_number, company_name, customer_email, plan_name, billing_cycle, subtotal, total_amount, status, payment_method, payment_id, selected_apps)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'Paid', $8, $9, $10)`,
+          [orderNumber, effectiveCompany, normEmail, `${planName} (Renewal)`, billingCycle, safeSubtotal, safeAmount, paymentMethod, verifiedPaymentId, JSON.stringify([softwareName || planName])]
+        );
+      }
+
+      // Update customer table
+      await query(
+        `UPDATE customers
+         SET subscription_status = 'Active',
+             payment_status = 'Paid',
+             renewal_date = NOW() + INTERVAL '${renewalInterval}',
+             updated_at = NOW()
+         WHERE LOWER(email) = $1 OR LOWER(company_name) = LOWER($2)`,
+        [normEmail, effectiveCompany]
+      );
+    }
+
+    const daysRemaining = Math.max(0, Math.ceil((updatedRenewalDate - new Date()) / (1000 * 60 * 60 * 24)));
+
+    // Send Admin Notification Email for Renewal
+    try {
+      await sendAdminSubscriptionDueEmail({
+        customerName: effectiveCompany,
+        companyName: effectiveCompany,
+        customerEmail: normEmail,
+        planName: `${planName} (${softwareName || 'Software Suite'})`,
+        dueDate: updatedRenewalDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        amount: safeAmount,
+        daysLeft: daysRemaining,
+        subscriptionId: `SUB-${effectiveCompany.replace(/\s+/g, '-').toUpperCase()}`,
+        isRenewal: true,
+        status: 'Renewed Successfully'
+      });
+    } catch (e) {
+      console.error('Error sending admin renewal email:', e.message);
+    }
+
+    // Send customer renewal confirmation email
+    if (normEmail) {
+      try {
+        const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+        await sendInvoiceAndCredentialsEmail({
+          toEmail: normEmail,
+          customerName: effectiveCompany,
+          companyName: effectiveCompany,
+          invoiceNumber,
+          orderNumber,
+          amount: safeAmount,
+          billingCycle,
+          planName: `${planName} (Renewal)`,
+          selectedApps: [softwareName || planName],
+          password: '• • • • • • • • (Existing Password)',
+          loginUrl: `${origin}/customer`
+        });
+      } catch (e) {
+        console.error('Error sending customer renewal invoice email:', e.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Subscription successfully renewed! New validity: ${updatedRenewalDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      invoiceNumber,
+      orderNumber,
+      paymentId: verifiedPaymentId,
+      amount: safeAmount,
+      billingCycle,
+      softwareName: softwareName || planName,
+      renewalDate: updatedRenewalDate.toISOString(),
+      daysRemaining
+    });
+  } catch (err) {
+    console.error('Error renewing subscription:', err);
+    res.status(500).json({ success: false, message: err.message || 'Renewal failed' });
   }
 });
 
@@ -2831,6 +3257,13 @@ app.get('/api/admin/customers/:id', requireAdminAuth, async (req, res, next) => 
 const adminModulesRouter = require('./adminModulesRoutes');
 app.use('/api/admin', adminModulesRouter);
 
+// -------------------------------------------------------------
+// OXOO AGENT: AI CUSTOMER ASSISTANT ROUTER
+// -------------------------------------------------------------
+const agentRouter = require('./agentRoutes');
+app.use('/api/agent', agentRouter);
+
+
 
 // Update Customer Account Status (Activate, Suspend, Close, Restore)
 app.put('/api/admin/customers/:id/status', requireAdminAuth, async (req, res, next) => {
@@ -2904,6 +3337,31 @@ app.put('/api/admin/customers/:id/subscription', requireAdminAuth, async (req, r
   }
 });
 
+// 8.4.1 Delete Customer
+app.delete('/api/admin/customers/:id', requireAdminAuth, async (req, res, next) => {
+  try {
+    const custId = req.params.id;
+    const cRes = await query(
+      `SELECT * FROM customers WHERE customer_id = $1 OR id::text = $1 OR company_name ILIKE $1 LIMIT 1`,
+      [custId]
+    );
+    if (cRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found.' });
+    }
+    const customer = cRes.rows[0];
+
+    // Delete related subscriptions and customer record
+    await query(`DELETE FROM subscriptions WHERE company_name = $1`, [customer.company_name]);
+    await query(`DELETE FROM customers WHERE customer_id = $1 OR id = $2`, [customer.customer_id, customer.id]);
+
+    await logAudit(`Customer Deleted: ${customer.company_name}`, customer.customer_id || custId, 'Super Administrator', req.ip);
+
+    res.json({ success: true, message: `Customer "${customer.company_name}" deleted successfully.` });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // -------------------------------------------------------------
 // 8.5 SUBSCRIPTION LIFECYCLE, RENEWAL WARNING & FOLLOW-UP SUITE
 // -------------------------------------------------------------
@@ -2913,7 +3371,7 @@ function generateRenewalReminderEmail({ customer_name, plan_name, subscription_i
   return `
     <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
       <div style="background: #0f172a; padding: 24px; text-align: center;">
-        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.5px;">OXOO 360</h1>
+        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.5px;">OXOO</h1>
         <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">Billing & Renewal Notification</p>
       </div>
       <div style="padding: 32px 24px; color: #1e293b;">
@@ -2945,7 +3403,7 @@ function generateDueTodayEmail({ customer_name, plan_name, renewal_url }) {
   return `
     <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
       <div style="background: #0f172a; padding: 24px; text-align: center;">
-        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">OXOO 360</h1>
+        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">OXOO</h1>
         <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">Subscription Due Today</p>
       </div>
       <div style="padding: 32px 24px; color: #1e293b;">
@@ -2966,7 +3424,7 @@ function generatePaymentOverdueEmail({ customer_name, subscription_id, amount_du
   return `
     <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #fee2e2; border-radius: 12px; overflow: hidden;">
       <div style="background: #991b1b; padding: 24px; text-align: center;">
-        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">OXOO 360</h1>
+        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">OXOO</h1>
         <p style="color: #fca5a5; font-size: 13px; margin: 4px 0 0;">Payment Overdue Notice</p>
       </div>
       <div style="padding: 32px 24px; color: #1e293b;">
@@ -3035,6 +3493,24 @@ async function runRenewalWarningScheduler() {
                 next_scheduled_email = NOW() + INTERVAL '10 hours'
             WHERE id = $1
           `, [sub.id]);
+
+          // Send automated Due Notification to Admin on email
+          try {
+            await sendAdminSubscriptionDueEmail({
+              customerName: sub.contact_person || sub.company_name,
+              companyName: sub.company_name,
+              customerEmail: email,
+              planName: sub.plan || 'Standard Pack',
+              dueDate: renewalDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              amount: sub.amount || 0,
+              daysLeft,
+              subscriptionId: sub.subscription_id || `SUB-2026-${sub.id}`,
+              isRenewal: false,
+              status: `Due in ${daysLeft} days`
+            });
+          } catch (admMailErr) {
+            console.error('[Scheduler] Error sending admin due notification email:', admMailErr.message);
+          }
         }
       }
 
@@ -3063,6 +3539,24 @@ async function runRenewalWarningScheduler() {
                   last_email_sent = NOW()
               WHERE id = $1
             `, [sub.id]);
+
+            // Send automated Overdue Notice to Admin on email
+            try {
+              await sendAdminSubscriptionDueEmail({
+                customerName: sub.contact_person || sub.company_name,
+                companyName: sub.company_name,
+                customerEmail: email,
+                planName: sub.plan || 'Standard Pack',
+                dueDate: renewalDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                amount: sub.amount || 0,
+                daysLeft,
+                subscriptionId: sub.subscription_id || `SUB-2026-${sub.id}`,
+                isRenewal: false,
+                status: `Overdue by ${overdueDays} days`
+              });
+            } catch (admMailErr) {
+              console.error('[Scheduler] Error sending admin overdue notification email:', admMailErr.message);
+            }
           }
         }
       }
@@ -4673,14 +5167,19 @@ app.post('/api/payment/verify', async (req, res, next) => {
       if (customerEmail) {
         try {
           if (!userAlreadyRegistered) {
-            const defaultHash = await bcrypt.hash('oxoo123', 10);
+            // STRICT RULE: New customer has NOT created their password yet.
+            // DO NOT create temporary password, DO NOT insert into users yet, and DO NOT send credentials/invoice email yet!
+            // Checkout Step 5 will prompt the user to set their password.
+            // Only after they submit their password (/api/customer/setup-password), their account is created and invoice + credentials email is dispatched!
+            console.log(`[Payment Verify] New customer purchase verified for ${normEmail}. Awaiting customer password creation.`);
+          } else {
+            // Already registered customer: update organization, storage ID, and last login
             await query(
-              `INSERT INTO users (name, email, password, role, organization, active, storage_id, last_login)
-               VALUES ($1, $2, $3, 'customer', $4, true, $5, NOW())`,
-              [customerName || companyName || 'Customer Admin', normEmail, defaultHash, companyName || 'My Organization', effectiveStorageId]
+              `UPDATE users SET organization = $1, storage_id = COALESCE(users.storage_id, $2), last_login = NOW() WHERE LOWER(email) = $3`,
+              [companyName || 'My Organization', effectiveStorageId, normEmail]
             );
 
-            // Send formal tax invoice & customer dashboard login credentials to customer email
+            // Send confirmation invoice email to existing registered customer
             try {
               const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
               await sendInvoiceAndCredentialsEmail({
@@ -4694,18 +5193,12 @@ app.post('/api/payment/verify', async (req, res, next) => {
                 billingCycle,
                 planName,
                 selectedApps,
-                password: 'oxoo123',
+                password: '• • • • • • • • (Existing Password)',
                 loginUrl: `${origin}/login`
               });
             } catch (emailErr) {
-              console.error('Error sending invoice and login credentials email:', emailErr.message);
+              console.error('Error sending invoice email to existing customer:', emailErr.message);
             }
-          } else {
-            // Already registered customer: update last login and storage ID
-            await query(
-              `UPDATE users SET organization = $1, storage_id = COALESCE(users.storage_id, $2), last_login = NOW() WHERE LOWER(email) = $3`,
-              [companyName || 'My Organization', effectiveStorageId, normEmail]
-            );
           }
         } catch (uErr) {
           console.error('Error recording customer in users table:', uErr.message);
@@ -4731,7 +5224,9 @@ app.post('/api/payment/verify', async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Payment verified and software activated in customer dashboard successfully!',
+      message: userAlreadyRegistered
+        ? 'Payment verified and software activated in customer dashboard successfully!'
+        : 'Payment verified! Please create your account password to activate portal access and receive your invoice.',
       orderNumber,
       paymentId: verifiedPaymentId,
       invoiceNumber,
@@ -4741,6 +5236,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
       activeApps: mergedApps,
       purchasedApps: mergedApps,
       alreadyRegistered: userAlreadyRegistered,
+      requiresPasswordSetup: !userAlreadyRegistered,
       status: 'Active',
       amountPaid: safeTotalAmount,
       invoiceDate: now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),

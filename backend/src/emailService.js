@@ -799,10 +799,260 @@ async function sendPasswordResetEmail({
   }
 }
 
+/**
+ * Dispatch automated credentials (ID & Password) email to newly created Admin, Software Admin, Manager or Employee.
+ */
+async function sendAdminStaffCredentialsEmail({ to, name, role, email, employeeId, password, assignedSoftware = [], loginUrl }) {
+  const normEmail = String(to || email || '').trim().toLowerCase();
+  const userName = name || 'Administrator';
+  const userRole = role || 'Software Admin';
+  const userPwd = password || 'Welcome@2026';
+  const scope = Array.isArray(assignedSoftware) && assignedSoftware.length > 0 
+    ? assignedSoftware.join(', ') 
+    : 'All Platform Software & Websites';
+  
+  const portalUrl = loginUrl || process.env.ADMIN_LOGIN_URL || 'http://localhost:5173/admin/login';
+  const subject = `Your OXOO Admin & Staff Account Credentials (${userRole})`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #091322 0%, #0f172a 100%); padding: 32px 28px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">OXOO</h1>
+        <div style="color: #38bdf8; font-size: 13px; font-weight: 600; margin-top: 6px; letter-spacing: 0.3px;">Enterprise Multi-App Platform</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 32px 28px;">
+        <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 14px 0;">
+          Welcome to the Team, ${userName}
+        </h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
+          An administrator account has been created for you on the <strong>OXOO Platform</strong>. You have been granted access as a <strong>${userRole}</strong>.
+        </p>
+
+        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <div style="font-size: 11px; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;">
+            Your Login Credentials
+          </div>
+          <table width="100%" style="font-size: 13px; color: #1e293b; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 140px;">Role / Access:</td>
+              <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${userRole}</td>
+            </tr>
+            ${employeeId ? `
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Staff / Admin ID:</td>
+              <td style="padding: 6px 0; font-family: monospace; font-weight: 700; color: #0284c7;">${employeeId}</td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Login Email / ID:</td>
+              <td style="padding: 6px 0; font-family: monospace; font-weight: 700; color: #0f172a;">${normEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Password:</td>
+              <td style="padding: 6px 0;">
+                <code style="background-color: #e2e8f0; color: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 14px; font-weight: 800; letter-spacing: 0.5px;">${userPwd}</code>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Assigned Scope:</td>
+              <td style="padding: 6px 0; font-size: 12px; color: #334155;">${scope}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${portalUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 14px 34px; border-radius: 10px; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
+            Log In to Console →
+          </a>
+        </div>
+
+        <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px; padding-top: 18px; border-top: 1px solid #f1f5f9;">
+          Direct Console URL:<br>
+          <a href="${portalUrl}" style="color: #0284c7; word-break: break-all;">${portalUrl}</a>
+        </p>
+
+        <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 12px 14px; margin-top: 20px; font-size: 12px; color: #92400e;">
+          <strong>Security Notice:</strong> Please update your password after your first successful login from your Profile Settings.
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+        © ${new Date().getFullYear()} OXOO Enterprise Platform. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    const info = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: normEmail,
+      subject,
+      html
+    });
+    console.log(`[EmailService] Credentials email dispatched to ${normEmail} (${userRole}) [ID: ${info?.messageId || 'sim'}]`);
+    return { success: true, messageId: info?.messageId };
+  } catch (err) {
+    console.error(`[EmailService] Failed to dispatch credentials email to ${normEmail}:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+// -------------------------------------------------------------
+// Admin Due & Renewal Notification Email
+// -------------------------------------------------------------
+async function sendAdminSubscriptionDueEmail({
+  adminEmail,
+  customerName = 'Customer',
+  companyName = 'My Organization',
+  customerEmail = '',
+  planName = 'Standard Pack',
+  dueDate = 'N/A',
+  amount = 0,
+  daysLeft = 0,
+  subscriptionId = '',
+  isRenewal = false,
+  status = 'Due Soon'
+}) {
+  const targetAdmin = adminEmail || process.env.ADMIN_NOTIFICATION_EMAIL || process.env.BREVO_SENDER_EMAIL || 'support@oxoo.ai';
+  const normEmail = targetAdmin.trim().toLowerCase();
+
+  const isOverdue = daysLeft < 0;
+  const statusColor = isRenewal ? '#16a34a' : isOverdue ? '#dc2626' : '#d97706';
+  const statusBadge = isRenewal ? 'RENEWAL COMPLETED' : isOverdue ? `OVERDUE (${Math.abs(daysLeft)} DAYS)` : `DUE IN ${daysLeft} DAYS`;
+
+  const subject = isRenewal
+    ? `[OXOO Admin Alert] Subscription Renewed: ${companyName} (${planName})`
+    : `[OXOO Admin Alert] Subscription Due Notice: ${companyName} (${isOverdue ? 'Overdue' : `${daysLeft} days remaining`})`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="600px" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="background: linear-gradient(135deg, #091322 0%, #1e293b 100%); padding: 26px 30px; text-align: left;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">OXOO Admin Notification</h1>
+                  <span style="font-size: 12px; font-weight: 600; color: #38bdf8; display: block; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Subscription Lifecycle & Billing Alert
+                  </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 28px 30px;">
+              <div style="display: inline-block; padding: 4px 12px; border-radius: 9999px; background: ${statusColor}18; color: ${statusColor}; font-weight: 800; font-size: 12px; border: 1px solid ${statusColor}40; margin-bottom: 16px;">
+                ● ${statusBadge}
+              </div>
+
+              <h2 style="font-size: 19px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
+                ${isRenewal ? 'Customer Renewed Subscription' : 'Customer Subscription Payment Due'}
+              </h2>
+              <p style="font-size: 13.5px; line-height: 1.6; color: #475569; margin-bottom: 20px;">
+                ${isRenewal
+                  ? `<strong>${customerName}</strong> from <strong>${companyName}</strong> has completed their renewal payment.`
+                  : `A customer subscription is approaching its due date or is overdue. Please review details below:`}
+              </p>
+
+              <table width="100%" cellpadding="8" cellspacing="0" style="background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 13.5px; margin-bottom: 24px;">
+                <tr>
+                  <td width="38%" style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Company / Customer:</td>
+                  <td style="color: #0f172a; font-weight: 700; border-bottom: 1px solid #edf2f7;">${companyName} (${customerName})</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Customer Email:</td>
+                  <td style="color: #0284c7; font-weight: 600; border-bottom: 1px solid #edf2f7;">
+                    <a href="mailto:${customerEmail}" style="color: #0284c7; text-decoration: none;">${customerEmail || 'N/A'}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Subscription ID:</td>
+                  <td style="color: #0f172a; font-family: monospace; font-weight: 700; border-bottom: 1px solid #edf2f7;">${subscriptionId || 'SUB-2026-ACTIVE'}</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Plan / Software:</td>
+                  <td style="color: #0f172a; font-weight: 700; border-bottom: 1px solid #edf2f7;">${planName}</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Due Date:</td>
+                  <td style="color: #0f172a; font-weight: 700; border-bottom: 1px solid #edf2f7;">${dueDate}</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Amount:</td>
+                  <td style="color: #16a34a; font-weight: 800; border-bottom: 1px solid #edf2f7;">₹${Number(amount || 0).toLocaleString('en-IN')}</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748b; font-weight: 600;">Time Remaining:</td>
+                  <td style="color: ${statusColor}; font-weight: 800;">
+                    ${isRenewal ? 'Active / Extended' : isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}
+                  </td>
+                </tr>
+              </table>
+
+              <div style="text-align: center; margin-top: 10px;">
+                <a href="http://localhost:5173/admin" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 10px 22px; border-radius: 8px; font-size: 13.5px; font-weight: 700; text-decoration: none;">
+                  Manage in Admin Portal →
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 30px; text-align: center; font-size: 11.5px; color: #94a3b8;">
+              OXOO Automated Billing & Renewal Notification Engine &bull; Confidential &copy; ${new Date().getFullYear()}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    const info = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: normEmail,
+      subject,
+      html
+    });
+    console.log(`[EmailService] Admin due notification sent to ${normEmail} for ${companyName} [ID: ${info?.messageId || 'sim'}]`);
+    return { success: true, messageId: info?.messageId };
+  } catch (err) {
+    console.error(`[EmailService] Failed to send admin due notification:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendOtpEmail,
   verifyOtp,
   sendInvoiceAndCredentialsEmail,
   sendPasswordResetEmail,
+  sendAdminStaffCredentialsEmail,
+  sendAdminSubscriptionDueEmail,
   sendMailWithFallback
 };

@@ -477,7 +477,7 @@ export default function ReportsAnalyticsModule({ showToast }) {
                     {[
                       { product: 'OXOO Business Suite', plans: 'Starter, Pro, Enterprise', price: '₹4,999 / mo', status: 'Active' },
                       { product: 'Finance Pro', plans: 'Finance Standard & Advanced', price: '₹4,999 / mo', status: 'Active' },
-                      { product: 'HRMS Pro', plans: 'Employee360 & Payroll', price: '₹4,999 / mo', status: 'Active' },
+                      { product: 'HRMS Pro', plans: 'Employee Pro & Payroll', price: '₹4,999 / mo', status: 'Active' },
                       { product: 'Marketing Suite', plans: 'Omnichannel Growth', price: '₹3,499 / mo', status: 'Active' },
                       { product: 'Website Builder CMS', plans: 'Single Domain & Agency', price: '₹1,999 / mo', status: 'Active' }
                     ].map((row, i) => (

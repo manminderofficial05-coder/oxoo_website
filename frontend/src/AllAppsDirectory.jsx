@@ -75,7 +75,7 @@ export const ALL_APPS_CATEGORIES = [
       { name: 'Payroll', desc: 'Automated salary calculation and slips.', icon: '/apps/logo-accounting.png?v=clean', slug: 'payroll', bgColor: '#f5f3ff' },
       { name: 'Recruitment', desc: 'Hiring pipeline, resumes and interviews.', icon: '/apps/logo-crm.png?v=clean', slug: 'recruitment', bgColor: '#ecfdf5' },
       { name: 'Time Off', desc: 'Manage leaves, balances and holidays.', icon: '/apps/logo-timesheets.png?v=clean', slug: 'time-off', bgColor: '#fff1f2' },
-      { name: 'Appraisals', desc: 'Performance reviews and 360 appraisals.', icon: '/apps/logo-studio.png?v=clean', slug: 'appraisals', bgColor: '#fffbeb' },
+      { name: 'Appraisals', desc: 'Performance reviews and appraisals.', icon: '/apps/logo-studio.png?v=clean', slug: 'appraisals', bgColor: '#fffbeb' },
       { name: 'Fleet', desc: 'Manage company vehicles and fuel logs.', icon: '/apps/logo-field-service.png?v=clean', slug: 'fleet', bgColor: '#fdf2f8' }
     ]
   },

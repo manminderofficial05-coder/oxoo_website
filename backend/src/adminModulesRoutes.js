@@ -1,7 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { query } = require('./db');
-const { sendMailWithFallback } = require('./emailService');
+const { sendMailWithFallback, sendAdminStaffCredentialsEmail } = require('./emailService');
 
 const router = express.Router();
 
@@ -363,6 +364,34 @@ router.post('/applications/:id/health-check', async (req, res, next) => {
   }
 });
 
+// 1.9 Delete Application
+router.delete('/applications/:id', async (req, res, next) => {
+  try {
+    const appId = req.params.id;
+    const delRes = await query(
+      `DELETE FROM platform_applications WHERE app_id = $1 OR id::text = $1 RETURNING *`,
+      [appId]
+    );
+
+    if (delRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Application not found.' });
+    }
+
+    // Also remove from applications if present
+    await query(`DELETE FROM applications WHERE id = $1 OR slug = $1`, [appId]);
+
+    await logAuditAction('Application Deleted', appId, 'Super Administrator', req.ip);
+
+    res.json({
+      success: true,
+      message: `Application ${appId} was deleted successfully.`
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
 
 // ============================================================================
 // MODULE 2: PAYMENTS & INVOICES ENDPOINTS
@@ -561,7 +590,7 @@ router.get('/invoices/:id/download-pdf', async (req, res, next) => {
       <body>
         <div class="header">
           <div>
-            <div class="logo">OXOO<span>.ai</span> 360</div>
+            <div class="logo">OXOO</div>
             <p style="margin: 4px 0; color: #64748b; font-size: 13px;">One Intelligent Platform. Every Business.</p>
           </div>
           <div style="text-align: right;">
@@ -640,6 +669,9 @@ router.get('/staff/summary', async (_req, res, next) => {
       SELECT 
         COUNT(*)::int as total,
         COUNT(*) FILTER (WHERE role = 'Super Admin')::int as super_admin,
+        COUNT(*) FILTER (WHERE role = 'Software Admin')::int as software_admin,
+        COUNT(*) FILTER (WHERE role = 'Manager')::int as managers,
+        COUNT(*) FILTER (WHERE role = 'Employee')::int as employees,
         COUNT(*) FILTER (WHERE role = 'Finance Admin')::int as finance_admin,
         COUNT(*) FILTER (WHERE role = 'Support Staff')::int as support_staff,
         COUNT(*) FILTER (WHERE role = 'Sales Staff')::int as sales_staff
@@ -652,6 +684,9 @@ router.get('/staff/summary', async (_req, res, next) => {
       summary: {
         totalUsers: row.total || 0,
         superAdmins: row.super_admin || 0,
+        softwareAdmins: row.software_admin || 0,
+        managers: row.managers || 0,
+        employees: row.employees || 0,
         financeAdmins: row.finance_admin || 0,
         supportTeam: row.support_staff || 0,
         salesTeam: row.sales_staff || 0
@@ -662,17 +697,27 @@ router.get('/staff/summary', async (_req, res, next) => {
   }
 });
 
-// 3.2 Staff List with Filters
+// 3.2 Staff List with Filters & Role-Based Scope Isolation
 router.get('/staff', async (req, res, next) => {
   try {
     const { search = '', role = 'All', status = 'All', department = 'All' } = req.query;
+    const requesterRole = (req.user?.role || req.headers['x-admin-role'] || 'super_admin').toString();
+    const requesterEmail = (req.user?.email || req.headers['x-admin-email'] || 'admin@oxoo.ai').toString().toLowerCase();
 
     let sql = `SELECT * FROM platform_staff WHERE 1=1`;
     const params = [];
 
+    // Role-based data isolation:
+    // If the caller is a Software Admin (not a Super Admin), show only users they created or within their scope
+    const isSuperAdmin = requesterRole.toLowerCase().includes('super');
+    if (!isSuperAdmin && requesterEmail) {
+      params.push(requesterEmail);
+      sql += ` AND (LOWER(created_by) = $${params.length} OR LOWER(email) = $${params.length} OR role IN ('Manager', 'Employee'))`;
+    }
+
     if (search.trim()) {
       params.push(`%${search.trim().toLowerCase()}%`);
-      sql += ` AND (LOWER(name) LIKE $${params.length} OR LOWER(email) LIKE $${params.length} OR LOWER(department) LIKE $${params.length})`;
+      sql += ` AND (LOWER(name) LIKE $${params.length} OR LOWER(email) LIKE $${params.length} OR LOWER(department) LIKE $${params.length} OR LOWER(COALESCE(employee_id, '')) LIKE $${params.length})`;
     }
 
     if (role && role !== 'All' && role !== 'All Roles') {
@@ -702,16 +747,21 @@ router.get('/staff', async (req, res, next) => {
   }
 });
 
-// 3.3 Add Staff User
+// 3.3 Add Staff User (ID & Password Creation with Automated Email Dispatch)
 router.post('/staff', async (req, res, next) => {
   try {
     const {
       name,
       email,
       phone = '',
-      role = 'Support Staff',
-      department = 'Support',
+      employeeId = '',
+      password = '',
+      role = 'Software Admin',
+      department = 'Administration',
       access_level = 'Module Specific',
+      assignedSoftware = ['All Software'],
+      assigned_software = ['All Software'],
+      sendEmail = true,
       permissions = []
     } = req.body;
 
@@ -720,35 +770,136 @@ router.post('/staff', async (req, res, next) => {
     }
 
     const emailNorm = email.trim().toLowerCase();
+    const requesterRole = (req.user?.role || req.headers['x-admin-role'] || 'super_admin').toString().toLowerCase();
+    const requesterEmail = (req.user?.email || req.headers['x-admin-email'] || 'admin@oxoo.ai').toString().toLowerCase();
 
-    // Check duplicate
-    const existing = await query(`SELECT id FROM platform_staff WHERE LOWER(email) = $1 LIMIT 1`, [emailNorm]);
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ success: false, message: 'A staff member with this email already exists.' });
+    // Role Hierarchy Validation:
+    // Software Admin can ONLY create Manager and Employee
+    const isSuperAdmin = requesterRole.includes('super');
+    if (!isSuperAdmin) {
+      if (role === 'Super Admin' || role === 'Software Admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Permission denied: Software Admins can only create Manager and Employee accounts.'
+        });
+      }
     }
 
-    // Default permissions based on role
+    // Check duplicate email
+    const existing = await query(`SELECT id FROM platform_staff WHERE LOWER(email) = $1 LIMIT 1`, [emailNorm]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'An administrator or staff user with this email already exists.' });
+    }
+
+    // Prepare credentials: ID and Password
+    const plainPassword = (password && password.trim())
+      ? password.trim()
+      : `Oxoo@${Math.random().toString(36).slice(-6)}!`;
+
+    const staffEmpId = (employeeId && employeeId.trim())
+      ? employeeId.trim().toUpperCase()
+      : `${role === 'Super Admin' ? 'SUP' : role === 'Software Admin' ? 'SFT' : role === 'Manager' ? 'MGR' : 'EMP'}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const softwareList = Array.isArray(assignedSoftware) && assignedSoftware.length > 0
+      ? assignedSoftware
+      : (Array.isArray(assigned_software) && assigned_software.length > 0 ? assigned_software : ['All Software']);
+
+    // Map role for users table authentication
+    let dbUserRole = 'admin';
+    if (role === 'Super Admin') dbUserRole = 'super_admin';
+    else if (role === 'Software Admin') dbUserRole = 'admin';
+    else if (role === 'Manager') dbUserRole = 'manager';
+    else if (role === 'Employee') dbUserRole = 'employee';
+
+    // Hash password for secure storage
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(plainPassword, salt);
+
+    // 1. Insert/Update in users table so user can log in immediately
+    await query(`
+      INSERT INTO users (name, email, password, role, organization, active, storage_id)
+      VALUES ($1, $2, $3, $4, $5, true, $6)
+      ON CONFLICT (email) DO UPDATE
+      SET password = EXCLUDED.password,
+          role = EXCLUDED.role,
+          name = EXCLUDED.name,
+          active = true;
+    `, [name.trim(), emailNorm, hashedPassword, dbUserRole, softwareList.join(', '), staffEmpId]);
+
+    // 2. Default permissions based on role
     let assignedPerms = permissions;
     if (!assignedPerms || assignedPerms.length === 0) {
       if (role === 'Super Admin') assignedPerms = ['*'];
-      else if (role === 'Finance Admin') assignedPerms = ['subscriptions.read', 'payments.read', 'invoices.read', 'invoices.download', 'reports.finance.read'];
-      else if (role === 'Support Staff') assignedPerms = ['customers.read', 'subscriptions.read', 'support_tickets.read', 'support_tickets.reply', 'support_tickets.resolve'];
-      else if (role === 'Sales Staff') assignedPerms = ['customers.read', 'subscriptions.read', 'products.read', 'reports.sales.read'];
+      else if (role === 'Software Admin') assignedPerms = ['applications.read', 'applications.configure', 'customers.read', 'support_tickets.read', 'support_tickets.reply', 'users.read', 'users.manage'];
+      else if (role === 'Manager') assignedPerms = ['applications.read', 'customers.read', 'support_tickets.read', 'support_tickets.reply'];
+      else if (role === 'Employee') assignedPerms = ['support_tickets.read', 'support_tickets.reply'];
+      else assignedPerms = ['*'];
     }
 
+    // 3. Insert into platform_staff
     const insertRes = await query(
-      `INSERT INTO platform_staff (name, email, phone, role, department, status, access_level, permissions, joined_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, 'Active', $6, $7, NOW(), NOW())
+      `INSERT INTO platform_staff (
+        name, email, phone, role, department, status, access_level,
+        permissions, assigned_software, employee_id, created_by, joined_at, updated_at
+      )
+       VALUES ($1, $2, $3, $4, $5, 'Active', $6, $7, $8, $9, $10, NOW(), NOW())
        RETURNING *`,
-      [name.trim(), emailNorm, phone, role, department, access_level, JSON.stringify(assignedPerms)]
+      [
+        name.trim(),
+        emailNorm,
+        phone,
+        role,
+        department,
+        access_level,
+        JSON.stringify(assignedPerms),
+        JSON.stringify(softwareList),
+        staffEmpId,
+        requesterEmail
+      ]
     );
 
-    await logAuditAction('Staff User Added', emailNorm, 'Super Administrator', req.ip, { role, department });
+    // 4. Automatically dispatch login credentials email
+    const frontendHost = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'http://localhost:5173';
+    const loginUrl = role === 'Employee' ? `${frontendHost}/employee/login` : `${frontendHost}/admin/login`;
+
+    let emailSent = false;
+    if (sendEmail !== false) {
+      try {
+        const emailRes = await sendAdminStaffCredentialsEmail({
+          to: emailNorm,
+          name: name.trim(),
+          role,
+          email: emailNorm,
+          employeeId: staffEmpId,
+          password: plainPassword,
+          assignedSoftware: softwareList,
+          loginUrl
+        });
+        emailSent = emailRes && emailRes.success;
+      } catch (eErr) {
+        console.warn('Failed to send credentials email:', eErr.message);
+      }
+    }
+
+    await logAuditAction(
+      'Staff Account Created & Credentials Sent',
+      emailNorm,
+      requesterEmail,
+      req.ip,
+      { role, department, employeeId: staffEmpId, emailSent }
+    );
 
     res.status(201).json({
       success: true,
-      message: 'Staff user invited successfully.',
-      staff: insertRes.rows[0]
+      message: `Account for "${name.trim()}" (${role}) created successfully. Login credentials and ID have been automatically sent to ${emailNorm}.`,
+      staff: insertRes.rows[0],
+      credentials: {
+        email: emailNorm,
+        employeeId: staffEmpId,
+        temporaryPassword: plainPassword,
+        role,
+        emailSent
+      }
     });
   } catch (err) {
     next(err);
@@ -841,6 +992,80 @@ router.put('/staff/:id/status', async (req, res, next) => {
     next(err);
   }
 });
+
+// 3.6 Delete Staff User (Permanently removes from platform_staff and users tables)
+router.delete('/staff/:id', async (req, res, next) => {
+  try {
+    const staffId = req.params.id;
+    const requesterEmail = (req.user?.email || req.headers['x-admin-email'] || '').toString().toLowerCase();
+
+    // 1. Locate the staff record
+    const found = await query(
+      `SELECT * FROM platform_staff WHERE id::text = $1 OR employee_id = $1 OR LOWER(email) = LOWER($1) LIMIT 1`,
+      [staffId]
+    );
+
+    if (found.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Staff user not found in database.' });
+    }
+
+    const target = found.rows[0];
+    const targetEmail = (target.email || '').toLowerCase().trim();
+
+    // 2. Prevent deleting the primary root Super Admin
+    if (targetEmail === 'manminder.singh@primepro.ai') {
+      return res.status(403).json({
+        success: false,
+        message: 'The primary root Super Administrator account (manminder.singh@primepro.ai) cannot be deleted.'
+      });
+    }
+
+    // 3. Prevent self-deletion if same as requester
+    if (requesterEmail && requesterEmail === targetEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot delete your own currently active administrator session.'
+      });
+    }
+
+    // 4. Prevent deleting the last remaining Super Admin
+    if (target.role === 'Super Admin') {
+      const saCount = await query(
+        `SELECT COUNT(*)::int as count FROM platform_staff WHERE role = 'Super Admin' AND id != $1`,
+        [target.id]
+      );
+      if (saCount.rows[0]?.count === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot delete the last remaining Super Administrator.'
+        });
+      }
+    }
+
+    // 5. Delete from platform_staff
+    await query(`DELETE FROM platform_staff WHERE id = $1`, [target.id]);
+
+    // 6. Delete from users table (removes login authentication)
+    await query(`DELETE FROM users WHERE LOWER(email) = LOWER($1)`, [targetEmail]);
+
+    // 7. Log audit event
+    await logAuditAction(
+      'Staff User Permanently Deleted',
+      `${target.name} (${targetEmail})`,
+      requesterEmail || 'Super Administrator',
+      req.ip,
+      { role: target.role, employeeId: target.employee_id, deletedAt: new Date().toISOString() }
+    );
+
+    res.json({
+      success: true,
+      message: `User "${target.name}" (${targetEmail}) has been permanently deleted from both the staff directory and authentication database.`
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 
 
 // ============================================================================
@@ -1142,6 +1367,33 @@ router.put('/tickets/:id/assign', async (req, res, next) => {
   }
 });
 
+// 4.6.1 Delete Support Ticket
+router.delete('/tickets/:id', async (req, res, next) => {
+  try {
+    const tId = req.params.id;
+    const delRes = await query(
+      `DELETE FROM support_tickets WHERE ticket_id = $1 OR ticket_number = $1 OR id::text = $1 RETURNING *`,
+      [tId]
+    );
+
+    if (delRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Ticket not found.' });
+    }
+
+    await logAuditAction('Support Ticket Deleted', tId, 'Super Administrator', req.ip, {
+      ticket_id: delRes.rows[0].ticket_id,
+      subject: delRes.rows[0].subject
+    });
+
+    res.json({
+      success: true,
+      message: `Ticket ${tId} was permanently deleted.`
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 4.7 Customer Portal Ticket Creation
 router.post('/customer/tickets', async (req, res, next) => {
   try {
@@ -1193,6 +1445,30 @@ router.post('/customer/tickets', async (req, res, next) => {
       success: true,
       message: 'Support ticket submitted successfully.',
       ticket: insertRes.rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 4.8 Delete Support Ticket
+router.delete('/tickets/:id', async (req, res, next) => {
+  try {
+    const tId = req.params.id;
+    const deleteRes = await query(
+      `DELETE FROM support_tickets WHERE ticket_id = $1 OR ticket_number = $1 OR id::text = $1 RETURNING *`,
+      [tId]
+    );
+
+    if (deleteRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Ticket not found.' });
+    }
+
+    await logAuditAction('Support Ticket Deleted', tId, 'Super Administrator', req.ip, { ticketId: tId });
+
+    res.json({
+      success: true,
+      message: `Support ticket ${tId} was permanently deleted from the database.`
     });
   } catch (err) {
     next(err);
@@ -1427,10 +1703,10 @@ router.get('/reports/export', async (req, res, next) => {
     } else {
       // General overview export
       csvData = 'Report,Generated At,Generated By,Format\n' +
-        `"OXOO 360 Executive Report","${new Date().toISOString()}","Super Administrator","CSV"\n\n` +
+        `"OXOO Executive Report","${new Date().toISOString()}","Super Administrator","CSV"\n\n` +
         'Metric,Value\n' +
         '"Report Category","' + category + '"\n' +
-        '"Platform","OXOO 360 Multiix Enterprise"\n' +
+        '"Platform","OXOO Multiix Enterprise"\n' +
         '"Status","Verified Live Production Telemetry"\n';
     }
 
@@ -1546,7 +1822,7 @@ router.post('/email-templates/test', async (req, res, next) => {
     const tRes = await query(`SELECT * FROM email_templates WHERE template_key = $1 OR id::text = $1 LIMIT 1`, [template_key]);
     const tpl = tRes.rows[0] || {
       subject: 'OXOO Test Email',
-      body_html: '<p>This is a test notification from OXOO 360.</p>'
+      body_html: '<p>This is a test notification from OXOO.</p>'
     };
 
     let subject = tpl.subject;

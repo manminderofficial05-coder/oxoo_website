@@ -106,7 +106,7 @@ const serviceDescriptions = {
   "Payroll": "Automated salary disbursements, deductions, tax compliance, and payslip generation.",
   "Recruitment": "Kanban applicant tracking system (ATS), job boards, resumes, and interview scheduling.",
   "Time Off": "Manage employee leave requests, balances, approval workflows, and holiday calendars.",
-  "Appraisals": "Periodic performance reviews, 360-degree feedback, OKRs, and employee growth plans.",
+  "Appraisals": "Periodic performance reviews, multi-rater feedback, OKRs, and employee growth plans.",
   "Fleet": "Manage corporate fleet vehicles, fuel logs, service history, and driver assignments.",
 
   "Social Marketing": "Schedule, publish, and analyze campaigns across LinkedIn, X, Meta, and Instagram.",

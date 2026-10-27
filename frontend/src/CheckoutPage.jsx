@@ -11,7 +11,7 @@ import { SOFTWARE_MODULES } from './PricingPage';
 import {
   calculatePricing, createPaymentOrder, verifyPayment, getCustomerOverview,
   sendEmailOtp, verifyEmailOtp, setupCustomerPassword, checkEmailExists,
-  loginUser, forgotPassword
+  loginUser, forgotPassword, checkEmailSoftware
 } from './api';
 import './checkout.css';
 
@@ -172,6 +172,36 @@ export default function CheckoutPage() {
     window.addEventListener('oxoo_auth_change', handleAuthSync);
     return () => window.removeEventListener('oxoo_auth_change', handleAuthSync);
   }, []);
+
+  const [duplicateSoftwareWarning, setDuplicateSoftwareWarning] = useState('');
+
+  // Validate if entered email already owns any of the selected software
+  const verifyEmailSoftwareOwnership = async (emailToCheck) => {
+    const email = (emailToCheck || formData.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) return false;
+
+    try {
+      const res = await checkEmailSoftware(email);
+      if (res?.ownedAppIds && res.ownedAppIds.length > 0) {
+        setOwnedAppIds((prev) => Array.from(new Set([...prev, ...res.ownedAppIds])));
+        const conflicts = selectedAppIds.filter((id) => res.ownedAppIds.includes(id));
+        if (conflicts.length > 0) {
+          const conflictNames = SOFTWARE_MODULES.filter((m) => conflicts.includes(m.id)).map((m) => m.name).join(', ');
+          const warnMsg = `The account for ${email} already owns ${conflictNames}. This software is not available for duplicate purchase because you already have it. Please renew or manage your existing subscription in the Customer Dashboard.`;
+          setDuplicateSoftwareWarning(warnMsg);
+          return true;
+        } else {
+          setDuplicateSoftwareWarning('');
+          return false;
+        }
+      } else {
+        setDuplicateSoftwareWarning('');
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
+  };
 
   // Fetch customer's already active software from backend to prevent duplicate purchases
   useEffect(() => {
@@ -401,6 +431,11 @@ export default function CheckoutPage() {
 
   // Handle toggling software selection in Step 1
   const handleToggleSoftware = (appId) => {
+    if (ownedAppIds.includes(appId)) {
+      const mod = SOFTWARE_MODULES.find((m) => m.id === appId);
+      alert(`You already own ${mod?.name || 'this software'}. It is not available for duplicate purchase because you already have it. Please renew or manage it from your Customer Dashboard.`);
+      return;
+    }
     if (selectedAppIds.includes(appId)) {
       if (selectedAppIds.length > 1) {
         const next = selectedAppIds.filter((id) => id !== appId);
@@ -473,10 +508,19 @@ export default function CheckoutPage() {
     return Object.keys(errs).length === 0;
   };
 
-  // Proceed from Step 3: Enforces email OTP verification before allowing payment!
+  // Proceed from Step 3: Enforces duplicate software check and email OTP verification before payment!
   const handleProceedFromStep3 = async (e) => {
     if (e) e.preventDefault();
     if (!validateCompanyDetails()) return;
+
+    // Strict validation: Ensure customer does not already own any of the selected software!
+    if (formData.email) {
+      const hasConflict = await verifyEmailSoftwareOwnership(formData.email);
+      if (hasConflict) {
+        alert('You already own one or more of the selected software applications on this account. They are not available for duplicate purchase because you already have them. Please renew your existing software from your Customer Dashboard.');
+        return;
+      }
+    }
 
     if (isEmailVerified) {
       setCurrentStep(4);
@@ -841,21 +885,28 @@ export default function CheckoutPage() {
               {/* Software Selection Grid */}
               <div className="checkout-software-grid">
                 {SOFTWARE_MODULES.map((mod) => {
-                  const isOwned = Boolean(loggedInUser && ownedAppIds.includes(mod.id));
+                  const isOwned = Boolean(ownedAppIds.includes(mod.id));
                   const isChecked = selectedAppIds.includes(mod.id);
                   return (
                     <div
                       key={mod.id}
-                      className={`checkout-software-card ${isChecked ? 'selected' : ''}`}
+                      className={`checkout-software-card ${isChecked && !isOwned ? 'selected' : ''}`}
                       onClick={() => handleToggleSoftware(mod.id)}
+                      style={isOwned ? {
+                        opacity: 0.88,
+                        background: '#f8fafc',
+                        border: '1.5px solid #cbd5e1',
+                        cursor: 'not-allowed'
+                      } : {}}
                     >
                       <input
                         type="checkbox"
-                        checked={isChecked}
+                        checked={isChecked && !isOwned}
+                        disabled={isOwned}
                         onChange={() => handleToggleSoftware(mod.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <img src={mod.iconSrc} alt={mod.name} className="checkout-software-icon" />
+                      <img src={mod.iconSrc} alt={mod.name} className="checkout-software-icon" style={isOwned ? { filter: 'grayscale(0.2)' } : {}} />
                       <div className="checkout-software-info">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
                           <span className="checkout-software-name">{mod.name}</span>
@@ -866,12 +917,12 @@ export default function CheckoutPage() {
                                 fontWeight: 700,
                                 padding: '2px 8px',
                                 borderRadius: '9999px',
-                                background: '#dcfce7',
-                                color: '#15803d',
-                                border: '1px solid #86efac'
+                                background: '#fef3c7',
+                                color: '#92400e',
+                                border: '1px solid #fde68a'
                               }}
                             >
-                              Active on Account
+                              Already Active on Your Account
                             </span>
                           ) : (
                             <span
@@ -888,17 +939,41 @@ export default function CheckoutPage() {
                             </span>
                           )}
                         </div>
-                        <span className="checkout-software-desc">
-                          {mod.desc}
-                        </span>
+
+                        {isOwned ? (
+                          <div style={{ marginTop: '3px' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>• You already own this software. Not available for duplicate purchase.</span>
+                            </div>
+                            <Link
+                              to="/customer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0284c7', textDecoration: 'underline', display: 'inline-block', marginTop: '2px' }}
+                            >
+                              Renew in Customer Dashboard →
+                            </Link>
+                          </div>
+                        ) : (
+                          <span className="checkout-software-desc">
+                            {mod.desc}
+                          </span>
+                        )}
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <span className="checkout-software-rate" style={{ display: 'block' }}>
-                          ₹{isYearly ? '560' : '740'}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                          / user / mo
-                        </span>
+                        {isOwned ? (
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', background: '#e2e8f0', padding: '3px 8px', borderRadius: '6px', display: 'inline-block' }}>
+                            Not Available to Buy
+                          </span>
+                        ) : (
+                          <>
+                            <span className="checkout-software-rate" style={{ display: 'block' }}>
+                              ₹{isYearly ? '560' : '740'}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                              / user / mo
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -1091,6 +1166,60 @@ export default function CheckoutPage() {
                 </Link>
               </div>
 
+              {/* Duplicate Software Purchase Warning Banner */}
+              {duplicateSoftwareWarning && (
+                <div
+                  style={{
+                    background: '#fef2f2',
+                    border: '1.5px solid #ef4444',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    color: '#991b1b',
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.1)'
+                  }}
+                >
+                  <AlertCircle size={22} style={{ flexShrink: 0, marginTop: '2px', color: '#dc2626' }} />
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '14.5px', marginBottom: '4px' }}>
+                      Software Already Purchased on This Account
+                    </strong>
+                    <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: '#7f1d1d' }}>
+                      {duplicateSoftwareWarning}
+                    </p>
+                    <div style={{ marginTop: '10px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Link
+                        to="/customer?renew=true"
+                        style={{
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          background: '#0284c7',
+                          padding: '6px 14px',
+                          borderRadius: '6px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        Renew in Customer Dashboard →
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => { setDuplicateSoftwareWarning(''); setCurrentStep(1); }}
+                        style={{ background: 'none', border: 'none', color: '#475569', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Choose Different Software
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleProceedFromStep3}>
                 <div className="company-details-form-grid">
                   {/* Your name * */}
@@ -1125,9 +1254,11 @@ export default function CheckoutPage() {
                       required
                       placeholder="you@company.com"
                       value={formData.email}
+                      onBlur={() => verifyEmailSoftwareOwnership(formData.email)}
                       onChange={(e) => {
                         const newEmail = e.target.value;
                         setFormData({ ...formData, email: newEmail });
+                        if (duplicateSoftwareWarning) setDuplicateSoftwareWarning('');
                         if (isEmailVerified && (!loggedInUser || loggedInUser.email !== newEmail)) {
                           setIsEmailVerified(false);
                         }
@@ -1899,32 +2030,71 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Actions Banner */}
-              <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <CheckCircle2 size={24} style={{ color: '#16a34a' }} />
-                  <div>
-                    <b style={{ color: '#166534', fontSize: '1rem', display: 'block' }}>Payment Verified & Active!</b>
-                    <span style={{ color: '#15803d', fontSize: '0.85rem' }}>Subscription has been initialized on your dedicated storage instance.</span>
+              {/* Lock Tax Invoice & Dashboard access until password is created for new customers */}
+              {(!loggedInUser && !passwordSavedSuccess) ? (
+                <div
+                  className="no-print"
+                  style={{
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                    border: '1.5px dashed #94a3b8',
+                    borderRadius: '16px',
+                    padding: '36px 28px',
+                    textAlign: 'center',
+                    marginTop: '20px',
+                    marginBottom: '20px',
+                    boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      background: '#e0f2fe',
+                      color: '#0284c7',
+                      display: 'grid',
+                      placeItems: 'center',
+                      margin: '0 auto 16px'
+                    }}
+                  >
+                    <Lock size={28} />
                   </div>
+                  <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                    Set Your Password Above to Unlock Your Official Tax Invoice
+                  </h4>
+                  <p style={{ fontSize: '0.92rem', color: '#64748b', maxWidth: '620px', margin: '0 auto', lineHeight: 1.6 }}>
+                    Your payment of <strong>₹{totals.totalAmount.toFixed(2)}</strong> is verified and your software instance is ready.
+                    Per security compliance, your <strong>Official Tax Invoice PDF</strong> and <strong>Customer Dashboard Access</strong> will be generated, displayed, and emailed to <strong>{formData.email}</strong> right after you save your password above.
+                  </p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    type="button"
-                    className="checkout-secondary-btn"
-                    onClick={handlePrintReceipt}
-                  >
-                    <Download size={15} /> Download / Print Invoice
-                  </button>
-                  <Link
-                    to="/customer"
-                    className="checkout-primary-btn btn-green"
-                    style={{ textDecoration: 'none', padding: '10px 18px', fontSize: '0.9rem' }}
-                  >
-                    Open Customer Dashboard →
-                  </Link>
-                </div>
-              </div>
+              ) : (
+                <>
+                  {/* Actions Banner */}
+                  <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <CheckCircle2 size={24} style={{ color: '#16a34a' }} />
+                      <div>
+                        <b style={{ color: '#166534', fontSize: '1rem', display: 'block' }}>Payment Verified & Active!</b>
+                        <span style={{ color: '#15803d', fontSize: '0.85rem' }}>Subscription has been initialized on your dedicated storage instance.</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        type="button"
+                        className="checkout-secondary-btn"
+                        onClick={handlePrintReceipt}
+                      >
+                        <Download size={15} /> Download / Print Invoice
+                      </button>
+                      <Link
+                        to="/customer"
+                        className="checkout-primary-btn btn-green"
+                        style={{ textDecoration: 'none', padding: '10px 18px', fontSize: '0.9rem' }}
+                      >
+                        Open Customer Dashboard →
+                      </Link>
+                    </div>
+                  </div>
 
               {/* =========================================================== */}
               {/* Exact TAX INVOICE Sheet from Screenshot 2                   */}
@@ -2190,8 +2360,10 @@ export default function CheckoutPage() {
                   Go to Customer Dashboard <ArrowRight size={16} />
                 </Link>
               </div>
-            </div>
+            </>
           )}
+        </div>
+      )}
         </div>
       </div>
       <Footer />

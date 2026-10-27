@@ -1046,7 +1046,7 @@ async function initDb() {
         VALUES
           ('PRD-001', 'OXOO Business Suite', 'business-suite', 'Layers', '#0284c7', 'Complete business management platform', 'All-in-one unified enterprise ERP and business operating system integrating finance, HRMS, CRM, inventory, and operations.', 'Business Management', '["Finance", "HRMS", "Sales", "Inventory", "Marketing", "Studio"]'::jsonb, '["Multi-Company ERP", "Unified Single Sign-On", "Enterprise Access Control", "Automated Workflows", "API Integrations"]'::jsonb, 8, 'Active', 'Public', '2026-10-24T10:30:00Z'),
           ('PRD-002', 'Finance Pro', 'finance-pro', 'CreditCard', '#059669', 'Advanced finance and accounting', 'Automated double-entry bookkeeping, GST invoicing, cashflow forecasts, automated bank reconciliations, and expense management.', 'Finance', '["Accounting", "Invoicing", "Payroll", "Cashflow", "Taxation"]'::jsonb, '["Automated Bank Feeds", "Multi-Currency Ledgers", "E-Invoicing \u0026 GST Filing", "Audit-Ready Reports", "Expense OCR Scanning"]'::jsonb, 4, 'Active', 'Public', '2026-10-22T16:12:00Z'),
-          ('PRD-003', 'HRMS Pro', 'hrms-pro', 'Users', '#7c3aed', 'Complete human resource management', 'Employee self-service, automated attendance with geo-fencing, payroll processing, performance reviews, and leave management.', 'Human Resources', '["Employee", "Payroll", "Attendance", "Leaves", "Recruitment"]'::jsonb, '["Biometric \u0026 Geo Attendance", "Automated Tax Calculation", "Direct Salary Bank Transfers", "Appraisal 360 Reviews", "Employee Self Service"]'::jsonb, 4, 'Active', 'Public', '2026-10-21T11:45:00Z'),
+          ('PRD-003', 'HRMS Pro', 'hrms-pro', 'Users', '#7c3aed', 'Complete human resource management', 'Employee self-service, automated attendance with geo-fencing, payroll processing, performance reviews, and leave management.', 'Human Resources', '["Employee", "Payroll", "Attendance", "Leaves", "Recruitment"]'::jsonb, '["Biometric \u0026 Geo Attendance", "Automated Tax Calculation", "Direct Salary Bank Transfers", "Performance Appraisals", "Employee Self Service"]'::jsonb, 4, 'Active', 'Public', '2026-10-21T11:45:00Z'),
           ('PRD-004', 'Sales Pro', 'sales-pro', 'TrendingUp', '#ea580c', 'Boost your sales and CRM', 'Comprehensive lead scoring, visual sales pipeline, deal tracking, automated follow-up sequences, and quote-to-cash workflows.', 'Sales & CRM', '["Leads", "Pipeline", "Customers", "Quotes", "Analytics"]'::jsonb, '["Kanban Deal Pipeline", "Email \u0026 Call Tracking", "Quote PDF Generator", "Lead Scoring AI", "Revenue Forecasting"]'::jsonb, 3, 'Active', 'Public', '2026-10-20T14:18:00Z'),
           ('PRD-005', 'Inventory & Supply Chain', 'inventory-supply-chain', 'Package', '#0d9488', 'Inventory and supply chain management', 'Real-time multi-warehouse inventory tracking, batch and serial tracking, supplier purchase orders, and stock reorder alerts.', 'Inventory', '["Inventory", "Warehouse", "Purchase", "Suppliers", "Shipments"]'::jsonb, '["Multi-Warehouse Tracking", "Barcode \u0026 QR Labeling", "Automated Purchase Orders", "Batch Expiry Tracking", "Carrier Shipping APIs"]'::jsonb, 3, 'Inactive', 'Public', '2026-10-18T09:20:00Z'),
           ('PRD-006', 'Marketing Pro', 'marketing-pro', 'Send', '#db2777', 'Marketing automation and campaigns', 'Multi-channel email and SMS campaign management, audience segmentation, landing page builder, and conversion tracking.', 'Marketing', '["Email", "Campaign", "Analytics", "Audience", "Templates"]'::jsonb, '["Drag-and-Drop Email Builder", "Drip Email Sequences", "SMS \u0026 WhatsApp Broadcasts", "UTM Tracking Analytics", "A/B Testing Engine"]'::jsonb, 2, 'Active', 'Public', '2026-10-16T17:40:00Z'),
@@ -1162,7 +1162,7 @@ async function initDb() {
           app_type, access_mode, auth_method, service_key, access_protection, warning_page_url,
           subscription_required, status, health_status, health_response_ms, allowed_domains, updated_at
         ) VALUES
-          ('APP-HRMS', 'Employee360 HRMS', 'employee360-hrms', 'HR', 'Users', '#7c3aed', 'Complete HR and employee-management solution.', 'Manage employees, attendance, payroll, leave, performance and more with Employee360 HRMS.', 'https://hrms.oxoo.in', '/employee', '/admin', 'https://hrms.oxoo.in/customer', 'https://hrms.oxoo.in/logout', 'https://hrms.oxoo.in/health', 'HRMS', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_9f8d7e6c5b4a3e2d', true, 'https://oxoo.in/access-denied', 'HRMS Plan', 'Active', 'Operational', 32, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
+          ('APP-HRMS', 'Employee Pro HRMS', 'employee-pro-hrms', 'HR', 'Users', '#7c3aed', 'Complete HR and employee-management solution.', 'Manage employees, attendance, payroll, leave, performance and more with Employee Pro HRMS.', 'https://hrms.oxoo.in', '/employee', '/admin', 'https://hrms.oxoo.in/customer', 'https://hrms.oxoo.in/logout', 'https://hrms.oxoo.in/health', 'HRMS', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_9f8d7e6c5b4a3e2d', true, 'https://oxoo.in/access-denied', 'HRMS Plan', 'Active', 'Operational', 32, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
           ('APP-FIN', 'OXOO Finance', 'oxoo-finance', 'Finance', 'CreditCard', '#059669', 'Enterprise accounting, ledgers and GST invoicing.', 'Automated bookkeeping, invoice creation, multi-currency accounts and financial reports.', 'https://finance.oxoo.in', '/portal', '/admin', 'https://finance.oxoo.in/customer', 'https://finance.oxoo.in/logout', 'https://finance.oxoo.in/health', 'Finance', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_8a7b6c5d4e3f2a1b', true, 'https://oxoo.in/access-denied', 'Finance Plan', 'Active', 'Operational', 28, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
           ('APP-SALES', 'Sales Pro', 'sales-pro-app', 'Sales', 'TrendingUp', '#ea580c', 'Pipeline tracking, CRM and deals closing.', 'Complete visual pipeline, deal progress tracking, automated follow-up sequences and customer intelligence.', 'https://sales.oxoo.in', '/login', '/admin', 'https://sales.oxoo.in/pipeline', 'https://sales.oxoo.in/logout', 'https://sales.oxoo.in/health', 'Sales', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_7c6d5e4f3a2b1c9d', true, 'https://oxoo.in/access-denied', 'Business Plan', 'Active', 'Operational', 45, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
           ('APP-INVENTORY', 'Inventory & SCM', 'inventory-scm', 'Inventory', 'Package', '#0d9488', 'Multi-warehouse stock and supply chain tracking.', 'Real-time multi-warehouse inventory levels, reorder alerts, supplier tracking and shipments.', 'https://inventory.oxoo.in', '/staff', '/admin', 'https://inventory.oxoo.in/warehouse', 'https://inventory.oxoo.in/logout', 'https://inventory.oxoo.in/health', 'Inventory', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_6b5a4f3e2d1c9b8a', true, 'https://oxoo.in/access-denied', 'Enterprise Plan', 'Maintenance', 'Degraded', 120, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
@@ -1233,7 +1233,7 @@ async function initDb() {
               'INV-2026-1017', 'TXN3387612450', 'CST-0004', 'NextGen HR', 'priya@nextgenhr.com', '+91 91234 56789',
               'HRMS Plan', 'HRMS Plan', 'Yearly', 12999.00, 2339.82, 15338.82, 'INR', 'Netbanking',
               'Paid', '2026-09-21T11:10:00Z', '2026-09-21T11:14:00Z', '2027-09-21T11:14:00Z',
-              '["Employee360 HRMS", "Payroll Pro"]'::jsonb,
+              '["Employee Pro HRMS", "Payroll Pro"]'::jsonb,
               '[{"step": "Invoice Created", "time": "21 Sep 2026, 11:10 AM", "completed": true}, {"step": "Payment Initiated", "time": "21 Sep 2026, 11:12 AM", "completed": true}, {"step": "Payment Confirmed", "time": "21 Sep 2026, 11:13 AM", "completed": true}, {"step": "Invoice Paid", "time": "21 Sep 2026, 11:14 AM", "completed": true}]'::jsonb
             ),
             (
@@ -1273,9 +1273,16 @@ async function initDb() {
           status VARCHAR(50) DEFAULT 'Active',
           access_level VARCHAR(50) DEFAULT 'Full Platform',
           permissions JSONB DEFAULT '[]'::jsonb,
+          assigned_software JSONB DEFAULT '["all"]'::jsonb,
+          employee_id VARCHAR(50),
+          created_by VARCHAR(150) DEFAULT 'admin@oxoo.ai',
           joined_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        ALTER TABLE platform_staff ADD COLUMN IF NOT EXISTS assigned_software JSONB DEFAULT '["all"]'::jsonb;
+        ALTER TABLE platform_staff ADD COLUMN IF NOT EXISTS employee_id VARCHAR(50);
+        ALTER TABLE platform_staff ADD COLUMN IF NOT EXISTS created_by VARCHAR(150) DEFAULT 'admin@oxoo.ai';
       `);
 
       // Ensure Super Administrator platform_staff record exists for console authorization
@@ -1460,9 +1467,11 @@ async function initDb() {
         ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_agent TEXT DEFAULT 'Mozilla/5.0 Chrome/130.0';
         ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS result VARCHAR(50) DEFAULT 'Success';
         ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS duration_ms INTEGER DEFAULT 24;
+      `);
 
-        if (SHOULD_SEED_DEMO) {
-          // Seed initial authentic audit events if count < 5
+      if (SHOULD_SEED_DEMO) {
+        // Seed initial authentic audit events if count < 5
+        await client.query(`
           INSERT INTO audit_logs (
             action, target, user_name, actor_name, actor_email, actor_role,
             resource_type, resource_id, ip_address, result, duration_ms, details, created_at
@@ -1475,8 +1484,9 @@ async function initDb() {
             ('Security Policy Enforced', 'Session Timeout', 'Manminder Singh', 'Manminder Singh', 'manminder.singh@primepro.ai', 'Super Admin', 'SecuritySettings', 'POLICY-SEC-1', '103.212.144.18', 'Success', 22, '{"session_timeout_minutes": 60, "mfa_enforced": true}'::jsonb, NOW() - INTERVAL '1 day'),
             ('Webhook Verification Ping', 'Razorpay Webhook', 'Razorpay Service', 'Razorpay Gateway', 'gateways@oxoo.ai', 'Super Admin', 'Integration', 'INT-RAZORPAY', '185.107.56.20', 'Success', 85, '{"event": "payment.authorized", "latency_ms": 85}'::jsonb, NOW() - INTERVAL '1 day')
           ON CONFLICT DO NOTHING;
-        }
-      `);
+        `);
+      }
+
 
       // 19. EMAIL TEMPLATES TABLE
       await client.query(`
@@ -1504,7 +1514,7 @@ async function initDb() {
             '["{{customer_name}}", "{{otp_code}}", "{{expiration_minutes}}"]'::jsonb, true
           ),
           (
-            'welcome_email', 'Welcome Email', 'Account', 'Welcome to OXOO 360, {{customer_name}}!',
+            'welcome_email', 'Welcome Email', 'Account', 'Welcome to OXOO, {{customer_name}}!',
             '<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;"><h2 style="color: #0f172a;">Welcome to OXOO!</h2><p style="color: #475569;">Hello {{customer_name}}, your {{organization_name}} workspace is ready.</p><a href="{{portal_url}}" style="display: inline-block; padding: 12px 24px; background: #0284c7; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 700;">Open Workspace</a></div>',
             'Welcome to OXOO! Hello {{customer_name}}, your {{organization_name}} workspace is ready at {{portal_url}}.',
             '["{{customer_name}}", "{{organization_name}}", "{{portal_url}}", "{{admin_email}}"]'::jsonb, true
@@ -1698,7 +1708,7 @@ async function initDb() {
 
         INSERT INTO platform_settings (category, settings) VALUES
           ('general', '{
-            "platformName": "OXOO 360",
+            "platformName": "OXOO",
             "tagline": "One Platform. Infinite Possibilities.",
             "defaultCurrency": "INR",
             "timezone": "Asia/Kolkata",
@@ -1754,8 +1764,68 @@ async function initDb() {
             "logLevel": "info",
             "dataRetentionDays": 365,
             "backupSchedule": "Daily at 02:00 AM UTC"
+          }'::jsonb),
+          ('agent', '{
+            "enabled": true,
+            "agentName": "OXOO Agent",
+            "welcomeMessage": "Hi! I''m OXOO Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
+            "suggestedQuestions": [
+              "Explore OXOO applications",
+              "Compare pricing plans",
+              "Find a website development package",
+              "Explore Android and iOS app development",
+              "Learn about AI chatbots",
+              "Manage my subscription",
+              "Find an invoice",
+              "Contact customer support"
+            ],
+            "aiProvider": "gemini",
+            "aiModel": "gemini-1.5-flash",
+            "rateLimitPerMinute": 30,
+            "retentionDays": 90,
+            "supportEscalationEmail": "support@oxoo.ai",
+            "allowCustomerActions": true
           }'::jsonb)
         ON CONFLICT (category) DO NOTHING;
+      `);
+
+      // 18. OXOO Agent AI Tables
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS agent_conversations (
+          id SERIAL PRIMARY KEY,
+          conversation_id VARCHAR(100) NOT NULL UNIQUE,
+          session_id VARCHAR(100) NOT NULL,
+          user_id INTEGER,
+          customer_id VARCHAR(50),
+          user_email VARCHAR(255),
+          title VARCHAR(255) DEFAULT 'New Conversation',
+          message_count INTEGER DEFAULT 0,
+          last_message_at TIMESTAMPTZ DEFAULT NOW(),
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_agent_conv_session ON agent_conversations(session_id);
+        CREATE INDEX IF NOT EXISTS idx_agent_conv_email ON agent_conversations(user_email);
+
+        CREATE TABLE IF NOT EXISTS agent_messages (
+          id SERIAL PRIMARY KEY,
+          conversation_id VARCHAR(100) NOT NULL,
+          sender VARCHAR(20) NOT NULL,
+          content TEXT NOT NULL,
+          structured_payload JSONB DEFAULT '{}'::jsonb,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_agent_msg_conv ON agent_messages(conversation_id);
+
+        CREATE TABLE IF NOT EXISTS agent_events (
+          id SERIAL PRIMARY KEY,
+          event_type VARCHAR(50) NOT NULL,
+          conversation_id VARCHAR(100),
+          actor_email VARCHAR(255),
+          details JSONB DEFAULT '{}'::jsonb,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_agent_events_type ON agent_events(event_type);
       `);
     } catch (modErr) {
       console.error('Module upgrade schema seed error:', modErr.message);

@@ -6,7 +6,7 @@ import {
 import {
   getApplicationsSummary, getAdminApplications, getAdminApplication,
   createAdminApplication, updateAdminApplication, updateAdminApplicationStatus,
-  rotateApplicationServiceKey, checkApplicationHealth
+  rotateApplicationServiceKey, checkApplicationHealth, deleteAdminApplication
 } from '../../api';
 
 export default function ApplicationsModule({ showToast, logAuditEvent }) {
@@ -25,6 +25,8 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [showConfigureDrawer, setShowConfigureDrawer] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [deleteConfirmApp, setDeleteConfirmApp] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [configureTab, setConfigureTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -183,6 +185,26 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
       }
     } catch (e) {
       showToast('Error changing status.');
+    }
+  };
+
+  const handleDeleteApp = async () => {
+    if (!deleteConfirmApp) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteAdminApplication(deleteConfirmApp.app_id || deleteConfirmApp.id);
+      if (res && res.success) {
+        showToast(res.message || `Application "${deleteConfirmApp.name}" was permanently deleted.`);
+        if (logAuditEvent) logAuditEvent('Application Deleted', deleteConfirmApp.name);
+        setDeleteConfirmApp(null);
+        fetchData();
+      } else {
+        showToast(res.message || 'Failed to delete application.');
+      }
+    } catch (e) {
+      showToast(e.message || 'Error deleting application.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -408,6 +430,26 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                       >
                         <Sliders size={12} /> Configure
                       </button>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          background: '#fee2e2',
+                          color: '#dc2626',
+                          border: '1px solid #fecaca',
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        onClick={() => setDeleteConfirmApp(app)}
+                        title="Delete application"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -430,7 +472,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>+ Add Application</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>Provision a new SaaS application in the OXOO 360 ecosystem.</p>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>Provision a new SaaS application in the OXOO ecosystem.</p>
               </div>
               <button onClick={() => setShowAddDrawer(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={20} /></button>
             </div>
@@ -443,7 +485,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Employee360 HRMS"
+                      placeholder="e.g. Employee Pro HRMS"
                       value={newAppForm.name}
                       onChange={(e) => setNewAppForm({ ...newAppForm, name: e.target.value })}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', marginTop: '4px' }}
@@ -962,13 +1004,25 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
 
             {/* Footer */}
             <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
-              <button
-                type="button"
-                onClick={() => handleToggleStatus(selectedApp)}
-                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-              >
-                {selectedApp.status === 'Active' ? 'Deactivate App' : 'Activate App'}
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleToggleStatus(selectedApp)}
+                  style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {selectedApp.status === 'Active' ? 'Deactivate App' : 'Activate App'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowConfigureDrawer(false);
+                    setDeleteConfirmApp(selectedApp);
+                  }}
+                  style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fee2e2', color: '#dc2626', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Trash2 size={13} /> Delete App
+                </button>
+              </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   type="button"
@@ -988,6 +1042,77 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. DELETE APPLICATION MODAL */}
+      {deleteConfirmApp && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ width: '480px', maxWidth: '100%', background: '#fff', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', background: '#fef2f2', borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#991b1b' }}>Delete Application</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#b91c1c' }}>Permanent removal from ecosystem</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteConfirmApp(null)}
+                disabled={isDeleting}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#334155', lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete <strong>{deleteConfirmApp.name}</strong> ({deleteConfirmApp.app_id})?
+              </p>
+
+              <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: '#92400e', lineHeight: 1.5 }}>
+                • Removes application from platform configuration<br />
+                • Associated service API keys will immediately become invalid<br />
+                • Deletes from PostgreSQL <code>platform_applications</code>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="oxoo-outline-btn"
+                onClick={() => setDeleteConfirmApp(null)}
+                disabled={isDeleting}
+                style={{ padding: '8px 16px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteApp}
+                disabled={isDeleting}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#dc2626',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Trash2 size={14} />
+                {isDeleting ? 'Deleting...' : 'Confirm & Delete'}
+              </button>
             </div>
           </div>
         </div>

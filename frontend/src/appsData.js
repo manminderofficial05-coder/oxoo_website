@@ -611,7 +611,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-hr.png?v=clean',
     svgSrc: '/app-logos/hrms.svg',
     tagline: 'Employee records, department hierarchy, leave approvals, and appraisals.',
-    description: 'Empower your people with modern human capital management. Centralize employee documents, manage leave policies and approvals, conduct 360 reviews, and maintain organizational charts.',
+    description: 'Empower your people with modern human capital management. Centralize employee documents, manage leave policies and approvals, conduct comprehensive reviews, and maintain organizational charts.',
     features: ['Employee Directory', 'Leave & Attendance Tracking', 'Org Hierarchy Chart', 'Performance Appraisals', 'Expense Reimbursement'],
     kpis: [
       { label: 'Total Employees', value: '148', change: '+6 Hired' },
@@ -694,7 +694,7 @@ export const SERVICE_ALIASES = {
   'payroll': { base: 'accounting', name: 'Payroll', category: 'Human Resources', iconSrc: '/apps/logo-accounting.png?v=clean', tagline: 'Automated salary disbursements, deductions, tax compliance, and payslips.' },
   'recruitment': { base: 'crm', name: 'Recruitment', category: 'Human Resources', iconSrc: '/apps/logo-crm.png?v=clean', tagline: 'Candidate pipeline Kanban, resume parsing, interview scheduling, and offer letters.' },
   'time-off': { base: 'timesheets', name: 'Time Off', category: 'Human Resources', iconSrc: '/apps/logo-timesheets.png?v=clean', tagline: 'Leave management, vacation requests, accruals, and departmental calendars.' },
-  'appraisals': { base: 'studio', name: 'Appraisals', category: 'Human Resources', iconSrc: '/apps/logo-studio.png?v=clean', tagline: 'Periodic performance appraisals, 360-degree feedback, and goal milestones.' },
+  'appraisals': { base: 'studio', name: 'Appraisals', category: 'Human Resources', iconSrc: '/apps/logo-studio.png?v=clean', tagline: 'Periodic performance appraisals, multi-rater feedback, and goal milestones.' },
   'fleet': { base: 'field-service', name: 'Fleet', category: 'Human Resources', iconSrc: '/apps/logo-field-service.png?v=clean', tagline: 'Vehicle fleet management, fuel consumption logs, maintenance contracts, and drivers.' },
 
   // Marketing

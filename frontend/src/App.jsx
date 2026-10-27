@@ -31,6 +31,7 @@ import AdminLoginPage from './AdminLoginPage';
 import ResetPasswordPage from './ResetPasswordPage';
 import EmployeeLoginPage from './EmployeeLoginPage';
 import HelpPage from './HelpPage';
+import OxooAgentWidget from './components/agent/OxooAgentWidget';
 
 function useScrollTop() {
   const location = useLocation();
@@ -1177,7 +1178,7 @@ function ServiceDetail() {
               },
               {
                 title: 'Contact Management',
-                desc: 'Consolidate 360-degree customer histories, conversations, and transaction records.',
+                desc: 'Consolidate comprehensive customer histories, conversations, and transaction records.',
                 icon: ShieldCheck,
                 color: 'green'
               },
@@ -1693,8 +1694,10 @@ function NotFound() {
 export default function App() {
   useScrollTop();
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
+    <>
+      <Routes>
+        <Route path="/" element={<Home />} />
+
       <Route path="/choose-apps" element={<ChooseAppsPage />} />
       <Route path="/apps" element={<AllAppsDirectory />} />
       <Route path="/all-apps" element={<AllAppsDirectory />} />
@@ -1782,5 +1785,8 @@ export default function App() {
       <Route path="/admin/*" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    <OxooAgentWidget />
+  </>
   );
 }
+

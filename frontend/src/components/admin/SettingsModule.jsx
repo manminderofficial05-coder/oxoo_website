@@ -2,19 +2,27 @@ import React, { useState, useEffect } from 'react';
 import {
   Settings, Globe, Palette, Mail, CreditCard, Shield,
   Sliders, FileText, Server, RefreshCw, CheckCircle2,
-  Lock, AlertTriangle, Key, ExternalLink, Save, Activity
+  Lock, AlertTriangle, Key, ExternalLink, Save, Activity,
+  Bot, Sparkles, MessageSquare, Trash2, Plus, Eye, EyeOff, Radio
 } from 'lucide-react';
-import { getAdminPlatformSettings, updateAdminPlatformSettings } from '../../api';
+import {
+  getAdminPlatformSettings,
+  updateAdminPlatformSettings,
+  getAdminAgentAnalytics
+} from '../../api';
 
 export default function SettingsModule({ showToast, logAuditEvent }) {
-  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'branding' | 'email' | 'payments' | 'security' | 'api' | 'billing' | 'system'
+  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'branding' | 'email' | 'payments' | 'security' | 'api' | 'billing' | 'system' | 'agent'
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [newQuestionText, setNewQuestionText] = useState('');
+  const [agentAnalytics, setAgentAnalytics] = useState(null);
 
   // Settings state by category
   const [categoryData, setCategoryData] = useState({
     general: {
-      platformName: 'OXOO 360',
+      platformName: 'OXOO',
       tagline: 'One Platform. Infinite Possibilities.',
       defaultCurrency: 'INR (₹)',
       timezone: 'Asia/Kolkata',
@@ -71,8 +79,31 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
       maintenanceMode: false,
       debugLogging: false,
       databaseStatus: 'Healthy (PostgreSQL Neon)',
-      systemVersion: 'OXOO 360 v2.4.1',
+      systemVersion: 'OXOO v2.4.1',
       uptime: '99.98%'
+    },
+    agent: {
+      enabled: true,
+      agentName: 'OXOO Agent',
+      welcomeMessage: "Hi! I'm OXOO Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
+      suggestedQuestions: [
+        'Explore OXOO applications',
+        'Compare pricing plans',
+        'Find a website development package',
+        'Explore Android and iOS app development',
+        'Learn about AI chatbots',
+        'Manage my subscription',
+        'Find an invoice',
+        'Contact customer support'
+      ],
+      aiProvider: 'gemini',
+      aiModel: 'gemini-1.5-flash',
+      aiApiKey: '',
+      rateLimitPerMinute: 30,
+      retentionDays: 90,
+      supportEscalationEmail: 'support@oxoo.ai',
+      supportEscalationPhone: '+91 80 4567 8900',
+      allowCustomerActions: true
     }
   });
 
@@ -86,12 +117,20 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
           [cat]: { ...prev[cat], ...res.settings }
         }));
       }
+
+      if (cat === 'agent') {
+        const analyticsRes = await getAdminAgentAnalytics();
+        if (analyticsRes && analyticsRes.success) {
+          setAgentAnalytics(analyticsRes);
+        }
+      }
     } catch (err) {
       console.error(`Failed to load ${cat} settings:`, err);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchCategorySettings(activeTab);
@@ -167,8 +206,10 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
           { id: 'security', label: 'Security', icon: Shield },
           { id: 'api', label: 'API & Webhooks', icon: Key },
           { id: 'billing', label: 'Billing', icon: FileText },
-          { id: 'system', label: 'System', icon: Server }
+          { id: 'system', label: 'System', icon: Server },
+          { id: 'agent', label: 'OXOO Agent (AI)', icon: Bot }
         ].map((t) => {
+
           const Icon = t.icon;
           return (
             <button
@@ -624,7 +665,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
                       type="text"
                       disabled
                       className="oxoo-form-input"
-                      value={currentSettings.systemVersion || 'OXOO 360 v2.4.1'}
+                      value={currentSettings.systemVersion || 'OXOO v2.4.1'}
                       style={{ background: '#f8fafc' }}
                     />
                   </div>
@@ -650,6 +691,297 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
                     <span>Maintenance Mode (Temporarily suspend customer portal checkouts)</span>
                   </label>
                 </div>
+              </>
+            )}
+
+            {/* TAB 9: OXOO AGENT (AI ASSISTANT) SETTINGS */}
+            {activeTab === 'agent' && (
+              <>
+                {/* 1. Real Usage Analytics Header Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#0369a1', textTransform: 'uppercase' }}>Total Chats</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#0284c7', marginTop: '4px' }}>
+                      {agentAnalytics?.metrics?.totalConversations ?? 0}
+                    </div>
+                  </div>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>Total Messages</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b', marginTop: '4px' }}>
+                      {agentAnalytics?.metrics?.totalMessages ?? 0}
+                    </div>
+                  </div>
+                  <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#047857', textTransform: 'uppercase' }}>Tickets via Agent</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#059669', marginTop: '4px' }}>
+                      {agentAnalytics?.metrics?.ticketsCreatedViaAgent ?? 0}
+                    </div>
+                  </div>
+                  <div style={{ background: '#fdf4ff', border: '1px solid #f5d0fe', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#86198f', textTransform: 'uppercase' }}>Service Health</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#a21caf', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                      Operational (Neon RAG)
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Status & Master Toggle */}
+                <div className="oxoo-form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer', fontWeight: 600 }}>
+                    <input
+                      type="checkbox"
+                      checked={currentSettings.enabled !== false}
+                      onChange={(e) => handleUpdateField('enabled', e.target.checked)}
+                      style={{ width: '16px', height: '16px' }}
+                    />
+                    <span>Enable OXOO Agent Floating Widget across Website</span>
+                  </label>
+                  <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#64748b' }}>
+                    When disabled, the chatbot icon will not appear on public website pages.
+                  </p>
+                </div>
+
+                {/* 3. Assistant Name & Welcome Text */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Agent Display Name</label>
+                    <input
+                      type="text"
+                      className="oxoo-form-input"
+                      value={currentSettings.agentName || 'OXOO Agent'}
+                      onChange={(e) => handleUpdateField('agentName', e.target.value)}
+                    />
+                  </div>
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Support Escalation Email</label>
+                    <input
+                      type="email"
+                      className="oxoo-form-input"
+                      value={currentSettings.supportEscalationEmail || 'support@oxoo.ai'}
+                      onChange={(e) => handleUpdateField('supportEscalationEmail', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Welcome Message</label>
+                  <textarea
+                    rows={3}
+                    className="oxoo-form-input"
+                    value={currentSettings.welcomeMessage || ''}
+                    onChange={(e) => handleUpdateField('welcomeMessage', e.target.value)}
+                    style={{ resize: 'vertical' }}
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>
+                    Greeting shown to visitors when they first open the chat panel.
+                  </span>
+                </div>
+
+                {/* 4. AI Provider & Model Configuration (Section 8) */}
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', background: '#f8fafc', marginTop: '6px' }}>
+                  <h4 style={{ margin: '0 0 10px', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Bot size={16} color="#0284c7" />
+                    AI Provider & Server Model Configuration
+                  </h4>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div className="oxoo-form-group">
+                      <label className="oxoo-form-label">AI Provider</label>
+                      <select
+                        className="oxoo-form-input"
+                        value={currentSettings.aiProvider || 'gemini'}
+                        onChange={(e) => handleUpdateField('aiProvider', e.target.value)}
+                      >
+                        <option value="gemini">Google Gemini (Recommended)</option>
+                        <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+                      </select>
+                    </div>
+
+                    <div className="oxoo-form-group">
+                      <label className="oxoo-form-label">Model Identifier</label>
+                      <input
+                        type="text"
+                        className="oxoo-form-input"
+                        placeholder="e.g. gemini-1.5-flash or gpt-4o-mini"
+                        value={currentSettings.aiModel || 'gemini-1.5-flash'}
+                        onChange={(e) => handleUpdateField('aiModel', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="oxoo-form-group" style={{ marginTop: '10px' }}>
+                    <label className="oxoo-form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Server-Side Model API Key</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        {showApiKey ? <EyeOff size={13} /> : <Eye size={13} />}
+                        {showApiKey ? 'Hide' : 'Reveal/Edit'}
+                      </button>
+                    </label>
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      className="oxoo-form-input"
+                      placeholder="Leave blank to use server environment AI_API_KEY"
+                      value={currentSettings.aiApiKey || ''}
+                      onChange={(e) => handleUpdateField('aiApiKey', e.target.value)}
+                    />
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>
+                      Masked for security. Never exposed to browser visitors. If not set, the agent operates in live Database Grounded RAG mode.
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5. Suggested Questions Manager */}
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', background: '#ffffff', marginTop: '6px' }}>
+                  <h4 style={{ margin: '0 0 8px', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={16} color="#0284c7" />
+                    Suggested Questions (Prompt Pills)
+                  </h4>
+                  <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>
+                    These interactive chips appear below the welcome message to guide customer questions.
+                  </p>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                    {(currentSettings.suggestedQuestions || []).map((q, qIdx) => (
+                      <span
+                        key={qIdx}
+                        style={{
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '20px',
+                          padding: '4px 10px',
+                          fontSize: '12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {q}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = currentSettings.suggestedQuestions.filter((_, idx) => idx !== qIdx);
+                            handleUpdateField('suggestedQuestions', updated);
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0, display: 'inline-flex' }}
+                          title="Remove question"
+                        >
+                          <Trash2 size={12} style={{ color: '#ef4444' }} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Add Question input */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      className="oxoo-form-input"
+                      placeholder="Add another suggested question..."
+                      value={newQuestionText}
+                      onChange={(e) => setNewQuestionText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newQuestionText.trim()) {
+                            const updated = [...(currentSettings.suggestedQuestions || []), newQuestionText.trim()];
+                            handleUpdateField('suggestedQuestions', updated);
+                            setNewQuestionText('');
+                          }
+                        }
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="oxoo-outline-btn"
+                      onClick={() => {
+                        if (newQuestionText.trim()) {
+                          const updated = [...(currentSettings.suggestedQuestions || []), newQuestionText.trim()];
+                          handleUpdateField('suggestedQuestions', updated);
+                          setNewQuestionText('');
+                        }
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 14px' }}
+                    >
+                      <Plus size={14} /> Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* 6. Rate Limits & Customer Actions */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Rate Limit (Requests per minute)</label>
+                    <input
+                      type="number"
+                      min={10}
+                      max={120}
+                      className="oxoo-form-input"
+                      value={currentSettings.rateLimitPerMinute || 30}
+                      onChange={(e) => handleUpdateField('rateLimitPerMinute', parseInt(e.target.value, 10))}
+                    />
+                  </div>
+                  <div className="oxoo-form-group">
+                    <label className="oxoo-form-label">Conversation Retention (Days)</label>
+                    <input
+                      type="number"
+                      min={7}
+                      max={365}
+                      className="oxoo-form-input"
+                      value={currentSettings.retentionDays || 90}
+                      onChange={(e) => handleUpdateField('retentionDays', parseInt(e.target.value, 10))}
+                    />
+                  </div>
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={currentSettings.allowCustomerActions !== false}
+                      onChange={(e) => handleUpdateField('allowCustomerActions', e.target.checked)}
+                    />
+                    <span>Allow Agent to Draft Actions (Support Tickets, Demo Requests, Checkout Links)</span>
+                  </label>
+                </div>
+
+                {/* 7. Real Live Event Stream */}
+                {agentAnalytics?.recentEvents && agentAnalytics.recentEvents.length > 0 && (
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#ffffff', marginTop: '6px' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={15} color="#0284c7" />
+                      Recent Recorded Agent Activity (Audit Log)
+                    </h4>
+                    <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                      <table style={{ width: '100%', fontSize: '11.5px', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
+                            <th style={{ padding: '6px 8px' }}>Event</th>
+                            <th style={{ padding: '6px 8px' }}>Actor</th>
+                            <th style={{ padding: '6px 8px' }}>Conversation</th>
+                            <th style={{ padding: '6px 8px' }}>Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {agentAnalytics.recentEvents.map((ev, evIdx) => (
+                            <tr key={evIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '6px 8px', fontWeight: 600, color: '#0f172a' }}>{ev.event_type}</td>
+                              <td style={{ padding: '6px 8px', color: '#475569' }}>{ev.actor_email || 'anonymous'}</td>
+                              <td style={{ padding: '6px 8px', color: '#64748b' }}>{ev.conversation_id?.slice(0, 14) || '—'}</td>
+                              <td style={{ padding: '6px 8px', color: '#94a3b8' }}>{new Date(ev.created_at).toLocaleTimeString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

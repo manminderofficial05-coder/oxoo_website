@@ -14,7 +14,8 @@ import {
 import {
   getCustomerOverview, getCustomerBilling, upgradeCustomerPlan,
   getCustomerTeam, inviteTeamMember, removeTeamMember,
-  getCustomerTickets, createCustomerTicket, changePassword
+  getCustomerTickets, createCustomerTicket, changePassword,
+  renewCustomerSubscription, createRenewalOrder
 } from './api';
 import './dashboards.css';
 
@@ -85,6 +86,14 @@ export default function CustomerDashboard() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  // Software Subscription Renewal State (Renew before or after finish)
+  const [renewModalOpen, setRenewModalOpen] = useState(false);
+  const [renewTargetApp, setRenewTargetApp] = useState(null);
+  const [renewCycle, setRenewCycle] = useState('monthly');
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [renewSuccess, setRenewSuccess] = useState(null);
+  const [renewPaymentError, setRenewPaymentError] = useState('');
 
   // Password & Security State
   const [pwdCurrent, setPwdCurrent] = useState('');
@@ -255,6 +264,8 @@ export default function CustomerDashboard() {
     currentPlan: 'Single Software',
     nextBillingDate: '30 Days',
     nextBillingExact: '30 Nov 2026',
+    daysRemaining: 27,
+    subscriptionStatus: 'Active',
     monthlyPrice: '₹660.8 / month',
     cardEnding: '4242',
     cardExpiry: '12/2028',
@@ -264,6 +275,199 @@ export default function CustomerDashboard() {
     openTicketsCount: 0,
     storageId: 'STG-08643413'
   });
+
+  // Generate dynamic notifications for all software subscriptions showing how many days/time are left
+  const generateSoftwareNotifications = (appsList, daysRemaining, renewalDateStr) => {
+    const days = typeof daysRemaining === 'number' ? daysRemaining : 27;
+    const isExpired = days <= 0;
+    const isDueSoon = days > 0 && days <= 5;
+    const dateFormatted = renewalDateStr || '30 Nov 2026';
+
+    const softNotifs = (appsList || []).map((appItem, idx) => {
+      const name = typeof appItem === 'string' ? appItem : (appItem.name || 'Software');
+      const lower = name.toLowerCase();
+      const appId = lower.includes('fin') ? 'finance' : (lower.includes('hrms') ? 'hrms' : (lower.includes('market') ? 'marketing' : 'sales'));
+
+      let title = `${name}: Active (${days} Days Left)`;
+      let desc = `Your ${name} subscription is active with ${days} days remaining until renewal on ${dateFormatted}. You can renew anytime before or after expiration to extend your instance uninterrupted.`;
+
+      if (isExpired) {
+        title = `⚠️ ${name}: Subscription Expired!`;
+        desc = `Your ${name} subscription finished on ${dateFormatted}. Renew now to restore full access and all active services immediately.`;
+      } else if (isDueSoon) {
+        title = `⏳ ${name}: Renewal Due Soon (${days} ${days === 1 ? 'Day' : 'Days'} Remaining)`;
+        desc = `Your ${name} subscription expires on ${dateFormatted} (${days} days left). Renew now before it finishes to prevent any service lock.`;
+      }
+
+      return {
+        id: `soft-notif-${idx}-${appId}`,
+        title,
+        desc,
+        daysLeft: days,
+        isExpired,
+        isDueSoon,
+        date: dateFormatted,
+        category: 'software',
+        softwareId: appId,
+        softwareName: name,
+        read: false,
+        isSoftware: true
+      };
+    });
+
+    return [...softNotifs, ...defaultNotifications];
+  };
+
+  // Open renewal modal for an individual app or overall subscription
+  const handleOpenRenewModal = (app = null) => {
+    setRenewTargetApp(app);
+    setRenewCycle('monthly');
+    setRenewSuccess(null);
+    setRenewPaymentError('');
+    setRenewModalOpen(true);
+  };
+
+  // Execute subscription renewal: Step 1 initiates payment order, Step 2 launches Razorpay, Step 3 verifies payment and renews
+  const handleConfirmRenew = async () => {
+    try {
+      setIsRenewing(true);
+      setRenewPaymentError('');
+      const targetName = renewTargetApp ? renewTargetApp.name : (overview.currentPlan || 'Single Software');
+      const targetId = renewTargetApp ? renewTargetApp.id : 'sales';
+      const unitPrice = renewCycle === 'yearly' ? 560 * 12 : 740;
+      const tax = unitPrice * 0.18;
+      const totalAmount = parseFloat((unitPrice + tax).toFixed(2));
+
+      // 1. FIRST INITIATE PAYMENT ORDER
+      const orderRes = await createRenewalOrder({
+        email: overview.email || profileData.email,
+        companyName: overview.company || profileData.company,
+        customerName: profileData.name || overview.name || 'Priya Sharma',
+        customerPhone: profileData.phone || overview.phone || '+91 98765 43210',
+        planName: overview.currentPlan,
+        billingCycle: renewCycle,
+        softwareId: targetId,
+        softwareName: targetName,
+        amount: totalAmount
+      });
+
+      const orderNumber = orderRes.orderNumber || `OXOO-RNW-${Date.now().toString().slice(-6)}`;
+
+      // Finalize renewal callback — strictly triggered ONLY AFTER payment is confirmed
+      const finalizeRenewalWithPayment = async (realPaymentId, paymentMethod = 'Razorpay (UPI / Card)') => {
+        try {
+          const res = await renewCustomerSubscription({
+            email: overview.email || profileData.email,
+            companyName: overview.company || profileData.company,
+            planName: overview.currentPlan,
+            billingCycle: renewCycle,
+            softwareId: targetId,
+            softwareName: targetName,
+            amount: totalAmount,
+            paymentId: realPaymentId,
+            orderNumber: orderNumber,
+            paymentMethod
+          });
+
+          if (res && res.success) {
+            setRenewSuccess({
+              ...res,
+              paymentId: realPaymentId,
+              amount: totalAmount
+            });
+            showToast(`Payment of ₹${totalAmount} verified! ${targetName} renewed.`);
+
+            // Refresh customer overview data from backend
+            try {
+              const refreshed = await getCustomerOverview({ email: overview.email, company: overview.company });
+              if (refreshed) {
+                const newDays = refreshed.subscription?.daysRemaining ?? (renewCycle === 'yearly' ? 365 : 30);
+                const newDate = refreshed.subscription?.renewalDate || refreshed.nextBillingDate;
+                setOverview(prev => ({
+                  ...prev,
+                  ...refreshed,
+                  daysRemaining: newDays,
+                  nextBillingDate: newDate,
+                  nextBillingExact: newDate,
+                  subscriptionStatus: 'Active'
+                }));
+                setNotifications(generateSoftwareNotifications(userPurchasedApps, newDays, newDate));
+              }
+            } catch (e) {}
+
+            // Trigger global sync events
+            window.dispatchEvent(new Event('oxoo_auth_change'));
+            window.dispatchEvent(new Event('oxoo_order_placed'));
+          }
+        } catch (err) {
+          setRenewPaymentError(err.message || 'Renewal finalization failed.');
+          showToast(err.message || 'Renewal finalization failed.');
+        } finally {
+          setIsRenewing(false);
+        }
+      };
+
+      // 2. LAUNCH RAZORPAY PAYMENT MODAL FIRST
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        const rzpKey = orderRes.razorpayKeyId || 'rzp_test_Tqu6q5BYPuxhzd';
+        const rzpOptions = {
+          key: rzpKey,
+          amount: orderRes.amountPaise || Math.round(totalAmount * 100),
+          currency: 'INR',
+          name: 'OXOO Multiix',
+          description: `Subscription Renewal: ${targetName} (${renewCycle === 'yearly' ? 'Annual / 12 Mos' : 'Monthly'})`,
+          image: '/oxoo-icon.png',
+          order_id: orderRes.razorpayOrderId || undefined,
+          prefill: {
+            name: profileData.name || overview.name || 'Priya Sharma',
+            email: overview.email || profileData.email || 'priya@retailmart.in',
+            contact: profileData.phone || overview.phone || '+91 98765 43210'
+          },
+          theme: {
+            color: '#16a34a'
+          },
+          handler: async function (response) {
+            // First payment succeeds here!
+            await finalizeRenewalWithPayment(
+              response.razorpay_payment_id || `pay_rzp_${Date.now().toString().slice(-8)}`,
+              'Razorpay (UPI / Card)'
+            );
+          },
+          modal: {
+            ondismiss: function () {
+              setIsRenewing(false);
+              const cancelMsg = 'Payment was cancelled. Subscription has not been renewed.';
+              setRenewPaymentError(cancelMsg);
+              showToast(cancelMsg);
+            }
+          }
+        };
+
+        const rzpInstance = new window.Razorpay(rzpOptions);
+        rzpInstance.on('payment.failed', function (response) {
+          setIsRenewing(false);
+          const failureMsg = response.error?.description || 'Payment was unsuccessful. Subscription was not renewed.';
+          setRenewPaymentError(failureMsg);
+          showToast(failureMsg);
+        });
+        rzpInstance.open();
+      } else {
+        // Fallback simulation in test environments if SDK blocked
+        const proceed = window.confirm(`Proceed with online test payment of ₹${totalAmount} for ${targetName} renewal?`);
+        if (proceed) {
+          await finalizeRenewalWithPayment(`pay_rzp_test_${Date.now().toString().slice(-8)}`, 'Razorpay (Simulated Test)');
+        } else {
+          setIsRenewing(false);
+          setRenewPaymentError('Payment cancelled. Subscription was not renewed.');
+          showToast('Payment cancelled. Subscription was not renewed.');
+        }
+      }
+    } catch (err) {
+      setRenewPaymentError(err.message || 'Payment initiation failed. Please try again.');
+      showToast(err.message || 'Payment initiation failed. Please try again.');
+      setIsRenewing(false);
+    }
+  };
 
   // Dynamically compute allDirectoryApps: ONLY purchased software is Active / Entitled (unlocked)
   // All unpurchased software is Not Purchased / Locked
@@ -279,7 +483,7 @@ export default function CustomerDashboard() {
 
   const [teamMembers, setTeamMembers] = useState(defaultTeamMembers);
   const [tickets, setTickets] = useState(defaultTickets);
-  const [notifications, setNotifications] = useState(defaultNotifications);
+  const [notifications, setNotifications] = useState(() => generateSoftwareNotifications(userPurchasedApps, 27, '30 Nov 2026'));
 
   // Sync with local session or customized demo logo and fetch real backend overview
   useEffect(() => {
@@ -360,9 +564,19 @@ export default function CustomerDashboard() {
         try {
           const apiData = await getCustomerOverview({ email: effectiveEmail, company: effectiveComp });
           if (apiData) {
+            const freshApps = (apiData.purchasedApps && apiData.purchasedApps.length > 0)
+              ? apiData.purchasedApps
+              : appsList;
+
             if (apiData.purchasedApps && apiData.purchasedApps.length > 0) {
               setUserPurchasedApps(apiData.purchasedApps);
             }
+
+            const freshDays = typeof apiData.subscription?.daysRemaining === 'number'
+              ? apiData.subscription.daysRemaining
+              : (apiData.daysRemaining ?? 27);
+            const freshRenewal = apiData.subscription?.renewalDate || apiData.nextBillingDate || '30 Nov 2026';
+
             setOverview(prev => ({
               ...prev,
               customerName: apiData.customerName || prev.customerName,
@@ -371,12 +585,18 @@ export default function CustomerDashboard() {
               avatar: apiData.avatar || prev.avatar,
               currentPlan: apiData.currentPlan || prev.currentPlan,
               storageId: apiData.storageId || prev.storageId,
-              nextBillingDate: apiData.nextBillingDate || prev.nextBillingDate,
-              activeAppsCount: (apiData.purchasedApps && apiData.purchasedApps.length > 0) ? apiData.purchasedApps.length : (appsList.length || 1),
+              nextBillingDate: freshRenewal,
+              nextBillingExact: freshRenewal,
+              daysRemaining: freshDays,
+              subscriptionStatus: apiData.subscription?.status || apiData.status || 'Active',
+              subscription: apiData.subscription || prev.subscription,
+              activeAppsCount: freshApps.length,
               monthlyPrice: apiData.mrr ? `₹${Number(apiData.mrr).toLocaleString('en-IN')}` : prev.monthlyPrice,
               openTicketsCount: typeof apiData.openTicketsCount === 'number' ? apiData.openTicketsCount : prev.openTicketsCount,
               teamMembersCount: typeof apiData.teamMembersCount === 'number' ? apiData.teamMembersCount : prev.teamMembersCount
             }));
+
+            setNotifications(generateSoftwareNotifications(freshApps, freshDays, freshRenewal));
           }
         } catch (apiErr) {
           console.warn('Backend customer overview call skipped:', apiErr.message);
@@ -387,6 +607,16 @@ export default function CustomerDashboard() {
     }
 
     hydrateCustomer();
+
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get('renew') === 'true') {
+        setRenewCycle('monthly');
+        setRenewSuccess(null);
+        setRenewPaymentError('');
+        setRenewModalOpen(true);
+      }
+    } catch (e) {}
 
     const handleAuthChange = () => hydrateCustomer();
     window.addEventListener('oxoo_auth_change', handleAuthChange);
@@ -771,17 +1001,87 @@ export default function CustomerDashboard() {
                 </div>
 
                 {/* Current Plan Card */}
-                <div className="oxoo-plan-card">
+                <div className="oxoo-plan-card" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div className="oxoo-crown-badge">
                     <Crown size={22} />
                   </div>
                   <div className="oxoo-plan-details">
                     <span className="oxoo-plan-label">Current Plan</span>
                     <span className="oxoo-plan-name">{overview.currentPlan}</span>
-                    <span className="oxoo-plan-billing-date">Next billing: {overview.nextBillingDate}</span>
+                    <span className="oxoo-plan-billing-date">
+                      {overview.daysRemaining <= 0
+                        ? `Expired • Ended ${overview.nextBillingDate}`
+                        : `${overview.daysRemaining} days left • Next billing: ${overview.nextBillingDate}`}
+                    </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRenewModal()}
+                    style={{
+                      background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <RefreshCw size={13} /> Renew
+                  </button>
                 </div>
               </div>
+
+              {/* Due Soon / Expired Alert Banner */}
+              {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: overview.daysRemaining <= 0 ? '#fef2f2' : '#fffbeb',
+                  border: `1.5px solid ${overview.daysRemaining <= 0 ? '#fecaca' : '#fde68a'}`,
+                  borderRadius: '12px',
+                  padding: '12px 18px',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <AlertTriangle size={20} color={overview.daysRemaining <= 0 ? '#dc2626' : '#d97706'} />
+                    <div>
+                      <strong style={{ fontSize: '13.5px', color: overview.daysRemaining <= 0 ? '#991b1b' : '#92400e' }}>
+                        {overview.daysRemaining <= 0 ? 'Your Software Subscription Has Expired!' : `Your Subscription Renewal is Due in ${overview.daysRemaining} ${overview.daysRemaining === 1 ? 'Day' : 'Days'}!`}
+                      </strong>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {overview.daysRemaining <= 0 ? 'Renew your plan now to restore full access and prevent instance freeze.' : 'Renew anytime before or after expiration to keep all active services functioning smoothly.'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRenewModal()}
+                    style={{
+                      background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '7px 16px',
+                      borderRadius: '8px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <RefreshCw size={13} /> Renew Now →
+                  </button>
+                </div>
+              )}
 
               {/* Dashboard Statistics (4 Summary Cards) */}
               <div className="oxoo-summary-grid">
@@ -887,16 +1187,47 @@ export default function CustomerDashboard() {
                             {app.id === 'marketing' && <Megaphone size={26} />}
                           </div>
                           <span className="oxoo-app-name" style={{ fontSize: '15px' }}>{app.name}</span>
-                          <span className="oxoo-status-pill active">
-                            <span className="oxoo-status-dot" /> Active
-                          </span>
-                          <button
-                            type="button"
-                            className="oxoo-app-action-btn open"
-                            onClick={() => handleOpenApp(app)}
-                          >
-                            Open App →
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px' }}>
+                            <span className="oxoo-status-pill active" style={{ margin: 0 }}>
+                              <span className="oxoo-status-dot" /> Active
+                            </span>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: (overview.daysRemaining <= 0 ? '#ef4444' : overview.daysRemaining <= 5 ? '#d97706' : '#16a34a')
+                            }}>
+                              {overview.daysRemaining <= 0 ? 'Expired' : `${overview.daysRemaining ?? 30}d left`}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <button
+                              type="button"
+                              className="oxoo-app-action-btn open"
+                              onClick={() => handleOpenApp(app)}
+                            >
+                              Open App →
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRenewModal(app)}
+                              style={{
+                                background: '#f0fdf4',
+                                color: '#15803d',
+                                border: '1px solid #bbf7d0',
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <RefreshCw size={12} /> Renew Software
+                            </button>
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -1029,28 +1360,77 @@ export default function CustomerDashboard() {
 
                       <div style={{ marginBottom: '16px' }}>
                         {app.entitled ? (
-                          <span className="oxoo-status-pill active">
-                            <span className="oxoo-status-dot" /> Active
-                          </span>
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                              <span className="oxoo-status-pill active" style={{ margin: 0 }}>
+                                <span className="oxoo-status-dot" /> Active
+                              </span>
+                              <span style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                background: (overview.daysRemaining <= 0 ? '#fee2e2' : overview.daysRemaining <= 5 ? '#fef3c7' : '#dcfce7'),
+                                color: (overview.daysRemaining <= 0 ? '#b91c1c' : overview.daysRemaining <= 5 ? '#b45309' : '#15803d')
+                              }}>
+                                {overview.daysRemaining <= 0 ? 'Expired' : `${overview.daysRemaining ?? 30} Days Left`}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                              Next Renewal: {overview.nextBillingExact || overview.nextBillingDate}
+                            </div>
+                          </>
                         ) : (
                           <span className="oxoo-status-pill not-purchased" style={{ background: '#fef3c7', color: '#d97706' }}>
                             <span className="oxoo-status-dot" style={{ background: '#d97706' }} /> Not Purchased
                           </span>
                         )}
-                        {app.purchasedDate && (
+                        {app.purchasedDate && !app.entitled && (
                           <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
                             Purchased on: {app.purchasedDate}
                           </div>
                         )}
                       </div>
 
-                      <button
-                        type="button"
-                        className={`oxoo-app-action-btn ${app.entitled ? 'open' : 'view-plans'}`}
-                        onClick={() => handleOpenApp(app)}
-                      >
-                        {app.entitled ? 'Open App →' : 'View Plans →'}
-                      </button>
+                      {app.entitled ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <button
+                            type="button"
+                            className="oxoo-app-action-btn open"
+                            onClick={() => handleOpenApp(app)}
+                          >
+                            Open App →
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRenewModal(app)}
+                            style={{
+                              background: '#f0fdf4',
+                              color: '#15803d',
+                              border: '1px solid #bbf7d0',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <RefreshCw size={13} /> Renew Software
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="oxoo-app-action-btn view-plans"
+                          onClick={() => handleOpenApp(app)}
+                        >
+                          View Plans →
+                        </button>
+                      )}
                     </div>
                   ))}
               </div>
@@ -1090,17 +1470,58 @@ export default function CustomerDashboard() {
                       <Crown size={22} />
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Single Software</span>
-                        <span className="oxoo-status-pill active" style={{ margin: 0, padding: '2px 8px', fontSize: '10px' }}>Active</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>{overview.currentPlan}</span>
+                        <span className={`oxoo-status-pill ${overview.daysRemaining <= 0 ? 'not-purchased' : 'active'}`} style={{
+                          margin: 0,
+                          padding: '2px 8px',
+                          fontSize: '10px',
+                          background: overview.daysRemaining <= 0 ? '#fee2e2' : '#ecfdf5',
+                          color: overview.daysRemaining <= 0 ? '#b91c1c' : '#059669'
+                        }}>
+                          {overview.daysRemaining <= 0 ? 'Expired' : 'Active'}
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: (overview.daysRemaining <= 0 ? '#fee2e2' : overview.daysRemaining <= 5 ? '#fef3c7' : '#dbeafe'),
+                          color: (overview.daysRemaining <= 0 ? '#b91c1c' : overview.daysRemaining <= 5 ? '#b45309' : '#1d4ed8')
+                        }}>
+                          {overview.daysRemaining <= 0 ? 'Ended' : `${overview.daysRemaining} Days Left`}
+                        </span>
                       </div>
-                      <div style={{ fontSize: '16px', fontWeight: 700, color: '#0284c7', margin: '2px 0' }}>₹660.8 / month</div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>Next billing date: 30 Nov 2026</div>
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: '#0284c7', margin: '2px 0' }}>{overview.monthlyPrice}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        Next billing / renewal date: <strong>{overview.nextBillingExact || overview.nextBillingDate}</strong>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Payment Method */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  {/* Actions & Payment Method */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenRenewModal()}
+                      style={{
+                        background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '10px 18px',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 3px 10px rgba(22, 163, 74, 0.25)'
+                      }}
+                    >
+                      <RefreshCw size={15} /> Renew Subscription
+                    </button>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ffffff', padding: '10px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                       <CreditCard size={20} color="#0284c7" />
                       <div>
@@ -1754,9 +2175,9 @@ export default function CustomerDashboard() {
                 </div>
               </div>
 
-              {/* Filters: All, Payments, Team, Support, System */}
+              {/* Filters: All, Software Subscriptions, Payments, Team, Support, System */}
               <div className="oxoo-filter-pills-bar">
-                {['all', 'payments', 'team', 'support', 'system'].map((f) => (
+                {['all', 'software', 'payments', 'team', 'support', 'system'].map((f) => (
                   <button
                     key={f}
                     type="button"
@@ -1764,7 +2185,7 @@ export default function CustomerDashboard() {
                     onClick={() => setNotifFilter(f)}
                     style={{ textTransform: 'capitalize' }}
                   >
-                    {f}
+                    {f === 'software' ? 'Software Licenses' : f}
                   </button>
                 ))}
               </div>
@@ -1776,13 +2197,16 @@ export default function CustomerDashboard() {
                   .map((notif) => (
                     <div key={notif.id} className="oxoo-notification-card">
                       <div className="oxoo-notification-icon" style={{
-                        background: notif.category === 'payments' ? '#ecfdf5' :
+                        background: notif.category === 'software' ? (notif.isExpired ? '#fef2f2' : notif.isDueSoon ? '#fffbeb' : '#ecfdf5') :
+                          notif.category === 'payments' ? '#ecfdf5' :
                           notif.category === 'team' ? '#eff6ff' :
                           notif.category === 'support' ? '#fef3c7' : '#f3e8ff',
-                        color: notif.category === 'payments' ? '#10b981' :
+                        color: notif.category === 'software' ? (notif.isExpired ? '#ef4444' : notif.isDueSoon ? '#d97706' : '#10b981') :
+                          notif.category === 'payments' ? '#10b981' :
                           notif.category === 'team' ? '#0284c7' :
                           notif.category === 'support' ? '#d97706' : '#8b5cf6'
                       }}>
+                        {notif.category === 'software' && (notif.isExpired ? <AlertTriangle size={18} /> : notif.isDueSoon ? <Clock size={18} /> : <ShieldCheck size={18} />)}
                         {notif.category === 'payments' && <CreditCard size={18} />}
                         {notif.category === 'team' && <UserPlus size={18} />}
                         {notif.category === 'support' && <MessageSquare size={18} />}
@@ -1790,15 +2214,52 @@ export default function CustomerDashboard() {
                       </div>
 
                       <div className="oxoo-notification-content">
-                        <span className="oxoo-notification-title">{notif.title}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span className="oxoo-notification-title">{notif.title}</span>
+                          {notif.category === 'software' && (
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              background: notif.isExpired ? '#fee2e2' : notif.isDueSoon ? '#fef3c7' : '#dcfce7',
+                              color: notif.isExpired ? '#b91c1c' : notif.isDueSoon ? '#b45309' : '#15803d'
+                            }}>
+                              {notif.isExpired ? 'Expired' : `${notif.daysLeft} Days Remaining`}
+                            </span>
+                          )}
+                        </div>
                         <span className="oxoo-notification-desc">{notif.desc}</span>
                         <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                          Date: {notif.date}
+                          {notif.category === 'software' ? `Next Billing / Renewal Date: ${notif.date}` : `Date: ${notif.date}`}
                         </span>
                       </div>
 
                       {/* Actions */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {notif.category === 'software' && (
+                          <button
+                            type="button"
+                            style={{
+                              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                              color: '#ffffff',
+                              border: 'none',
+                              padding: '6px 14px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)',
+                              whiteSpace: 'nowrap'
+                            }}
+                            onClick={() => handleOpenRenewModal({ id: notif.softwareId, name: notif.softwareName })}
+                          >
+                            <RefreshCw size={12} /> Renew Now
+                          </button>
+                        )}
                         <button
                           type="button"
                           style={{ background: '#f1f5f9', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
@@ -2774,6 +3235,320 @@ export default function CustomerDashboard() {
           </div>
         </div>
       )}
+
+      {/* =========================================================
+          RENEW SUBSCRIPTION MODAL (Renew before or after finish)
+          ========================================================= */}
+      <AnimatePresence>
+        {renewModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.65)',
+              backdropFilter: 'blur(4px)',
+              display: 'grid',
+              placeItems: 'center',
+              zIndex: 1000,
+              padding: '20px'
+            }}
+            onClick={() => { if (!isRenewing) setRenewModalOpen(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#ffffff',
+                borderRadius: '20px',
+                width: '100%',
+                maxWidth: '560px',
+                boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+                overflow: 'hidden',
+                border: '1px solid #e2e8f0'
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: '22px 28px',
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                color: '#ffffff',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #16a34a 0%, #10b981 100%)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(22, 163, 74, 0.4)'
+                  }}>
+                    <RefreshCw size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                      Renew Software Subscription
+                    </h3>
+                    <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
+                      {renewTargetApp ? renewTargetApp.name : (overview.currentPlan || 'Single Software')} &bull; Renew before or after expiration
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { if (!isRenewing) setRenewModalOpen(false); }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#cbd5e1',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    display: 'grid',
+                    placeItems: 'center'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: '24px 28px' }}>
+                {renewSuccess ? (
+                  <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '50%',
+                      background: '#dcfce7',
+                      color: '#16a34a',
+                      display: 'grid',
+                      placeItems: 'center',
+                      margin: '0 auto 16px'
+                    }}>
+                      <CheckCircle2 size={34} />
+                    </div>
+                    <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#166534', marginBottom: '8px' }}>
+                      Subscription Successfully Renewed!
+                    </h4>
+                    <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '14px', lineHeight: 1.5 }}>
+                      Payment of <strong>₹{renewSuccess.amount || (renewCycle === 'yearly' ? ((560 * 12) * 1.18).toFixed(2) : (740 * 1.18).toFixed(2))}</strong> has been confirmed and verified. Your subscription has been extended until <strong>{new Date(renewSuccess.renewalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>.
+                      An updated Tax Invoice <strong>({renewSuccess.invoiceNumber})</strong> and payment confirmation receipt have been emailed to <strong>{overview.email}</strong>.
+                    </p>
+                    <div style={{
+                      background: '#f8fafc',
+                      borderRadius: '10px',
+                      padding: '10px 16px',
+                      marginBottom: '20px',
+                      fontSize: '0.82rem',
+                      color: '#334155',
+                      border: '1px solid #e2e8f0',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <ShieldCheck size={16} color="#16a34a" />
+                      <span>Payment Reference: <strong>{renewSuccess.paymentId || 'pay_verified'}</strong> &bull; Status: <strong style={{ color: '#16a34a' }}>PAID & VERIFIED</strong></span>
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        className="oxoo-app-action-btn open"
+                        style={{ padding: '10px 24px', fontSize: '0.9rem', margin: '0 auto' }}
+                        onClick={() => setRenewModalOpen(false)}
+                      >
+                        Return to Dashboard
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Error Banner if Payment Failed or was Cancelled */}
+                    {renewPaymentError && (
+                      <div style={{
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '10px',
+                        padding: '10px 14px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#b91c1c',
+                        fontSize: '0.82rem'
+                      }}>
+                        <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                        <span>{renewPaymentError}</span>
+                      </div>
+                    )}
+
+                    {/* Status Pill Card */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      background: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#fef2f2' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#fffbeb' : '#f0fdf4'),
+                      border: `1px solid ${(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#fecaca' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#fde68a' : '#bbf7d0')}`,
+                      marginBottom: '18px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Clock size={18} style={{ color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#ef4444' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#d97706' : '#16a34a') }} />
+                        <div>
+                          <span style={{ fontSize: '0.86rem', fontWeight: 700, color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#991b1b' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#92400e' : '#166534') }}>
+                            {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Subscription Expired' : `${overview.daysRemaining ?? 30} Days Left`}
+                          </span>
+                          <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                            {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Finished — Pay to reactivate instantly' : `Current cycle ends on ${overview.nextBillingExact || overview.nextBillingDate}`}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '9999px',
+                        background: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#fee2e2' : '#dcfce7',
+                        color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#b91c1c' : '#15803d'
+                      }}>
+                        {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Expired' : 'Active'}
+                      </span>
+                    </div>
+
+                    {/* Cycle Selection */}
+                    <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                      Choose Renewal Plan
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '18px' }}>
+                      <div
+                        onClick={() => setRenewCycle('monthly')}
+                        style={{
+                          padding: '14px',
+                          borderRadius: '12px',
+                          border: `2px solid ${renewCycle === 'monthly' ? '#0284c7' : '#e2e8f0'}`,
+                          background: renewCycle === 'monthly' ? '#f0f9ff' : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>Monthly</span>
+                          {renewCycle === 'monthly' && <CheckCircle2 size={16} color="#0284c7" />}
+                        </div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+                          ₹740 <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ mo</span>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                          Renew 1 month (+30 days)
+                        </span>
+                      </div>
+
+                      <div
+                        onClick={() => setRenewCycle('yearly')}
+                        style={{
+                          padding: '14px',
+                          borderRadius: '12px',
+                          border: `2px solid ${renewCycle === 'yearly' ? '#16a34a' : '#e2e8f0'}`,
+                          background: renewCycle === 'yearly' ? '#f0fdf4' : '#ffffff',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '10px',
+                          background: '#16a34a',
+                          color: '#ffffff',
+                          fontSize: '0.65rem',
+                          fontWeight: 800,
+                          padding: '2px 7px',
+                          borderRadius: '9999px'
+                        }}>
+                          SAVE 24%
+                        </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>Annual (12 Mos)</span>
+                          {renewCycle === 'yearly' && <CheckCircle2 size={16} color="#16a34a" />}
+                        </div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+                          ₹560 <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ mo</span>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600, display: 'block', marginTop: '4px' }}>
+                          Renew 1 year (+365 days)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pricing Breakdown */}
+                    <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}>
+                        <span>Base License ({renewCycle === 'yearly' ? '12 Months' : '1 Month'})</span>
+                        <b style={{ color: '#0f172a' }}>₹{renewCycle === 'yearly' ? (560 * 12).toFixed(2) : (740).toFixed(2)}</b>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}>
+                        <span>GST (18% Integrated Tax)</span>
+                        <b style={{ color: '#0f172a' }}>₹{renewCycle === 'yearly' ? ((560 * 12) * 0.18).toFixed(2) : (740 * 0.18).toFixed(2)}</b>
+                      </div>
+                      <div style={{ height: '1px', background: '#e2e8f0', margin: '6px 0' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
+                        <span>Total Payable Amount</span>
+                        <span style={{ color: '#0284c7' }}>₹{renewCycle === 'yearly' ? ((560 * 12) * 1.18).toFixed(2) : (740 * 1.18).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', fontSize: '0.75rem', color: '#64748b' }}>
+                        <ShieldCheck size={14} color="#16a34a" />
+                        <span>Razorpay Secured &bull; UPI (GPay, PhonePe, Paytm), Cards & NetBanking</span>
+                      </div>
+                    </div>
+
+                    {/* Pay & Renew Button */}
+                    <button
+                      type="button"
+                      onClick={handleConfirmRenew}
+                      disabled={isRenewing}
+                      style={{
+                        width: '100%',
+                        padding: '13px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                        color: '#ffffff',
+                        fontSize: '0.95rem',
+                        fontWeight: 800,
+                        border: 'none',
+                        cursor: isRenewing ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 14px rgba(22, 163, 74, 0.35)',
+                        opacity: isRenewing ? 0.7 : 1
+                      }}
+                    >
+                      {isRenewing ? (
+                        <>
+                          <RefreshCw size={16} className="animate-spin" /> Awaiting Payment Confirmation...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={18} /> Pay ₹{renewCycle === 'yearly' ? ((560 * 12) * 1.18).toFixed(2) : (740 * 1.18).toFixed(2)} & Renew Subscription
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

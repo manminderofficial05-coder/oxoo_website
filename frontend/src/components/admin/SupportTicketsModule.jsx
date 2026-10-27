@@ -3,11 +3,11 @@ import {
   HelpCircle, Search, Filter, MessageSquare, Lock,
   CheckCircle2, Clock, AlertCircle, X, Send, Eye, User,
   Building2, ExternalLink, RefreshCw, Paperclip, ChevronRight,
-  AlertTriangle, RotateCcw, Check, Calendar, ArrowRight, Shield
+  AlertTriangle, RotateCcw, Check, Calendar, ArrowRight, Shield, Trash2
 } from 'lucide-react';
 import {
   getTicketsSummary, getAdminTickets, getAdminTicket,
-  sendTicketReply, updateTicketStatus, assignTicket
+  sendTicketReply, updateTicketStatus, assignTicket, deleteAdminTicket
 } from '../../api';
 
 export default function SupportTicketsModule({ showToast, logAuditEvent }) {
@@ -48,6 +48,10 @@ export default function SupportTicketsModule({ showToast, logAuditEvent }) {
   const [pendingModalOpen, setPendingModalOpen] = useState(false);
   const [pendingType, setPendingType] = useState('Pending Customer');
   const [pendingReason, setPendingReason] = useState('');
+
+  // 5. Delete Confirmation Modal
+  const [deleteConfirmTicket, setDeleteConfirmTicket] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [reopenModalOpen, setReopenModalOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
@@ -226,6 +230,30 @@ export default function SupportTicketsModule({ showToast, logAuditEvent }) {
   // Filter messages for timeline vs internal notes
   const customerVisibleMessages = (selectedTicket?.replies || []).filter(r => !r.is_internal);
   const internalNotesList = (selectedTicket?.replies || []).filter(r => r.is_internal);
+
+  const handleDeleteTicket = async () => {
+    if (!deleteConfirmTicket) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteAdminTicket(deleteConfirmTicket.ticket_id || deleteConfirmTicket.ticket_number || deleteConfirmTicket.id);
+      if (res && res.success) {
+        showToast(res.message || 'Ticket deleted successfully.');
+        if (logAuditEvent) logAuditEvent('Support Ticket Deleted', deleteConfirmTicket.ticket_id || `ID-${deleteConfirmTicket.id}`);
+        setDeleteConfirmTicket(null);
+        if (selectedTicket && (selectedTicket.ticket_id === deleteConfirmTicket.ticket_id || selectedTicket.id === deleteConfirmTicket.id)) {
+          setShowDetailsModal(false);
+          setSelectedTicket(null);
+        }
+        fetchTickets(pagination.page);
+      } else {
+        showToast(res.message || 'Failed to delete ticket.');
+      }
+    } catch (e) {
+      showToast(e.message || 'Error deleting ticket.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="oxoo-section-card" style={{ padding: '24px' }}>
@@ -446,17 +474,42 @@ export default function SupportTicketsModule({ showToast, logAuditEvent }) {
                     {new Date(t.updated_at || t.created_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="oxoo-outline-btn"
-                      style={{ padding: '4px 10px', fontSize: '12px' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenTicket(t);
-                      }}
-                    >
-                      View Details
-                    </button>
+                    <div style={{ display: 'inline-flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        className="oxoo-outline-btn"
+                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenTicket(t);
+                        }}
+                      >
+                        View Details
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          background: '#fee2e2',
+                          color: '#dc2626',
+                          border: '1px solid #fecaca',
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmTicket(t);
+                        }}
+                        title="Delete ticket"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -524,13 +577,34 @@ export default function SupportTicketsModule({ showToast, logAuditEvent }) {
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowDetailsModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={22} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    border: '1px solid #fecaca',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  onClick={() => setDeleteConfirmTicket(selectedTicket)}
+                >
+                  <Trash2 size={13} /> Delete Ticket
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailsModal(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X size={22} />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body - 2 Columns (Left: Timeline & tabs, Right: Actions & Context) */}
@@ -1070,6 +1144,83 @@ export default function SupportTicketsModule({ showToast, logAuditEvent }) {
                 }}
               >
                 Confirm Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. DELETE TICKET CONFIRMATION MODAL */}
+      {deleteConfirmTicket && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ width: '480px', maxWidth: '100%', background: '#fff', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', background: '#fef2f2', borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#991b1b' }}>Delete Support Ticket</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#b91c1c' }}>Permanent removal from database</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteConfirmTicket(null)}
+                disabled={isDeleting}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#334155', lineHeight: 1.5 }}>
+                Are you sure you want to permanently delete ticket <strong>{deleteConfirmTicket.ticket_id || deleteConfirmTicket.ticket_number}</strong>?
+              </p>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px' }}>{deleteConfirmTicket.subject}</div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  Customer: {deleteConfirmTicket.company_name || deleteConfirmTicket.contact_name || deleteConfirmTicket.user_email}
+                </div>
+              </div>
+
+              <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: '#92400e', lineHeight: 1.5 }}>
+                • Removes ticket and all associated replies/notes from PostgreSQL<br />
+                • Cannot be recovered after deletion
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="oxoo-outline-btn"
+                onClick={() => setDeleteConfirmTicket(null)}
+                disabled={isDeleting}
+                style={{ padding: '8px 16px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteTicket}
+                disabled={isDeleting}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#dc2626',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Trash2 size={14} />
+                {isDeleting ? 'Deleting...' : 'Confirm & Delete'}
               </button>
             </div>
           </div>

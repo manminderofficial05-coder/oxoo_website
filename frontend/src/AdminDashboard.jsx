@@ -249,7 +249,7 @@ export default function AdminDashboard() {
   const [newTicketForm, setNewTicketForm] = useState({ customer: '', subject: '', category: 'Technical', priority: 'High', agent: 'Manminder Singh', desc: '' });
 
   // -------------------------------------------------------------
-  // PRODUCTS & PLANS STATE (OXOO 360)
+  // PRODUCTS & PLANS STATE (OXOO)
   // -------------------------------------------------------------
   const [prodPlanSubTab, setProdPlanSubTab] = useState('products'); // 'products' | 'plans'
   const [prodSummary, setProdSummary] = useState({ totalProducts: 9, totalPlans: 24, activePlans: 18, draftPlans: 3 });
@@ -1344,6 +1344,16 @@ export default function AdminDashboard() {
               <span>Customers</span>
             </button>
 
+            {/* Users & Roles Tab (RBAC & Multiple Admin User Management) */}
+            <button
+              type="button"
+              className={`oxoo-nav-v2-btn ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveTab('users')}
+            >
+              <ShieldCheck className="oxoo-nav-v2-icon" />
+              <span>Users & Roles</span>
+            </button>
+
             {/* Needs & Contact Inquiries Tab (Real customer requirements & leads) */}
             <button
               type="button"
@@ -1467,7 +1477,7 @@ export default function AdminDashboard() {
           </nav>
         </div>
 
-        {/* Sidebar Bottom: Admin Profile Card (Replacing 360 brand) */}
+        {/* Sidebar Bottom: Admin Profile Card */}
         <div
           className="oxoo-sidebar-v2-admin-card"
           onClick={() => setActiveTab('settings')}
@@ -5577,7 +5587,7 @@ export default function AdminDashboard() {
           )}
 
           {/* -------------------------------------------------------
-              4. PRODUCTS & PLANS MANAGEMENT (OXOO 360)
+              4. PRODUCTS & PLANS MANAGEMENT (OXOO)
               ------------------------------------------------------- */}
           {activeTab === 'products' && (
             <div className="oxoo-prod-container">
@@ -7735,7 +7745,7 @@ export default function AdminDashboard() {
               7. USERS & ROLES (MODULE 3 UPGRADE - RBAC)
               ------------------------------------------------------- */}
           {activeTab === 'users' && (
-            <UsersRolesModule showToast={showToast} logAuditEvent={logAuditEvent} />
+            <UsersRolesModule showToast={showToast} logAuditEvent={logAuditEvent} currentUser={adminUser} />
           )}
 
           {/* -------------------------------------------------------

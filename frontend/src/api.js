@@ -95,9 +95,17 @@ export async function loginUser(email, password) {
 
 export function getAdminHeaders() {
   const token = localStorage.getItem('oxoo_admin_token') || '';
+  let adminUser = null;
+  try {
+    const su = localStorage.getItem('oxoo_admin_user');
+    if (su) adminUser = JSON.parse(su);
+  } catch (e) {}
+
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(adminUser?.email ? { 'x-admin-email': adminUser.email } : {}),
+    ...(adminUser?.role ? { 'x-admin-role': adminUser.role } : {})
   };
 }
 
@@ -253,6 +261,43 @@ export async function upgradeCustomerPlan(planName) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ planName })
   });
+  return await r.json();
+}
+
+export async function checkEmailSoftware(email) {
+  try {
+    if (!email) return { registered: false, ownedApps: [], ownedAppIds: [] };
+    const r = await fetch(`${API_URL}/api/customer/check-email-software?email=${encodeURIComponent(email)}`);
+    if (!r.ok) return { registered: false, ownedApps: [], ownedAppIds: [] };
+    return await r.json();
+  } catch (e) {
+    return { registered: false, ownedApps: [], ownedAppIds: [] };
+  }
+}
+
+export async function createRenewalOrder(payload) {
+  const r = await fetch(`${API_URL}/api/customer/renew-order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(data.message || 'Unable to initiate renewal payment.');
+  }
+  return data;
+}
+
+export async function renewCustomerSubscription(payload) {
+  const r = await fetch(`${API_URL}/api/customer/renew-subscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.message || 'Subscription renewal failed.');
+  }
   return await r.json();
 }
 
@@ -598,6 +643,16 @@ export async function addSubscriptionFollowupNote(subscriptionId, payload) {
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Failed to save follow-up note.');
+  return data;
+}
+
+export async function deleteAdminCustomer(id) {
+  const r = await fetch(`${API_URL}/api/admin/customers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to delete customer.');
   return data;
 }
 
@@ -1028,6 +1083,16 @@ export async function checkApplicationHealth(id) {
   return data;
 }
 
+export async function deleteAdminApplication(id) {
+  const r = await fetch(`${API_URL}/api/admin/applications/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to delete application.');
+  return data;
+}
+
 // =============================================================
 // MODULE 2: PAYMENTS & INVOICES API
 // =============================================================
@@ -1141,6 +1206,16 @@ export async function updateAdminStaffStatus(id, status) {
   return data;
 }
 
+export async function deleteAdminStaff(id) {
+  const r = await fetch(`${API_URL}/api/admin/staff/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to delete user.');
+  return data;
+}
+
 // =============================================================
 // MODULE 4: SUPPORT TICKETS API
 // =============================================================
@@ -1218,6 +1293,16 @@ export async function submitCustomerTicket(payload) {
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Failed to submit ticket.');
+  return data;
+}
+
+export async function deleteAdminTicket(id) {
+  const r = await fetch(`${API_URL}/api/admin/tickets/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to delete ticket.');
   return data;
 }
 
@@ -1474,5 +1559,120 @@ export async function deleteAdminLead(id) {
   return data;
 }
 
+// -------------------------------------------------------------
+// MODULE 8: OXOO AGENT (AI CUSTOMER ASSISTANT) API
+// -------------------------------------------------------------
+export async function getAgentConfig() {
+  try {
+    const r = await fetch(`${API_URL}/api/agent/config`);
+    if (!r.ok) throw new Error('Agent config unavailable');
+    return await r.json();
+  } catch (err) {
+    return {
+      success: true,
+      enabled: true,
+      agentName: 'OXOO Agent',
+      welcomeMessage: "Hi! I'm OXOO Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
+      suggestedQuestions: [
+        'Explore OXOO applications',
+        'Compare pricing plans',
+        'Find a website development package',
+        'Explore Android and iOS app development',
+        'Learn about AI chatbots',
+        'Manage my subscription',
+        'Find an invoice',
+        'Contact customer support'
+      ],
+      status: 'Online (Database Grounded)',
+      allowCustomerActions: true
+    };
+  }
+}
+
+export async function sendAgentChat({ message, conversationId, sessionId }) {
+  const headers = getCustomerHeaders();
+  const r = await fetch(`${API_URL}/api/agent/chat`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ message, conversationId, sessionId })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Unable to send message to OXOO Agent.');
+  return data;
+}
+
+export async function getAgentHistory(conversationId) {
+  try {
+    const r = await fetch(`${API_URL}/api/agent/history/${encodeURIComponent(conversationId)}`);
+    if (!r.ok) throw new Error('History unavailable');
+    return await r.json();
+  } catch (err) {
+    return { success: false, messages: [] };
+  }
+}
+
+export async function clearAgentHistory(conversationId) {
+  const r = await fetch(`${API_URL}/api/agent/history/${encodeURIComponent(conversationId)}`, {
+    method: 'DELETE'
+  });
+  return await r.json().catch(() => ({ success: true }));
+}
+
+export async function confirmAgentAction({ actionPayload, conversationId }) {
+  const headers = getCustomerHeaders();
+  const r = await fetch(`${API_URL}/api/agent/action/confirm`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ actionPayload, conversationId })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Action could not be completed.');
+  return data;
+}
+
+export async function getAdminAgentSettings() {
+  try {
+    const r = await fetch(`${API_URL}/api/agent/admin/settings`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Agent settings unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, settings: {} };
+  }
+}
+
+export async function updateAdminAgentSettings(settings) {
+  const r = await fetch(`${API_URL}/api/agent/admin/settings`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ settings })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update agent settings');
+  return data;
+}
+
+export async function getAdminAgentAnalytics() {
+  try {
+    const r = await fetch(`${API_URL}/api/agent/admin/analytics`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Agent analytics unavailable');
+    return await r.json();
+  } catch {
+    return {
+      success: true,
+      metrics: {
+        totalConversations: 0,
+        totalMessages: 0,
+        totalEvents: 0,
+        ticketsCreatedViaAgent: 0,
+        leadsSubmittedViaAgent: 0,
+        uptime: '99.98%',
+        status: 'Operational'
+      },
+      recentEvents: []
+    };
+  }
+}
+
 export { API_URL };
+
 
