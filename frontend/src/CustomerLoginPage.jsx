@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User, ShieldCheck, ArrowRight, CheckCircle2, Lock, Sparkles, Building2, KeyRound, Mail, X } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { loginUser, registerUser, forgotPassword } from './api';
+import { authStorage } from './authStorage';
 
 export default function CustomerLoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -66,8 +67,7 @@ export default function CustomerLoginPage() {
           organization: companyName.trim() || `${name.trim()} Enterprise`
         });
         if (res && res.token) {
-          localStorage.setItem('oxoo_token', res.token);
-          localStorage.setItem('oxoo_user', JSON.stringify(res.user));
+          authStorage.setCustomerSession(res.token, res.user);
           window.dispatchEvent(new Event('oxoo_auth_change'));
           setSuccessMsg(`Welcome, ${res.user?.name}! Your customer account has been created.`);
           setTimeout(() => {
@@ -90,8 +90,7 @@ export default function CustomerLoginPage() {
     try {
       const res = await loginUser(email, password);
       if (res && res.token) {
-        localStorage.setItem('oxoo_token', res.token);
-        localStorage.setItem('oxoo_user', JSON.stringify(res.user));
+        authStorage.setCustomerSession(res.token, res.user);
         window.dispatchEvent(new Event('oxoo_auth_change'));
         setSuccessMsg(`Welcome, ${res.user?.name || 'Customer'}! Redirecting to your dashboard...`);
         setTimeout(() => {

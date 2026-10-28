@@ -28,6 +28,7 @@ import {
   updateAdminPlanStatus, getAdminPlanHistory
 } from './api';
 import './dashboards.css';
+import { authStorage } from './authStorage';
 import ApplicationsModule from './components/admin/ApplicationsModule';
 import PaymentsInvoicesModule from './components/admin/PaymentsInvoicesModule';
 import UsersRolesModule from './components/admin/UsersRolesModule';
@@ -86,8 +87,8 @@ export default function AdminDashboard() {
   const [toastMessage, setToastMessage] = useState('');
   const [adminUser, setAdminUser] = useState(() => {
     try {
-      const u = localStorage.getItem('oxoo_admin_user');
-      return u ? JSON.parse(u) : { name: 'Manminder Singh', email: 'manminder.singh@primepro.ai', role: 'Super Administrator' };
+      const u = authStorage.getAdminUser();
+      return u || { name: 'Manminder Singh', email: 'manminder.singh@primepro.ai', role: 'Super Administrator' };
     } catch (e) {
       return { name: 'Manminder Singh', email: 'manminder.singh@primepro.ai', role: 'Super Administrator' };
     }
@@ -1804,8 +1805,7 @@ export default function AdminDashboard() {
                       type="button"
                       style={{ width: '100%', padding: '8px 12px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', color: '#dc2626', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
                       onClick={() => {
-                        localStorage.removeItem('oxoo_admin_token');
-                        localStorage.removeItem('oxoo_admin_user');
+                        authStorage.clearAdminSession();
                         window.dispatchEvent(new Event('oxoo_admin_auth_change'));
                         setAdminMenuOpen(false);
                         navigate('/admin');

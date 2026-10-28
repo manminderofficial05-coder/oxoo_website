@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, User, ArrowRight, CheckCircle2, Lock, KeyRound, Cpu, AlertTriangle } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { loginAdminUser } from './api';
+import { authStorage } from './authStorage';
 
 export default function AdminLoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState('manminder.singh@primepro.ai');
@@ -29,9 +30,8 @@ export default function AdminLoginPage({ onLoginSuccess }) {
     try {
       const res = await loginAdminUser(email, password);
       if (res && res.token) {
-        // Strictly save into isolated Admin storage keys
-        localStorage.setItem('oxoo_admin_token', res.token);
-        localStorage.setItem('oxoo_admin_user', JSON.stringify(res.user));
+        // Strictly save into tab-isolated session storage
+        authStorage.setAdminSession(res.token, res.user);
         window.dispatchEvent(new Event('oxoo_admin_auth_change'));
         setSuccessMsg(`Welcome, ${res.user?.name || 'Administrator'}! Authorizing console...`);
         setTimeout(() => {

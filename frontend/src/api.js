@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { authStorage } from './authStorage';
 
 export async function getServices() {
   try {
@@ -94,12 +95,8 @@ export async function loginUser(email, password) {
 }
 
 export function getAdminHeaders() {
-  const token = localStorage.getItem('oxoo_admin_token') || '';
-  let adminUser = null;
-  try {
-    const su = localStorage.getItem('oxoo_admin_user');
-    if (su) adminUser = JSON.parse(su);
-  } catch (e) {}
+  const token = authStorage.getAdminToken();
+  const adminUser = authStorage.getAdminUser();
 
   return {
     'Content-Type': 'application/json',
@@ -110,12 +107,8 @@ export function getAdminHeaders() {
 }
 
 export function getCustomerHeaders() {
-  const token = localStorage.getItem('oxoo_token') || '';
-  let user = null;
-  try {
-    const su = localStorage.getItem('oxoo_user');
-    if (su) user = JSON.parse(su);
-  } catch (e) {}
+  const token = authStorage.getCustomerToken();
+  const user = authStorage.getCustomerUser();
 
   return {
     'Content-Type': 'application/json',
@@ -210,11 +203,7 @@ export async function getAdminOverview() {
 // -------------------------------------------------------------
 export async function getCustomerOverview(params = {}) {
   try {
-    let user = null;
-    try {
-      const su = localStorage.getItem('oxoo_user');
-      if (su) user = JSON.parse(su);
-    } catch (e) {}
+    const user = authStorage.getCustomerUser();
 
     const email = params.email || user?.email || '';
     const company = params.company || user?.organization || '';
@@ -238,11 +227,7 @@ export async function getCustomerOverview(params = {}) {
 
 export async function getCustomerBilling(params = {}) {
   try {
-    let user = null;
-    try {
-      const su = localStorage.getItem('oxoo_user');
-      if (su) user = JSON.parse(su);
-    } catch (e) {}
+    const user = authStorage.getCustomerUser();
 
     const email = params.email || user?.email || '';
     const company = params.company || user?.organization || '';
@@ -971,7 +956,7 @@ export async function resetPassword({ email, token, newPassword }) {
 }
 
 export async function changePassword({ currentPassword, newPassword }) {
-  const token = localStorage.getItem('oxoo_token');
+  const token = authStorage.getCustomerToken();
   const r = await fetch(`${API_URL}/api/customer/change-password`, {
     method: 'POST',
     headers: {

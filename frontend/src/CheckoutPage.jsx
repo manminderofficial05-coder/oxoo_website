@@ -14,6 +14,7 @@ import {
   loginUser, forgotPassword, checkEmailSoftware
 } from './api';
 import { useRegionPricing } from './RegionPricingContext';
+import { authStorage } from './authStorage';
 import './checkout.css';
 
 const INDIAN_STATES = [
@@ -77,14 +78,9 @@ export default function CheckoutPage() {
   const paramBilling = searchParams.get('billing');
   const [isYearly, setIsYearly] = useState(paramBilling === 'yearly');
 
-  // Logged-in user state (initialized from active localStorage session)
+  // Logged-in user state (initialized from active tab session)
   const [loggedInUser, setLoggedInUser] = useState(() => {
-    try {
-      const u = localStorage.getItem('oxoo_user');
-      return u ? JSON.parse(u) : null;
-    } catch (e) {
-      return null;
-    }
+    return authStorage.getCustomerUser();
   });
 
   // Track apps already purchased
@@ -152,12 +148,10 @@ export default function CheckoutPage() {
   const [forgotSending, setForgotSending] = useState(false);
   const [forgotStatusMsg, setForgotStatusMsg] = useState('');
 
-  // Listen for login/auth changes to automatically sync user details into formData
   useEffect(() => {
     const handleAuthSync = () => {
       try {
-        const u = localStorage.getItem('oxoo_user');
-        const user = u ? JSON.parse(u) : null;
+        const user = authStorage.getCustomerUser();
         setLoggedInUser(user);
         if (user) {
           setIsEmailVerified(true);
@@ -385,12 +379,9 @@ export default function CheckoutPage() {
         selectedApps: selectedAppsNames
       });
 
-      if (resp.token) {
-        localStorage.setItem('oxoo_token', resp.token);
-      }
-      if (resp.user) {
+      if (resp.token || resp.user) {
         const storedUser = {
-          ...resp.user,
+          ...(resp.user || {}),
           purchasedApps: SOFTWARE_MODULES.filter((m) => selectedAppIds.includes(m.id)).map((m) => ({
             id: m.id,
             name: m.name,
@@ -401,7 +392,7 @@ export default function CheckoutPage() {
             iconSrc: m.iconSrc
           }))
         };
-        localStorage.setItem('oxoo_user', JSON.stringify(storedUser));
+        authStorage.setCustomerSession(resp.token, storedUser);
         window.dispatchEvent(new Event('oxoo_auth_change'));
       }
 
@@ -681,10 +672,8 @@ export default function CheckoutPage() {
             purchasedApps: combinedPurchasedApps,
             plan: planNameFormatted
           };
-          localStorage.setItem('oxoo_user', JSON.stringify(userObj));
-          if (!localStorage.getItem('oxoo_token')) {
-            localStorage.setItem('oxoo_token', 'oxoo_cust_' + Date.now());
-          }
+          const existingToken = authStorage.getCustomerToken() || ('oxoo_cust_' + Date.now());
+          authStorage.setCustomerSession(existingToken, userObj);
         } catch (e) {}
 
         // Trigger global events for immediate UI reactivity

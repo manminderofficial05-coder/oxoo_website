@@ -32,6 +32,7 @@ import ResetPasswordPage from './ResetPasswordPage';
 import EmployeeLoginPage from './EmployeeLoginPage';
 import HelpPage from './HelpPage';
 import OxooAgentWidget from './components/agent/OxooAgentWidget';
+import { authStorage } from './authStorage';
 
 function useScrollTop() {
   const location = useLocation();
@@ -1581,15 +1582,14 @@ function ContactPage() {
 }
 
 // -------------------------------------------------------------
-// STRICT ROUTE PROTECTION GUARDS (ISOLATING CUSTOMER & ADMIN)
+// STRICT ROUTE PROTECTION GUARDS (TAB-ISOLATED PER USER SPECIFICATION)
 // -------------------------------------------------------------
 function AdminProtectedRoute({ children }) {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
     try {
-      const token = localStorage.getItem('oxoo_admin_token');
-      const userStr = localStorage.getItem('oxoo_admin_user');
-      if (token && userStr) {
-        const u = JSON.parse(userStr);
+      const token = authStorage.getAdminToken();
+      const u = authStorage.getAdminUser();
+      if (token && u) {
         return u.role === 'admin' || u.role === 'super_admin';
       }
     } catch (e) {}
@@ -1599,10 +1599,9 @@ function AdminProtectedRoute({ children }) {
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const token = localStorage.getItem('oxoo_admin_token');
-        const userStr = localStorage.getItem('oxoo_admin_user');
-        if (token && userStr) {
-          const u = JSON.parse(userStr);
+        const token = authStorage.getAdminToken();
+        const u = authStorage.getAdminUser();
+        if (token && u) {
           setIsAdminAuthenticated(u.role === 'admin' || u.role === 'super_admin');
           return;
         }
@@ -1611,14 +1610,12 @@ function AdminProtectedRoute({ children }) {
     };
 
     window.addEventListener('oxoo_admin_auth_change', checkAuth);
-    window.addEventListener('storage', checkAuth);
     return () => {
       window.removeEventListener('oxoo_admin_auth_change', checkAuth);
-      window.removeEventListener('storage', checkAuth);
     };
   }, []);
 
-  // When visiting /admin or /admin/dashboard without admin credentials, show the Admin Login form!
+  // When visiting /admin or /admin/dashboard without tab admin credentials, show the Admin Login form!
   if (!isAdminAuthenticated) {
     return <AdminLoginPage onLoginSuccess={() => setIsAdminAuthenticated(true)} />;
   }
@@ -1629,11 +1626,10 @@ function AdminProtectedRoute({ children }) {
 function CustomerProtectedRoute({ children }) {
   const [isCustomerAuthenticated, setIsCustomerAuthenticated] = useState(() => {
     try {
-      const token = localStorage.getItem('oxoo_token');
-      const userStr = localStorage.getItem('oxoo_user');
-      if (token && userStr) {
-        const u = JSON.parse(userStr);
-        return Boolean(u && (u.id || u.email));
+      const token = authStorage.getCustomerToken();
+      const u = authStorage.getCustomerUser();
+      if (token && u) {
+        return Boolean(u.id || u.email);
       }
     } catch (e) {}
     return false;
@@ -1642,11 +1638,10 @@ function CustomerProtectedRoute({ children }) {
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const token = localStorage.getItem('oxoo_token');
-        const userStr = localStorage.getItem('oxoo_user');
-        if (token && userStr) {
-          const u = JSON.parse(userStr);
-          setIsCustomerAuthenticated(Boolean(u && (u.id || u.email)));
+        const token = authStorage.getCustomerToken();
+        const u = authStorage.getCustomerUser();
+        if (token && u) {
+          setIsCustomerAuthenticated(Boolean(u.id || u.email));
           return;
         }
       } catch (e) {}
@@ -1654,14 +1649,12 @@ function CustomerProtectedRoute({ children }) {
     };
 
     window.addEventListener('oxoo_auth_change', checkAuth);
-    window.addEventListener('storage', checkAuth);
     return () => {
       window.removeEventListener('oxoo_auth_change', checkAuth);
-      window.removeEventListener('storage', checkAuth);
     };
   }, []);
 
-  // When visiting /customer or /dashboard without customer credentials, redirect to customer login
+  // When visiting /customer or /dashboard without tab customer credentials, redirect to customer login
   if (!isCustomerAuthenticated) {
     return <CustomerLoginPage />;
   }

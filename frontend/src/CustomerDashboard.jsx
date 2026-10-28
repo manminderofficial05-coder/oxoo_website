@@ -20,6 +20,7 @@ import {
   verifyPayment, resolveWorkspace
 } from './api';
 import './dashboards.css';
+import { authStorage } from './authStorage';
 
 // Live Customer Brand Logo Preview Badge
 function CustomerBrandBadge({ companyName, workspaceDomain }) {
@@ -289,9 +290,8 @@ export default function CustomerDashboard() {
   // User purchased apps state
   const [userPurchasedApps, setUserPurchasedApps] = useState(() => {
     try {
-      const su = localStorage.getItem('oxoo_user');
-      if (su) {
-        const u = JSON.parse(su);
+      const u = authStorage.getCustomerUser();
+      if (u) {
         if (u.purchasedApps && u.purchasedApps.length > 0) return u.purchasedApps;
         if (u.apps && u.apps.length > 0) return u.apps;
         if (u.active_apps && u.active_apps.length > 0) return u.active_apps;
@@ -532,15 +532,10 @@ export default function CustomerDashboard() {
     };
   });
 
-  // Hydrate all customer dashboard modules from the real database
   const hydrateCustomer = async () => {
     try {
       setIsLoadingData(true);
-      let storedUser = null;
-      try {
-        const su = localStorage.getItem('oxoo_user');
-        if (su) storedUser = JSON.parse(su);
-      } catch (e) {}
+      const storedUser = authStorage.getCustomerUser();
 
       const customCompany = localStorage.getItem('oxoo_demo_company') || localStorage.getItem('oxoo_company_name');
 
@@ -1431,8 +1426,7 @@ export default function CustomerDashboard() {
                       type="button"
                       style={{ width: '100%', padding: '8px 12px', background: 'none', border: 'none', textAlign: 'left', fontSize: '13px', color: '#dc2626', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
                       onClick={() => {
-                        localStorage.removeItem('oxoo_token');
-                        localStorage.removeItem('oxoo_user');
+                        authStorage.clearCustomerSession();
                         window.dispatchEvent(new Event('oxoo_auth_change'));
                         setUserMenuOpen(false);
                         navigate('/login');

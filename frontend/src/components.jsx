@@ -9,6 +9,7 @@ import {
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
 import { useRegionPricing } from './RegionPricingContext';
+import { authStorage } from './authStorage';
 
 // Configured HRMS Employee Login URL from environment configuration
 const HRMS_EMPLOYEE_LOGIN_URL =
@@ -347,17 +348,16 @@ export function Header() {
   useEffect(() => {
     const readUser = () => {
       try {
-        const stored = localStorage.getItem('oxoo_user');
-        const token = localStorage.getItem('oxoo_token');
-        if (stored && token) {
-          setCurrentUser(JSON.parse(stored));
+        const user = authStorage.getCustomerUser();
+        const token = authStorage.getCustomerToken();
+        if (user && token) {
+          setCurrentUser(user);
           return;
         }
-        const adminStored = localStorage.getItem('oxoo_admin_user');
-        const adminToken = localStorage.getItem('oxoo_admin_token');
-        if (adminStored && adminToken) {
-          const u = JSON.parse(adminStored);
-          setCurrentUser({ ...u, role: 'admin' });
+        const adminUser = authStorage.getAdminUser();
+        const adminToken = authStorage.getAdminToken();
+        if (adminUser && adminToken) {
+          setCurrentUser({ ...adminUser, role: 'admin' });
           return;
         }
         setCurrentUser(null);
@@ -366,21 +366,16 @@ export function Header() {
       }
     };
     readUser();
-    window.addEventListener('storage', readUser);
     window.addEventListener('oxoo_auth_change', readUser);
     window.addEventListener('oxoo_admin_auth_change', readUser);
     return () => {
-      window.removeEventListener('storage', readUser);
       window.removeEventListener('oxoo_auth_change', readUser);
       window.removeEventListener('oxoo_admin_auth_change', readUser);
     };
   }, [location.pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('oxoo_token');
-    localStorage.removeItem('oxoo_user');
-    localStorage.removeItem('oxoo_admin_token');
-    localStorage.removeItem('oxoo_admin_user');
+    authStorage.clearAll();
     setCurrentUser(null);
     setProfileOpen(false);
     window.dispatchEvent(new Event('oxoo_auth_change'));
