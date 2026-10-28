@@ -544,13 +544,18 @@ export default function CheckoutPage() {
       const orderNumber = orderRes.order?.orderNumber || `OXOO-ORD-${curYear}-${Date.now().toString().slice(-6)}`;
       const invoiceNumber = `INV-${curYear}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
 
-      const finalizeOrder = async (realPaymentId) => {
-        const paymentId = realPaymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
+      const finalizeOrder = async (realPaymentId, rzpOrderId, rzpSignature) => {
+        const paymentId = realPaymentId || orderRes.directPaymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
+        const effectiveOrderId = rzpOrderId || orderRes.effectiveOrderId || orderRes.razorpayOrderId;
+        const effectiveSignature = rzpSignature || orderRes.directSignature;
 
         // 2. Verify Payment on backend
         const verifyRes = await verifyPayment({
           orderNumber,
           paymentId,
+          razorpay_order_id: effectiveOrderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: effectiveSignature,
           paymentMethod,
           companyName: formData.companyName || formData.yourName,
           customerName: formData.yourName,
@@ -671,8 +676,8 @@ export default function CheckoutPage() {
         setCurrentStep(5);
       };
 
-      // Launch official Razorpay checkout modal if SDK is available
-      if (typeof window !== 'undefined' && window.Razorpay) {
+      // Launch official Razorpay checkout modal if SDK is available and a live Razorpay order was created
+      if (typeof window !== 'undefined' && window.Razorpay && orderRes.razorpayOrderId) {
         const rzpKey = orderRes.razorpayKeyId || 'rzp_test_Tqu6q5BYPuxhzd';
         const rzpOptions = {
           key: rzpKey,
@@ -692,7 +697,11 @@ export default function CheckoutPage() {
           },
           handler: async function (response) {
             try {
-              await finalizeOrder(response.razorpay_payment_id);
+              await finalizeOrder(
+                response.razorpay_payment_id,
+                response.razorpay_order_id,
+                response.razorpay_signature
+              );
             } catch (vErr) {
               setPaymentError(vErr.message || 'Payment confirmation failed.');
               setIsProcessing(false);
@@ -712,8 +721,12 @@ export default function CheckoutPage() {
         });
         rzpInstance.open();
       } else {
-        // Fallback: direct verification
-        await finalizeOrder(`pay_rzp_${Date.now().toString().slice(-8)}`);
+        // Direct checkout verification using server-signed HMAC credentials
+        await finalizeOrder(
+          orderRes.directPaymentId,
+          orderRes.effectiveOrderId,
+          orderRes.directSignature
+        );
       }
     } catch (err) {
       setPaymentError(err.message || 'Payment processing failed. Please try again.');

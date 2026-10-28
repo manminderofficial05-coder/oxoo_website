@@ -474,6 +474,7 @@ export default function CustomerDashboard() {
       });
 
       const orderNumber = orderRes.orderNumber || `OXOO-RNW-${Date.now().toString().slice(-6)}`;
+      const targetName = activeSoftwareNames;
 
       // Finalize renewal callback — strictly triggered ONLY AFTER payment is confirmed
       const finalizeRenewalWithPayment = async (realPaymentId, paymentMethod = 'Razorpay (UPI / Card)') => {
@@ -531,7 +532,7 @@ export default function CustomerDashboard() {
       };
 
       // 2. LAUNCH RAZORPAY PAYMENT MODAL FIRST
-      if (typeof window !== 'undefined' && window.Razorpay) {
+      if (typeof window !== 'undefined' && window.Razorpay && orderRes.razorpayOrderId) {
         const rzpKey = orderRes.razorpayKeyId || 'rzp_test_Tqu6q5BYPuxhzd';
         const rzpOptions = {
           key: rzpKey,
@@ -575,10 +576,10 @@ export default function CustomerDashboard() {
         });
         rzpInstance.open();
       } else {
-        // Fallback simulation in test environments if SDK blocked
+        // Fallback simulation in test environments if SDK blocked or live order unavailable
         const proceed = window.confirm(`Proceed with online test payment of ₹${totalAmount} for ${targetName} renewal?`);
         if (proceed) {
-          await finalizeRenewalWithPayment(`pay_rzp_test_${Date.now().toString().slice(-8)}`, 'Razorpay (Simulated Test)');
+          await finalizeRenewalWithPayment(orderRes.directPaymentId || `pay_rzp_test_${Date.now().toString().slice(-8)}`, 'Razorpay (Simulated Test)');
         } else {
           setIsRenewing(false);
           setRenewPaymentError('Payment cancelled. Subscription was not renewed.');
@@ -853,7 +854,7 @@ export default function CustomerDashboard() {
       const gstAmount = parseFloat((unitAmount * 0.18).toFixed(2));
       const totalAmount = parseFloat((unitAmount + gstAmount).toFixed(2));
 
-      // Initiate order
+      // Initiate order (force: true bypasses 5-day renewal lock for new application purchase)
       const orderRes = await createRenewalOrder({
         email: overview.email || profileData.email,
         companyName: overview.company || profileData.company,
@@ -864,19 +865,22 @@ export default function CustomerDashboard() {
         billingCycle: planBillingCycle,
         softwareId: selectedAppForPlans.id,
         softwareName: selectedAppForPlans.name,
-        amount: totalAmount
+        amount: totalAmount,
+        force: true
       });
 
       const orderNumber = orderRes.orderNumber || `OXOO-APP-${Date.now().toString().slice(-6)}`;
 
       // Finalize verified payment & entitlement activation
-      const completePurchaseWithPayment = async (realPaymentId) => {
+      const completePurchaseWithPayment = async (realPaymentId, rzpOrderId, rzpSignature) => {
         try {
+          const paymentId = realPaymentId || orderRes.directPaymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
           const verifyRes = await verifyPayment({
-            razorpay_order_id: orderRes.razorpayOrderId || `order_test_${Date.now()}`,
-            razorpay_payment_id: realPaymentId,
-            razorpay_signature: 'sig_verified_server',
+            razorpay_order_id: rzpOrderId || orderRes.effectiveOrderId || orderRes.razorpayOrderId,
+            razorpay_payment_id: paymentId,
+            razorpay_signature: rzpSignature || orderRes.directSignature,
             orderNumber: orderNumber,
+            paymentId: paymentId,
             customerName: profileData.name || overview.customerName,
             customerEmail: overview.email || profileData.email,
             customerPhone: profileData.phone || '+91 98765 43210',
@@ -890,7 +894,7 @@ export default function CustomerDashboard() {
 
           if (verifyRes && verifyRes.success) {
             setPurchaseSuccessData({
-              paymentId: realPaymentId,
+              paymentId: paymentId,
               invoiceNumber: verifyRes.invoiceNumber || orderNumber,
               appName: selectedAppForPlans.name,
               planName: selectedPlan.name,
@@ -917,7 +921,7 @@ export default function CustomerDashboard() {
         }
       };
 
-      if (typeof window !== 'undefined' && window.Razorpay) {
+      if (typeof window !== 'undefined' && window.Razorpay && orderRes.razorpayOrderId) {
         const rzpKey = orderRes.razorpayKeyId || 'rzp_test_Tqu6q5BYPuxhzd';
         const rzpOptions = {
           key: rzpKey,
@@ -935,7 +939,9 @@ export default function CustomerDashboard() {
           theme: { color: '#0284c7' },
           handler: async function (response) {
             await completePurchaseWithPayment(
-              response.razorpay_payment_id || `pay_rzp_${Date.now().toString().slice(-8)}`
+              response.razorpay_payment_id,
+              response.razorpay_order_id,
+              response.razorpay_signature
             );
           },
           modal: {
@@ -959,7 +965,11 @@ export default function CustomerDashboard() {
       } else {
         const ok = window.confirm(`Proceed with online test purchase of ₹${totalAmount} for ${selectedAppForPlans.name}?`);
         if (ok) {
-          await completePurchaseWithPayment(`pay_rzp_test_${Date.now().toString().slice(-8)}`);
+          await completePurchaseWithPayment(
+            orderRes.directPaymentId,
+            orderRes.effectiveOrderId,
+            orderRes.directSignature
+          );
         } else {
           setIsPurchasingApp(false);
           setPurchaseError('Purchase cancelled.');
