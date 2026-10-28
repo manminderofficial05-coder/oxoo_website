@@ -172,7 +172,7 @@ export default function CheckoutPage() {
 
   const [duplicateSoftwareWarning, setDuplicateSoftwareWarning] = useState('');
 
-  // Validate if entered email already owns any of the selected software
+  // Validate if entered email already owns any of the selected software (informative, non-blocking)
   const verifyEmailSoftwareOwnership = async (emailToCheck) => {
     const email = (emailToCheck || formData.email || '').trim().toLowerCase();
     if (!email || !email.includes('@')) return false;
@@ -181,26 +181,15 @@ export default function CheckoutPage() {
       const res = await checkEmailSoftware(email);
       if (res?.ownedAppIds && res.ownedAppIds.length > 0) {
         setOwnedAppIds((prev) => Array.from(new Set([...prev, ...res.ownedAppIds])));
-        const conflicts = selectedAppIds.filter((id) => res.ownedAppIds.includes(id));
-        if (conflicts.length > 0) {
-          const conflictNames = SOFTWARE_MODULES.filter((m) => conflicts.includes(m.id)).map((m) => m.name).join(', ');
-          const warnMsg = `The account for ${email} already owns ${conflictNames}. This software is not available for duplicate purchase because you already have it. Please renew or manage your existing subscription in the Customer Dashboard.`;
-          setDuplicateSoftwareWarning(warnMsg);
-          return true;
-        } else {
-          setDuplicateSoftwareWarning('');
-          return false;
-        }
-      } else {
-        setDuplicateSoftwareWarning('');
-        return false;
       }
+      setDuplicateSoftwareWarning('');
+      return false;
     } catch (e) {
       return false;
     }
   };
 
-  // Fetch customer's already active software from backend to prevent duplicate purchases
+  // Fetch customer's already active software from backend to identify owned software
   useEffect(() => {
     async function checkExistingPurchases() {
       const email = loggedInUser?.email || formData.email;
@@ -221,14 +210,6 @@ export default function CheckoutPage() {
           });
           const updated = Array.from(ids);
           setOwnedAppIds(updated);
-
-          // If any currently selected apps are already owned, remove them
-          setSelectedAppIds((prev) => {
-            const clean = prev.filter((id) => !updated.includes(id));
-            if (clean.length > 0) return clean;
-            const available = SOFTWARE_MODULES.find((m) => !updated.includes(m.id));
-            return available ? [available.id] : [];
-          });
         }
       } catch (e) {}
     }
@@ -423,13 +404,8 @@ export default function CheckoutPage() {
     }
   };
 
-  // Handle toggling software selection in Step 1
+  // Handle toggling software selection in Step 1 (unrestricted for all customers)
   const handleToggleSoftware = (appId) => {
-    if (ownedAppIds.includes(appId)) {
-      const mod = SOFTWARE_MODULES.find((m) => m.id === appId);
-      alert(`You already own ${mod?.name || 'this software'}. It is not available for duplicate purchase because you already have it. Please renew or manage it from your Customer Dashboard.`);
-      return;
-    }
     if (selectedAppIds.includes(appId)) {
       if (selectedAppIds.length > 1) {
         const next = selectedAppIds.filter((id) => id !== appId);
@@ -522,19 +498,10 @@ export default function CheckoutPage() {
     return Object.keys(errs).length === 0;
   };
 
-  // Proceed from Step 3: Enforces duplicate software check and email OTP verification before payment!
+  // Proceed from Step 3: Enforces email OTP verification before payment
   const handleProceedFromStep3 = async (e) => {
     if (e) e.preventDefault();
     if (!validateCompanyDetails()) return;
-
-    // Strict validation: Ensure customer does not already own any of the selected software!
-    if (formData.email) {
-      const hasConflict = await verifyEmailSoftwareOwnership(formData.email);
-      if (hasConflict) {
-        alert('You already own one or more of the selected software applications on this account. They are not available for duplicate purchase because you already have them. Please renew your existing software from your Customer Dashboard.');
-        return;
-      }
-    }
 
     if (isEmailVerified) {
       setCurrentStep(4);
@@ -621,9 +588,18 @@ export default function CheckoutPage() {
             iconSrc: m.iconSrc
           }));
 
-        // Store strictly the newly purchased apps in localStorage for instant synchronization
-        const combinedPurchasedApps = purchasedModules;
-        localStorage.setItem('oxoo_purchased_apps', JSON.stringify(purchasedModules));
+        // Store purchased apps in localStorage, preserving existing active applications
+        let existingPurchased = [];
+        try {
+          const ep = localStorage.getItem('oxoo_purchased_apps');
+          if (ep) existingPurchased = JSON.parse(ep);
+        } catch (e) {}
+        const mergedPurchasedApps = [
+          ...existingPurchased.filter(a => !purchasedModules.some(m => m.id === (typeof a === 'string' ? a : (a.id || a.name)))),
+          ...purchasedModules
+        ];
+        const combinedPurchasedApps = mergedPurchasedApps.length > 0 ? mergedPurchasedApps : purchasedModules;
+        localStorage.setItem('oxoo_purchased_apps', JSON.stringify(combinedPurchasedApps));
 
         // Build customer order record for Admin Dashboard & Customer Dashboard
         const orderRecord = {
@@ -913,90 +889,59 @@ export default function CheckoutPage() {
                   return (
                     <div
                       key={mod.id}
-                      className={`checkout-software-card ${isChecked && !isOwned ? 'selected' : ''}`}
+                      className={`checkout-software-card ${isChecked ? 'selected' : ''}`}
                       onClick={() => handleToggleSoftware(mod.id)}
-                      style={isOwned ? {
-                        opacity: 0.88,
-                        background: '#f8fafc',
-                        border: '1.5px solid #cbd5e1',
-                        cursor: 'not-allowed'
-                      } : {}}
                     >
                       <input
                         type="checkbox"
-                        checked={isChecked && !isOwned}
-                        disabled={isOwned}
+                        checked={isChecked}
                         onChange={() => handleToggleSoftware(mod.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <img src={mod.iconSrc} alt={mod.name} className="checkout-software-icon" style={isOwned ? { filter: 'grayscale(0.2)' } : {}} />
+                      <img src={mod.iconSrc} alt={mod.name} className="checkout-software-icon" />
                       <div className="checkout-software-info">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
                           <span className="checkout-software-name">{mod.name}</span>
-                          {isOwned ? (
+                          {isOwned && (
                             <span
                               style={{
                                 fontSize: '0.68rem',
                                 fontWeight: 700,
                                 padding: '2px 8px',
                                 borderRadius: '9999px',
-                                background: '#fef3c7',
-                                color: '#92400e',
-                                border: '1px solid #fde68a'
+                                background: '#dcfce7',
+                                color: '#166534',
+                                border: '1px solid #bbf7d0'
                               }}
                             >
-                              Already Active on Your Account
-                            </span>
-                          ) : (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                padding: '1px 7px',
-                                borderRadius: '4px',
-                                background: `${mod.color}15`,
-                                color: mod.color
-                              }}
-                            >
-                              6 Apps Suite
+                              Active on Account
                             </span>
                           )}
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '1px 7px',
+                              borderRadius: '4px',
+                              background: `${mod.color}15`,
+                              color: mod.color
+                            }}
+                          >
+                            6 Apps Suite
+                          </span>
                         </div>
 
-                        {isOwned ? (
-                          <div style={{ marginTop: '3px' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>• You already own this software. Not available for duplicate purchase.</span>
-                            </div>
-                            <Link
-                              to="/customer"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0284c7', textDecoration: 'underline', display: 'inline-block', marginTop: '2px' }}
-                            >
-                              Renew in Customer Dashboard →
-                            </Link>
-                          </div>
-                        ) : (
-                          <span className="checkout-software-desc">
-                            {mod.desc}
-                          </span>
-                        )}
+                        <span className="checkout-software-desc">
+                          {mod.desc}
+                        </span>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        {isOwned ? (
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', background: '#e2e8f0', padding: '3px 8px', borderRadius: '6px', display: 'inline-block' }}>
-                            Not Available to Buy
-                          </span>
-                        ) : (
-                          <>
-                            <span className="checkout-software-rate" style={{ display: 'block' }}>
-                              {totals.symbol}{totals.singleRate}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                              / user / mo
-                            </span>
-                          </>
-                        )}
+                        <span className="checkout-software-rate" style={{ display: 'block' }}>
+                          {totals.symbol}{totals.singleRate}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                          / user / mo
+                        </span>
                       </div>
                     </div>
                   );

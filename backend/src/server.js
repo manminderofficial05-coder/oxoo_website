@@ -1032,13 +1032,42 @@ app.post('/api/customer/renew-order', async (req, res, next) => {
       customerName,
       customerPhone,
       softwareId,
-      softwareName = 'Sales Software',
+      softwareName = 'Finance Software',
+      softwareNames = [],
       billingCycle = 'monthly',
-      amount
+      amount,
+      force = false
     } = req.body || {};
 
     const normEmail = (email || '').trim().toLowerCase();
     const effectiveCompany = companyName || 'My Organization';
+
+    // 5-Day Availability Rule: Renewal payment is only available within 5 days before expiration
+    if (isDbConnected && (companyName || email) && !force) {
+      try {
+        const subRes = await query(
+          `SELECT renewal_date FROM subscriptions
+           WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'
+           ORDER BY id DESC LIMIT 1`,
+          [effectiveCompany, effectiveCompany]
+        );
+        if (subRes.rows.length > 0 && subRes.rows[0].renewal_date) {
+          const renewalDate = new Date(subRes.rows[0].renewal_date);
+          const now = new Date();
+          const diffMs = renewalDate.getTime() - now.getTime();
+          const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          if (diffDays > 5) {
+            return res.status(400).json({
+              success: false,
+              message: `Renewal payment is only available within 5 days before expiration (${diffDays} days remaining).`
+            });
+          }
+        }
+      } catch (subErr) {
+        console.warn('[Renewal 5-day check note]:', subErr.message);
+      }
+    }
+
     const curYear = new Date().getFullYear();
     const orderNumber = `OXOO-RNW-${curYear}-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
@@ -1096,12 +1125,12 @@ app.post('/api/customer/renew-order', async (req, res, next) => {
             normEmail,
             customerName || effectiveCompany,
             customerPhone || '',
-            `Single Software (Renewal)`,
+            Array.isArray(softwareNames) && softwareNames.length > 1 ? `Custom Pack (${softwareNames.length} Softwares Renewal)` : `${softwareName} (Renewal)`,
             billingCycle,
             safeSubtotal,
             safeTax,
             safeAmount,
-            JSON.stringify([softwareName])
+            JSON.stringify(Array.isArray(softwareNames) && softwareNames.length > 0 ? softwareNames : [softwareName])
           ]
         );
       } catch (dbErr) {
@@ -1137,10 +1166,12 @@ app.post('/api/customer/renew-subscription', async (req, res, next) => {
       billingCycle = 'monthly',
       softwareId,
       softwareName,
+      softwareNames = [],
       paymentMethod = 'Razorpay (UPI / Card)',
       amount = 560,
       paymentId,
-      orderNumber: clientOrderNumber
+      orderNumber: clientOrderNumber,
+      force = false
     } = req.body || {};
 
     const verifiedPaymentId = paymentId || req.body.payment_id;
@@ -1153,6 +1184,33 @@ app.post('/api/customer/renew-subscription', async (req, res, next) => {
 
     const normEmail = (email || '').trim().toLowerCase();
     const effectiveCompany = companyName || 'My Organization';
+
+    // 5-Day Availability Rule: Renewal payment is only available within 5 days before expiration
+    if (isDbConnected && (companyName || email) && !force) {
+      try {
+        const subCheck = await query(
+          `SELECT renewal_date FROM subscriptions
+           WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'
+           ORDER BY id DESC LIMIT 1`,
+          [effectiveCompany, effectiveCompany]
+        );
+        if (subCheck.rows.length > 0 && subCheck.rows[0].renewal_date) {
+          const renewalDate = new Date(subCheck.rows[0].renewal_date);
+          const now = new Date();
+          const diffMs = renewalDate.getTime() - now.getTime();
+          const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          if (diffDays > 5) {
+            return res.status(400).json({
+              success: false,
+              message: `Renewal payment is only available within 5 days before expiration (${diffDays} days remaining).`
+            });
+          }
+        }
+      } catch (subErr) {
+        console.warn('[Renewal 5-day check note]:', subErr.message);
+      }
+    }
+
     const renewalInterval = billingCycle === 'yearly' ? '1 year' : '1 month';
     const curYear = new Date().getFullYear();
     const invoiceNumber = `INV-${curYear}-RNW-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
@@ -1221,10 +1279,11 @@ app.post('/api/customer/renew-subscription', async (req, res, next) => {
       }
 
       // Record renewal invoice with payment reference
+      const renewalItems = Array.isArray(softwareNames) && softwareNames.length > 0 ? softwareNames : [softwareName || planName];
       await query(
         `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items, payment_method)
          VALUES ($1, $2, $3, $4, 'INR', 'Paid', NOW(), $5, $6)`,
-        [invoiceNumber, effectiveCompany, `${planName} (Renewal)`, safeAmount, JSON.stringify([softwareName || planName]), paymentMethod]
+        [invoiceNumber, effectiveCompany, `${planName} (Renewal)`, safeAmount, JSON.stringify(renewalItems), paymentMethod]
       );
 
       // Record or update order with verified payment ID
@@ -1245,7 +1304,7 @@ app.post('/api/customer/renew-subscription', async (req, res, next) => {
         await query(
           `INSERT INTO orders (order_number, company_name, customer_email, plan_name, billing_cycle, subtotal, total_amount, status, payment_method, payment_id, selected_apps)
            VALUES ($1, $2, $3, $4, $5, $6, $7, 'Paid', $8, $9, $10)`,
-          [orderNumber, effectiveCompany, normEmail, `${planName} (Renewal)`, billingCycle, safeSubtotal, safeAmount, paymentMethod, verifiedPaymentId, JSON.stringify([softwareName || planName])]
+          [orderNumber, effectiveCompany, normEmail, `${planName} (Renewal)`, billingCycle, safeSubtotal, safeAmount, paymentMethod, verifiedPaymentId, JSON.stringify(renewalItems)]
         );
       }
 

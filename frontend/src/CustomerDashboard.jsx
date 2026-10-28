@@ -9,7 +9,8 @@ import {
   Mail, Phone, Clock, MessageSquare, RefreshCw, Filter, Sparkles,
   Laptop, Cpu, LogOut, Building, Trash2, UserPlus, Send, Calendar,
   Smartphone, ChevronRight, MoreHorizontal, Eye, ShieldCheck, CheckSquare,
-  FileSpreadsheet, Upload, History, AlertTriangle, Menu, Paperclip
+  FileSpreadsheet, Upload, History, AlertTriangle, Menu, Paperclip,
+  Package
 } from 'lucide-react';
 import {
   getCustomerOverview, getCustomerBilling, upgradeCustomerPlan,
@@ -232,31 +233,52 @@ export default function CustomerDashboard() {
     e.target.value = '';
   };
 
-  // Base software directory catalog across all OXOO multi-app offerings
+  // 5 Core Software Modules Available on OXOO Platform (matching Pricing / Checkout)
   const BASE_DIRECTORY_APPS = [
+    {
+      id: 'finance',
+      name: 'Finance Software',
+      shortName: 'Finance',
+      desc: 'Accounting, Invoicing, Expenses, Sign, Spreadsheet, ESG',
+      suiteCount: '6 Apps Suite',
+      color: 'blue',
+      iconSrc: '/apps/logo-accounting.png?v=clean'
+    },
     {
       id: 'sales',
       name: 'Sales Software',
-      desc: 'Business management & sales tracking',
-      color: 'blue'
+      shortName: 'Sales',
+      desc: 'CRM, Sales, Subscriptions, POS Shop, POS Restaurant, Rental',
+      suiteCount: '6 Apps Suite',
+      color: 'pink',
+      iconSrc: '/apps/logo-sales.png?v=clean'
     },
     {
-      id: 'hrms',
-      name: 'HRMS',
-      desc: 'Employee management system',
-      color: 'purple'
+      id: 'supply-chain',
+      name: 'Supply Chain Software',
+      shortName: 'Supply Chain',
+      desc: 'Inventory, Manufacturing, Maintenance, PLM, Quality, Purchase',
+      suiteCount: '6 Apps Suite',
+      color: 'orange',
+      iconSrc: '/apps/logo-inventory.png?v=clean'
     },
     {
-      id: 'finance',
-      name: 'Finance',
-      desc: 'Accounting, invoicing & reports',
-      color: 'green'
+      id: 'human-resources',
+      name: 'Human Resources Software',
+      shortName: 'HRMS',
+      desc: 'Employees, Payroll, Recruitment, Time Off, Appraisals, Fleet',
+      suiteCount: '6 Apps Suite',
+      color: 'purple',
+      iconSrc: '/apps/logo-hr.png?v=clean'
     },
     {
-      id: 'marketing',
-      name: 'Marketing',
-      desc: 'Email campaigns & marketing tools',
-      color: 'orange'
+      id: 'productivity',
+      name: 'Productivity Software',
+      shortName: 'Productivity',
+      desc: 'Artificial Intelligence, Discuss, VoIP, IoT, Documents, Knowledge',
+      suiteCount: '6 Apps Suite',
+      color: 'violet',
+      iconSrc: '/apps/logo-ai.png?v=clean'
     }
   ];
 
@@ -280,8 +302,9 @@ export default function CustomerDashboard() {
       if (str === idLower || str === nameLower) return true;
       if (idLower === 'finance' && (str.includes('finance') || str.includes('account'))) return true;
       if (idLower === 'sales' && str.includes('sale')) return true;
-      if (idLower === 'hrms' && (str.includes('hrms') || str.includes('hr') || str.includes('human'))) return true;
-      if (idLower === 'marketing' && str.includes('market')) return true;
+      if ((idLower === 'human-resources' || idLower === 'hrms') && (str.includes('hrms') || str.includes('hr') || str.includes('human') || str.includes('employee'))) return true;
+      if ((idLower === 'supply-chain' || idLower === 'inventory') && (str.includes('supply') || str.includes('inventory') || str.includes('chain') || str.includes('warehouse'))) return true;
+      if ((idLower === 'productivity' || idLower === 'ai' || idLower === 'marketing') && (str.includes('productivity') || str.includes('ai') || str.includes('discuss') || str.includes('market') || str.includes('agent'))) return true;
       if (nameLower.includes(str) || str.includes(nameLower)) return true;
       return false;
     });
@@ -337,7 +360,10 @@ export default function CustomerDashboard() {
     const softNotifs = (appsList || []).map((appItem, idx) => {
       const name = typeof appItem === 'string' ? appItem : (appItem.name || 'Software');
       const lower = name.toLowerCase();
-      const appId = lower.includes('fin') ? 'finance' : (lower.includes('hrms') ? 'hrms' : (lower.includes('market') ? 'marketing' : 'sales'));
+      const appId = lower.includes('fin') ? 'finance' :
+        (lower.includes('hrms') || lower.includes('hr') || lower.includes('human')) ? 'human-resources' :
+        (lower.includes('supply') || lower.includes('inventory') || lower.includes('chain')) ? 'supply-chain' :
+        (lower.includes('productivity') || lower.includes('ai')) ? 'productivity' : 'sales';
 
       let title = `${name}: Active Subscription`;
       let desc = `Your ${name} subscription is active with scheduled renewal on ${dateFormatted}. Manage billing and settings anytime in the customer portal.`;
@@ -369,6 +395,40 @@ export default function CustomerDashboard() {
     return [...softNotifs, ...defaultNotifications];
   };
 
+  // Dynamic renewal price calculation matching active apps count
+  const computeRenewalPricing = (cycle = renewCycle) => {
+    const activeApps = allDirectoryApps.filter(app => app.entitled);
+    const activeCount = Math.max(1, activeApps.length);
+    let baseMonthly = 740;
+    let baseYearlyPerMonth = 560;
+
+    if (activeCount === 1) {
+      baseMonthly = 740;
+      baseYearlyPerMonth = 560;
+    } else if (activeCount === 2) {
+      baseMonthly = 1280;
+      baseYearlyPerMonth = 980;
+    } else {
+      baseMonthly = 1280 + (activeCount - 2) * 740;
+      baseYearlyPerMonth = 980 + (activeCount - 2) * 560;
+    }
+
+    const isYearly = cycle === 'yearly';
+    const subtotal = isYearly ? baseYearlyPerMonth * 12 : baseMonthly;
+    const gst = parseFloat((subtotal * 0.18).toFixed(2));
+    const total = parseFloat((subtotal + gst).toFixed(2));
+
+    return {
+      activeApps,
+      activeCount,
+      baseMonthly,
+      baseYearlyPerMonth,
+      subtotal,
+      gst,
+      total
+    };
+  };
+
   // Open renewal modal for an individual app or overall subscription
   const handleOpenRenewModal = (app = null) => {
     setRenewTargetApp(app);
@@ -381,13 +441,23 @@ export default function CustomerDashboard() {
   // Execute subscription renewal: Step 1 initiates payment order, Step 2 launches Razorpay, Step 3 verifies payment and renews
   const handleConfirmRenew = async () => {
     try {
+      // 5-Day Availability Rule: Renewal payment is only available within 5 days of expiry
+      if (typeof overview.daysRemaining === 'number' && overview.daysRemaining > 5) {
+        showToast(`Renewal payment is only available within 5 days of expiry (${overview.daysRemaining} days remaining).`);
+        return;
+      }
+
       setIsRenewing(true);
       setRenewPaymentError('');
-      const targetName = renewTargetApp ? renewTargetApp.name : (overview.currentPlan || 'Single Software');
-      const targetId = renewTargetApp ? renewTargetApp.id : 'sales';
-      const unitPrice = renewCycle === 'yearly' ? 560 * 12 : 740;
-      const tax = unitPrice * 0.18;
-      const totalAmount = parseFloat((unitPrice + tax).toFixed(2));
+
+      const pricing = computeRenewalPricing(renewCycle);
+      const activeApps = pricing.activeApps.length > 0 ? pricing.activeApps : (renewTargetApp ? [renewTargetApp] : []);
+      const activeSoftwareNames = activeApps.map(a => a.name).join(' & ') || (renewTargetApp?.name || overview.currentPlan || 'Business Software');
+      const activeSoftwareIds = activeApps.map(a => a.id).join(',') || (renewTargetApp?.id || 'finance');
+      const planName = activeApps.length > 1
+        ? `Custom Pack (${activeApps.length} Softwares)`
+        : (activeApps[0]?.name || overview.currentPlan || 'Single Software');
+      const totalAmount = pricing.total;
 
       // 1. FIRST INITIATE PAYMENT ORDER
       const orderRes = await createRenewalOrder({
@@ -395,10 +465,11 @@ export default function CustomerDashboard() {
         companyName: overview.company || profileData.company,
         customerName: profileData.name || overview.name || 'Priya Sharma',
         customerPhone: profileData.phone || overview.phone || '+91 98765 43210',
-        planName: overview.currentPlan,
+        planName: planName,
         billingCycle: renewCycle,
-        softwareId: targetId,
-        softwareName: targetName,
+        softwareId: activeSoftwareIds,
+        softwareName: activeSoftwareNames,
+        softwareNames: activeApps.map(a => a.name),
         amount: totalAmount
       });
 
@@ -410,10 +481,11 @@ export default function CustomerDashboard() {
           const res = await renewCustomerSubscription({
             email: overview.email || profileData.email,
             companyName: overview.company || profileData.company,
-            planName: overview.currentPlan,
+            planName: planName,
             billingCycle: renewCycle,
-            softwareId: targetId,
-            softwareName: targetName,
+            softwareId: activeSoftwareIds,
+            softwareName: activeSoftwareNames,
+            softwareNames: activeApps.map(a => a.name),
             amount: totalAmount,
             paymentId: realPaymentId,
             orderNumber: orderNumber,
@@ -1116,8 +1188,8 @@ export default function CustomerDashboard() {
       return;
     }
 
-    // 2. HRMS Software (Opens Oxoo Finance Employee Login)
-    if (app.id === 'hrms') {
+    // 2. HRMS / Human Resources Software (Opens Oxoo Finance Employee Login)
+    if (app.id === 'hrms' || app.id === 'human-resources') {
       window.open('https://oxoo-finance.onrender.com/', '_blank');
       return;
     }
@@ -1136,8 +1208,8 @@ export default function CustomerDashboard() {
       return;
     }
 
-    // 5. Marketing & AI Suite
-    if (app.id === 'marketing') {
+    // 5. Productivity & AI Suite
+    if (app.id === 'productivity' || app.id === 'marketing' || app.id === 'ai') {
       const mktUrl = `/demo/ai?${ssoParams.toString()}`;
       window.open(mktUrl, '_blank');
       return;
@@ -1711,17 +1783,20 @@ export default function CustomerDashboard() {
                       allDirectoryApps.filter(app => app.entitled).map((app) => (
                         <div key={app.id} className="oxoo-app-tile" style={{ padding: '20px 16px' }}>
                           <div className={`oxoo-app-icon-box ${app.color === 'blue' ? 'gradient-blue' : ''}`} style={{
-                            background: app.color === 'blue' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
-                              app.color === 'purple' ? '#f3e8ff' :
-                              app.color === 'green' ? '#ecfdf5' : '#fff7ed',
-                            color: app.color === 'blue' ? '#ffffff' :
-                              app.color === 'purple' ? '#8b5cf6' :
-                              app.color === 'green' ? '#10b981' : '#f97316'
+                            background: app.id === 'sales' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
+                              (app.id === 'human-resources' || app.id === 'hrms') ? '#f3e8ff' :
+                              app.id === 'finance' ? '#ecfdf5' :
+                              (app.id === 'supply-chain' || app.id === 'inventory') ? '#fff7ed' : '#faf5ff',
+                            color: app.id === 'sales' ? '#ffffff' :
+                              (app.id === 'human-resources' || app.id === 'hrms') ? '#8b5cf6' :
+                              app.id === 'finance' ? '#10b981' :
+                              (app.id === 'supply-chain' || app.id === 'inventory') ? '#ea580c' : '#6d28d9'
                           }}>
                             {app.id === 'sales' && <Layers size={26} />}
-                            {app.id === 'hrms' && <Users size={26} />}
+                            {(app.id === 'human-resources' || app.id === 'hrms') && <Users size={26} />}
                             {app.id === 'finance' && <BarChart2 size={26} />}
-                            {app.id === 'marketing' && <Megaphone size={26} />}
+                            {(app.id === 'supply-chain' || app.id === 'inventory') && <Package size={26} />}
+                            {(app.id === 'productivity' || app.id === 'marketing') && <Sparkles size={26} />}
                           </div>
                           <span className="oxoo-app-name" style={{ fontSize: '15px' }}>{app.name}</span>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px' }}>
@@ -1757,6 +1832,11 @@ export default function CustomerDashboard() {
                             >
                               <RefreshCw size={12} /> Renew Software
                             </button>
+                            {typeof overview.daysRemaining === 'number' && overview.daysRemaining > 5 && (
+                              <div style={{ fontSize: '10px', color: '#64748b', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                                <Lock size={9} color="#94a3b8" /> Opens in {overview.daysRemaining - 5}d
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))
@@ -1867,17 +1947,22 @@ export default function CustomerDashboard() {
                         height: '60px',
                         borderRadius: '16px',
                         margin: '0 auto 14px',
-                        background: app.color === 'blue' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
-                          app.color === 'purple' ? '#f3e8ff' :
-                          app.color === 'green' ? '#ecfdf5' : '#fff7ed',
-                        color: app.color === 'blue' ? '#ffffff' :
-                          app.color === 'purple' ? '#8b5cf6' :
-                          app.color === 'green' ? '#10b981' : '#f97316'
+                        background: app.id === 'sales' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
+                          (app.id === 'human-resources' || app.id === 'hrms') ? '#f3e8ff' :
+                          app.id === 'finance' ? '#ecfdf5' :
+                          (app.id === 'supply-chain' || app.id === 'inventory') ? '#fff7ed' : '#faf5ff',
+                        color: app.id === 'sales' ? '#ffffff' :
+                          (app.id === 'human-resources' || app.id === 'hrms') ? '#8b5cf6' :
+                          app.id === 'finance' ? '#10b981' :
+                          (app.id === 'supply-chain' || app.id === 'inventory') ? '#ea580c' : '#6d28d9',
+                        display: 'grid',
+                        placeItems: 'center'
                       }}>
                         {app.id === 'sales' && <Layers size={28} />}
-                        {app.id === 'hrms' && <Users size={28} />}
+                        {(app.id === 'human-resources' || app.id === 'hrms') && <Users size={28} />}
                         {app.id === 'finance' && <BarChart2 size={28} />}
-                        {app.id === 'marketing' && <Megaphone size={28} />}
+                        {(app.id === 'supply-chain' || app.id === 'inventory') && <Package size={28} />}
+                        {(app.id === 'productivity' || app.id === 'marketing') && <Sparkles size={28} />}
                       </div>
 
                       <h3 className="oxoo-app-name" style={{ fontSize: '16px', marginBottom: '4px' }}>{app.name}</h3>
@@ -1938,6 +2023,11 @@ export default function CustomerDashboard() {
                           >
                             <RefreshCw size={13} /> Renew Software
                           </button>
+                          {typeof overview.daysRemaining === 'number' && overview.daysRemaining > 5 && (
+                            <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                              <Lock size={10} color="#94a3b8" /> Payment opens 5 days before renewal ({overview.daysRemaining - 5}d)
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <button
@@ -3747,10 +3837,11 @@ export default function CustomerDashboard() {
                     border: '1px solid #e2e8f0'
                   }}>
                     {[
-                      { id: 'sales', name: 'Sales Software', desc: 'Business & sales pipeline tracking' },
-                      { id: 'hrms', name: 'HRMS Software', desc: 'Employee management & attendance' },
                       { id: 'finance', name: 'Finance Software', desc: 'Accounting, invoicing & tax reports' },
-                      { id: 'marketing', name: 'Marketing Software', desc: 'Email campaigns & automation' }
+                      { id: 'sales', name: 'Sales Software', desc: 'Business & sales pipeline tracking' },
+                      { id: 'supply-chain', name: 'Supply Chain Software', desc: 'Inventory, manufacturing & procurement' },
+                      { id: 'human-resources', name: 'Human Resources Software', desc: 'Employee management & payroll' },
+                      { id: 'productivity', name: 'Productivity Software', desc: 'AI, discuss & documents' }
                     ].map(app => {
                       const isChecked = Array.isArray(inviteForm.appsAccess) && inviteForm.appsAccess.includes(app.id);
                       return (
@@ -3868,10 +3959,11 @@ export default function CustomerDashboard() {
                     border: '1px solid #e2e8f0'
                   }}>
                     {[
-                      { id: 'sales', name: 'Sales Software' },
-                      { id: 'hrms', name: 'HRMS Software' },
                       { id: 'finance', name: 'Finance Software' },
-                      { id: 'marketing', name: 'Marketing Software' }
+                      { id: 'sales', name: 'Sales Software' },
+                      { id: 'supply-chain', name: 'Supply Chain Software' },
+                      { id: 'human-resources', name: 'Human Resources Software' },
+                      { id: 'productivity', name: 'Productivity Software' }
                     ].map(app => {
                       const isChecked = Array.isArray(editingMember.apps_access) && editingMember.apps_access.includes(app.id);
                       return (
@@ -4870,7 +4962,9 @@ export default function CustomerDashboard() {
                       Renew Software Subscription
                     </h3>
                     <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
-                      {renewTargetApp ? renewTargetApp.name : (overview.currentPlan || 'Single Software')} &bull; Renew before or after expiration
+                      {allDirectoryApps.filter(a => a.entitled).length > 1
+                        ? `Multi-Software Subscription (${allDirectoryApps.filter(a => a.entitled).length} Softwares Active)`
+                        : (renewTargetApp ? renewTargetApp.name : (overview.currentPlan || 'Single Software'))} &bull; Official Renewal Center
                     </p>
                   </div>
                 </div>
@@ -4912,7 +5006,7 @@ export default function CustomerDashboard() {
                       Subscription Successfully Renewed!
                     </h4>
                     <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '14px', lineHeight: 1.5 }}>
-                      Payment of <strong>₹{renewSuccess.amount || (renewCycle === 'yearly' ? ((560 * 12) * 1.18).toFixed(2) : (740 * 1.18).toFixed(2))}</strong> has been confirmed and verified. Your subscription has been extended until <strong>{new Date(renewSuccess.renewalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>.
+                      Payment of <strong>₹{renewSuccess.amount || computeRenewalPricing(renewCycle).total.toFixed(2)}</strong> has been confirmed and verified. Your subscription has been extended until <strong>{new Date(renewSuccess.renewalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>.
                       An updated Tax Invoice <strong>({renewSuccess.invoiceNumber})</strong> and payment confirmation receipt have been emailed to <strong>{overview.email}</strong>.
                     </p>
                     <div style={{
@@ -4962,38 +5056,145 @@ export default function CustomerDashboard() {
                       </div>
                     )}
 
-                    {/* Status Pill Card */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      background: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#fef2f2' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#fffbeb' : '#f0fdf4'),
-                      border: `1px solid ${(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#fecaca' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#fde68a' : '#bbf7d0')}`,
-                      marginBottom: '18px'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Clock size={18} style={{ color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#ef4444' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#d97706' : '#16a34a') }} />
+                    {/* 5-Day Lock Rule Notice Banner */}
+                    {typeof overview.daysRemaining === 'number' && overview.daysRemaining > 5 ? (
+                      <div style={{
+                        background: '#fffbeb',
+                        border: '1.5px solid #fde68a',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
+                          background: '#fef3c7',
+                          color: '#d97706',
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Lock size={18} />
+                        </div>
                         <div>
-                          <span style={{ fontSize: '0.86rem', fontWeight: 700, color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#991b1b' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#92400e' : '#166534') }}>
-                            {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Subscription Expired' : 'Active Subscription'}
-                          </span>
-                          <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                            {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Finished — Pay to reactivate instantly' : `Current cycle ends on ${overview.nextBillingExact || overview.nextBillingDate}`}
+                          <div style={{ fontWeight: 800, color: '#92400e', fontSize: '13.5px' }}>
+                            Renewal Payment Locked ({overview.daysRemaining} Days Left)
+                          </div>
+                          <div style={{ color: '#b45309', fontSize: '12px', marginTop: '2px', lineHeight: 1.4 }}>
+                            Subscription payment is available within <strong>5 days before expiration</strong>. Your current cycle ends on <strong>{overview.nextBillingExact || overview.nextBillingDate}</strong>. Payment will unlock in {overview.daysRemaining - 5} days.
                           </div>
                         </div>
                       </div>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        background: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#fee2e2' : '#dcfce7',
-                        color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#b91c1c' : '#15803d'
+                    ) : (
+                      <div style={{
+                        background: '#f0fdf4',
+                        border: '1.5px solid #bbf7d0',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
                       }}>
-                        {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Expired' : 'Active'}
-                      </span>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
+                          background: '#dcfce7',
+                          color: '#16a34a',
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Clock size={18} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 800, color: '#166534', fontSize: '13.5px' }}>
+                            Renewal Payment Available Now
+                          </div>
+                          <div style={{ color: '#15803d', fontSize: '12px', marginTop: '2px', lineHeight: 1.4 }}>
+                            Your subscription has {overview.daysRemaining <= 0 ? 'expired' : `${overview.daysRemaining} days remaining`}. Complete your renewal payment below to ensure continuous service.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Active Software in this Subscription (Requirement: Show all active software) */}
+                    <div style={{ marginBottom: '18px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', margin: 0 }}>
+                          Software in this Subscription ({allDirectoryApps.filter(a => a.entitled).length || 1})
+                        </label>
+                        <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
+                          {allDirectoryApps.filter(a => a.entitled).length > 1
+                            ? `Custom Pack (${allDirectoryApps.filter(a => a.entitled).length} Softwares)`
+                            : 'Standard Pack (1 Software)'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(allDirectoryApps.filter(a => a.entitled).length > 0
+                          ? allDirectoryApps.filter(a => a.entitled)
+                          : (renewTargetApp ? [renewTargetApp] : [allDirectoryApps[0]])
+                        ).map((a) => (
+                          <div
+                            key={a.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 14px',
+                              borderRadius: '10px',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{
+                                width: '34px',
+                                height: '34px',
+                                borderRadius: '8px',
+                                background: a.id === 'sales' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
+                                  (a.id === 'human-resources' || a.id === 'hrms') ? '#f3e8ff' :
+                                  a.id === 'finance' ? '#ecfdf5' :
+                                  (a.id === 'supply-chain' || a.id === 'inventory') ? '#fff7ed' : '#faf5ff',
+                                color: a.id === 'sales' ? '#ffffff' :
+                                  (a.id === 'human-resources' || a.id === 'hrms') ? '#8b5cf6' :
+                                  a.id === 'finance' ? '#10b981' :
+                                  (a.id === 'supply-chain' || a.id === 'inventory') ? '#ea580c' : '#6d28d9',
+                                display: 'grid',
+                                placeItems: 'center',
+                                flexShrink: 0
+                              }}>
+                                {a.id === 'sales' && <Layers size={17} />}
+                                {(a.id === 'human-resources' || a.id === 'hrms') && <Users size={17} />}
+                                {a.id === 'finance' && <BarChart2 size={17} />}
+                                {(a.id === 'supply-chain' || a.id === 'inventory') && <Package size={17} />}
+                                {(a.id === 'productivity' || a.id === 'marketing') && <Sparkles size={17} />}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>{a.name}</div>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>6 Apps Suite &bull; Active License</div>
+                              </div>
+                            </div>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              background: '#dcfce7',
+                              color: '#15803d',
+                              border: '1px solid #bbf7d0'
+                            }}>
+                              Active
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Cycle Selection */}
@@ -5017,7 +5218,7 @@ export default function CustomerDashboard() {
                           {renewCycle === 'monthly' && <CheckCircle2 size={16} color="#0284c7" />}
                         </div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
-                          ₹740 <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ mo</span>
+                          ₹{computeRenewalPricing('monthly').baseMonthly} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ mo</span>
                         </div>
                         <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
                           Renew 1 month (+30 days)
@@ -5054,7 +5255,7 @@ export default function CustomerDashboard() {
                           {renewCycle === 'yearly' && <CheckCircle2 size={16} color="#16a34a" />}
                         </div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
-                          ₹560 <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ mo</span>
+                          ₹{computeRenewalPricing('yearly').baseYearlyPerMonth} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>/ mo</span>
                         </div>
                         <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600, display: 'block', marginTop: '4px' }}>
                           Renew 1 year (+365 days)
@@ -5063,59 +5264,78 @@ export default function CustomerDashboard() {
                     </div>
 
                     {/* Pricing Breakdown */}
-                    <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}>
-                        <span>Base License ({renewCycle === 'yearly' ? '12 Months' : '1 Month'})</span>
-                        <b style={{ color: '#0f172a' }}>₹{renewCycle === 'yearly' ? (560 * 12).toFixed(2) : (740).toFixed(2)}</b>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}>
-                        <span>GST (18% Integrated Tax)</span>
-                        <b style={{ color: '#0f172a' }}>₹{renewCycle === 'yearly' ? ((560 * 12) * 0.18).toFixed(2) : (740 * 0.18).toFixed(2)}</b>
-                      </div>
-                      <div style={{ height: '1px', background: '#e2e8f0', margin: '6px 0' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
-                        <span>Total Payable Amount</span>
-                        <span style={{ color: '#0284c7' }}>₹{renewCycle === 'yearly' ? ((560 * 12) * 1.18).toFixed(2) : (740 * 1.18).toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', fontSize: '0.75rem', color: '#64748b' }}>
-                        <ShieldCheck size={14} color="#16a34a" />
-                        <span>Razorpay Secured &bull; UPI (GPay, PhonePe, Paytm), Cards & NetBanking</span>
-                      </div>
-                    </div>
+                    {(() => {
+                      const pricing = computeRenewalPricing(renewCycle);
+                      return (
+                        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}>
+                            <span>Base License ({pricing.activeCount} Software{pricing.activeCount > 1 ? 's' : ''}, {renewCycle === 'yearly' ? '12 Months' : '1 Month'})</span>
+                            <b style={{ color: '#0f172a' }}>₹{pricing.subtotal.toFixed(2)}</b>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}>
+                            <span>GST (18% Integrated Tax)</span>
+                            <b style={{ color: '#0f172a' }}>₹{pricing.gst.toFixed(2)}</b>
+                          </div>
+                          <div style={{ height: '1px', background: '#e2e8f0', margin: '6px 0' }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
+                            <span>Total Payable Amount</span>
+                            <span style={{ color: '#0284c7' }}>₹{pricing.total.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', fontSize: '0.75rem', color: '#64748b' }}>
+                            <ShieldCheck size={14} color="#16a34a" />
+                            <span>Razorpay Secured &bull; UPI (GPay, PhonePe, Paytm), Cards & NetBanking</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
-                    {/* Pay & Renew Button */}
-                    <button
-                      type="button"
-                      onClick={handleConfirmRenew}
-                      disabled={isRenewing}
-                      style={{
-                        width: '100%',
-                        padding: '13px',
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
-                        fontWeight: 800,
-                        border: 'none',
-                        cursor: isRenewing ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 14px rgba(22, 163, 74, 0.35)',
-                        opacity: isRenewing ? 0.7 : 1
-                      }}
-                    >
-                      {isRenewing ? (
-                        <>
-                          <RefreshCw size={16} className="animate-spin" /> Awaiting Payment Confirmation...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard size={18} /> Pay ₹{renewCycle === 'yearly' ? ((560 * 12) * 1.18).toFixed(2) : (740 * 1.18).toFixed(2)} & Renew Subscription
-                        </>
-                      )}
-                    </button>
+                    {/* Pay & Renew Button (5-Day Rule Enforced) */}
+                    {(() => {
+                      const daysRemaining = typeof overview.daysRemaining === 'number' ? overview.daysRemaining : 27;
+                      const isPayable = daysRemaining <= 5;
+                      const pricing = computeRenewalPricing(renewCycle);
+
+                      return (
+                        <button
+                          type="button"
+                          onClick={handleConfirmRenew}
+                          disabled={!isPayable || isRenewing}
+                          style={{
+                            width: '100%',
+                            padding: '13px',
+                            borderRadius: '12px',
+                            background: !isPayable
+                              ? '#cbd5e1'
+                              : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                            color: !isPayable ? '#64748b' : '#ffffff',
+                            fontSize: '0.95rem',
+                            fontWeight: 800,
+                            border: 'none',
+                            cursor: (!isPayable || isRenewing) ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            boxShadow: !isPayable ? 'none' : '0 4px 14px rgba(22, 163, 74, 0.35)',
+                            opacity: isRenewing ? 0.7 : 1
+                          }}
+                        >
+                          {isRenewing ? (
+                            <>
+                              <RefreshCw size={16} className="animate-spin" /> Awaiting Payment Confirmation...
+                            </>
+                          ) : !isPayable ? (
+                            <>
+                              <Lock size={16} /> Payment Available 5 Days Before Expiry (in {daysRemaining - 5} days)
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard size={18} /> Pay ₹{pricing.total.toFixed(2)} & Renew Subscription
+                            </>
+                          )}
+                        </button>
+                      );
+                    })()}
                   </>
                 )}
               </div>

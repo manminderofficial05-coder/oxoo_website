@@ -447,3 +447,22 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
 5. **Session Segregation Testing:** When testing locally, logging in as an Admin stores credentials in `oxoo_admin_*`, which does not authorize `/customer`. To test the Customer Portal, log in separately via `/signin` or use an Incognito window.
 6. **No Client-Side Secrets:** Never place database connection strings, Gemini/OpenAI API keys, or JWT secrets in client code or Vite `.env`. All AI and database queries must pass through server-side authenticated endpoints.
 
+---
+
+## 12. Software Catalog, Repurchase & Renewal Rules
+
+1. **5 Core Software Modules:**
+   - `Finance Software` (`finance`): Accounting, Invoicing, Expenses, Sign, Spreadsheet, ESG
+   - `Sales Software` (`sales`): CRM, Sales, Subscriptions, POS Shop, POS Restaurant, Rental
+   - `Supply Chain Software` (`supply-chain`): Inventory, Manufacturing, Maintenance, PLM, Quality, Purchase
+   - `Human Resources Software` (`human-resources`): Employees, Payroll, Recruitment, Time Off, Appraisals, Fleet
+   - `Productivity Software` (`productivity`): Artificial Intelligence, Discuss, VoIP, IoT, Documents, Knowledge
+2. **Repurchase for Logged-In Customers:**
+   - Logged-in customers are fully enabled to purchase any software suite on Checkout without restrictions or duplicate blocking. Existing active software is marked with an informative badge and merged seamlessly into their subscription.
+3. **Multi-Software Renewal Flow:**
+   - When renewing, the Customer Portal lists all active software in the subscription, calculates Custom Pack pricing for multi-software subscriptions, and extends the active applications suite together.
+4. **5-Day Expiration Rule:**
+   - Subscription renewal payment is strictly enabled only when 5 or fewer days remain before the subscription's expiration date (`daysRemaining <= 5`).
+   - If more than 5 days remain, the renewal payment button is locked with countdown notifications on both frontend and backend.
+
+
