@@ -4,10 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight, Search, ChevronDown, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
   LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare,
-  Users, Package, ExternalLink
+  Users, Package, ExternalLink, RotateCcw
 } from 'lucide-react';
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
+import { useRegionPricing } from './RegionPricingContext';
 
 // Configured HRMS Employee Login URL from environment configuration
 const HRMS_EMPLOYEE_LOGIN_URL =
@@ -37,6 +38,7 @@ export function Logo({ light = false, withTagline = false, stacked = false, icon
 export function AnimatedHeroTitle() {
   const [animKey, setAnimKey] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const { currentRegion, formatPrice } = useRegionPricing();
 
   useEffect(() => {
     setIsFinished(false);
@@ -143,12 +145,190 @@ export function AnimatedHeroTitle() {
               />
             </svg>
             <div className="price-hand-copy">
-              <span className="price-headline">560.00 Rs / month</span>
+              <span className="price-headline">
+                {formatPrice(currentRegion.plans.singleApp.yearlyPrice)} / month
+              </span>
               <span className="price-subline">for ALL apps</span>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function CountryCurrencySelector({ isMobile = false }) {
+  const {
+    currentRegion,
+    detectedRegion,
+    isManualOverride,
+    selectableRegions,
+    setCountry,
+    resetToDetected
+  } = useRegionPricing();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isOpen]);
+
+  const handleSelect = (code) => {
+    setCountry(code, true);
+    setIsOpen(false);
+  };
+
+  const handleReset = (e) => {
+    e.stopPropagation();
+    resetToDetected();
+    setIsOpen(false);
+  };
+
+  return (
+    <div className={`nav-country-selector-wrap ${isMobile ? 'is-mobile' : ''}`} ref={dropdownRef}>
+      <button
+        type="button"
+        className={`nav-country-btn ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-label="Select Country and Currency"
+        title={`Selected Region: ${currentRegion.countryName} (${currentRegion.currency} ${currentRegion.symbol})`}
+      >
+        <span className="country-flag" role="img" aria-label={currentRegion.countryName}>
+          {currentRegion.flag}
+        </span>
+        <span className="country-code-label">
+          {currentRegion.regionCode === 'GLOBAL' ? 'INTL' : currentRegion.regionCode}
+        </span>
+        <span className="country-currency-pill">
+          {currentRegion.currency} {currentRegion.symbol}
+        </span>
+        <ChevronDown size={12} className={`country-caret ${isOpen ? 'rotate' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="nav-country-dropdown-menu"
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div className="nav-country-menu-header">
+              <span className="country-menu-title">Select Region & Currency</span>
+              <span className="country-detected-note">
+                Detected: {detectedRegion.flag} {detectedRegion.countryName}
+              </span>
+            </div>
+
+            {isManualOverride && (
+              <button
+                type="button"
+                className="nav-country-reset-btn"
+                onClick={handleReset}
+              >
+                <RotateCcw size={12} />
+                <span>Reset to detected ({detectedRegion.flag} {detectedRegion.countryName})</span>
+              </button>
+            )}
+
+            <div className="nav-country-options-list" role="listbox">
+              {selectableRegions.map((reg) => {
+                const isSelected = currentRegion.regionCode === reg.code;
+                return (
+                  <button
+                    key={reg.code}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={`nav-country-option-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleSelect(reg.code)}
+                  >
+                    <span className="opt-flag">{reg.flag}</span>
+                    <span className="opt-name">{reg.label}</span>
+                    {isSelected && <Check size={14} className="opt-check-icon" />}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function LanguageSelector() {
+  const [langOpen, setLangOpen] = useState(false);
+  const [selectedLang, setSelectedLang] = useState('EN');
+  const langRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (langRef.current && !langRef.current.contains(e.target)) {
+        setLangOpen(false);
+      }
+    };
+    if (langOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [langOpen]);
+
+  return (
+    <div className="nav-lang-selector-wrap" ref={langRef}>
+      <button
+        type="button"
+        className={`nav-lang-btn ${langOpen ? 'open' : ''}`}
+        onClick={() => setLangOpen(!langOpen)}
+        aria-expanded={langOpen}
+        aria-label="Select Language"
+        title="Language"
+      >
+        <Globe2 size={13} className="lang-icon" />
+        <span className="lang-code">{selectedLang}</span>
+        <ChevronDown size={11} className={`lang-caret ${langOpen ? 'rotate' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {langOpen && (
+          <motion.div
+            className="nav-lang-dropdown-menu"
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+          >
+            {[
+              { code: 'EN', label: 'English (US)' },
+              { code: 'HI', label: 'हिन्दी (Hindi)' },
+              { code: 'ES', label: 'Español (Spanish)' },
+              { code: 'AR', label: 'العربية (Arabic)' },
+              { code: 'FR', label: 'Français (French)' }
+            ].map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                className={`nav-lang-option-item ${selectedLang === l.code ? 'selected' : ''}`}
+                onClick={() => { setSelectedLang(l.code); setLangOpen(false); }}
+              >
+                <span>{l.label}</span>
+                {selectedLang === l.code && <Check size={13} />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -365,8 +545,10 @@ export function Header() {
           </NavLink>
         </nav>
 
-        {/* Right Action Items: Customer Login & Admin Login OR Logged-in Profile */}
+        {/* Right Action Items: Country & Language Selectors, Customer Login & Admin Login OR Profile */}
         <div className="nav-actions">
+          <CountryCurrencySelector />
+          <LanguageSelector />
           {currentUser ? (
             <div className="nav-profile-dropdown">
               <button
@@ -663,6 +845,13 @@ export function Header() {
             )}
 
 
+
+            <div className="mobile-country-select-row" style={{ padding: '12px 18px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
+                Region & Pricing
+              </div>
+              <CountryCurrencySelector isMobile={true} />
+            </div>
 
             {[
               ['Home', '/'],

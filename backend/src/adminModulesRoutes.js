@@ -1,10 +1,48 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { query } = require('./db');
 const { sendMailWithFallback, sendAdminStaffCredentialsEmail } = require('./emailService');
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'oxoo-super-secret-jwt-key-2026';
+
+// Administrator authentication verification middleware
+function requireAdminAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    const adminKey = req.headers['x-admin-key'];
+
+    if (adminKey && process.env.ADMIN_API_KEY && process.env.ADMIN_API_KEY !== 'oxoo-admin-secret-key-2026') {
+      const keyBuf = Buffer.from(adminKey);
+      const expectedBuf = Buffer.from(process.env.ADMIN_API_KEY);
+      if (keyBuf.length === expectedBuf.length && crypto.timingSafeEqual(keyBuf, expectedBuf)) {
+        req.adminUser = { id: 1, role: 'super_admin', name: 'Root Administrator' };
+        return next();
+      }
+    }
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Admin authorization required. Access denied.' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
+      return res.status(403).json({ success: false, message: 'Access Denied: Administrator privileges required.' });
+    }
+
+    req.adminUser = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired administrator session. Please sign in as an Administrator.' });
+  }
+}
+
+// Enforce admin authentication across all module routes
+router.use(requireAdminAuth);
 
 // Helper to log audit in DB
 async function logAuditAction(action, target = '', userName = 'Super Administrator', ip = '127.0.0.1', details = {}, extra = {}) {

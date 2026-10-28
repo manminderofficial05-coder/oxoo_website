@@ -1,0 +1,10 @@
+-- Run after reviewed data backfill and after inventorying existing billing cycles.
+-- SELECT billing_cycle, count(*) FROM public.subscriptions GROUP BY 1;
+-- Normalize all values to one approved vocabulary in a separate reviewed migration.
+-- Only then add/validate a CHECK constraint permitting:
+-- monthly, quarterly, six_months, yearly, one_time.
+--
+-- The app must use server-side entitlement evaluation:
+-- allowed only when identity active, both contact methods verified, organization
+-- membership active, product entitlement active/trialing or approved grace,
+-- and current time within starts_at/ends_at. Fail closed for missing/unknown state.

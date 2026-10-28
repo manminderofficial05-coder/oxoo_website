@@ -26,6 +26,8 @@ const {
   sendInquiryConfirmationEmail
 } = require('./emailService');
 const { generateInvoicePdf } = require('./invoicePdf');
+const oxooCentralRouter = require('./oxooCentralRoutes');
+const { REGIONAL_PRICING, resolvePricingRegion, formatRegionalCurrency } = require('./pricingConfig');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -96,7 +98,7 @@ function verifyToken(req, res, next) {
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(403).json({ message: 'Invalid or expired token.' });
+    return res.status(401).json({ message: 'Invalid or expired token.' });
   }
 }
 
@@ -115,9 +117,13 @@ function requireAdminAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     const adminKey = req.headers['x-admin-key'];
 
-    if (adminKey && (adminKey === process.env.ADMIN_API_KEY || adminKey === JWT_SECRET)) {
-      req.adminUser = { id: 1, role: 'admin', name: 'Root Administrator' };
-      return next();
+    if (adminKey && process.env.ADMIN_API_KEY && process.env.ADMIN_API_KEY !== 'oxoo-admin-secret-key-2026') {
+      const keyBuf = Buffer.from(adminKey);
+      const expectedBuf = Buffer.from(process.env.ADMIN_API_KEY);
+      if (keyBuf.length === expectedBuf.length && crypto.timingSafeEqual(keyBuf, expectedBuf)) {
+        req.adminUser = { id: 1, role: 'super_admin', name: 'Root Administrator' };
+        return next();
+      }
     }
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -125,10 +131,6 @@ function requireAdminAuth(req, res, next) {
     }
 
     const token = authHeader.split(' ')[1];
-    if (token === 'demo-admin-jwt-token-88') {
-      req.adminUser = { id: 1, role: 'super_admin', name: 'Manminder Singh' };
-      return next();
-    }
     const decoded = jwt.verify(token, JWT_SECRET);
 
     if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
@@ -154,6 +156,11 @@ app.get('/api/health', async (_req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// -------------------------------------------------------------
+// OXOO CENTRAL AUTHORITATIVE CONTROL PLANE ROUTES
+// -------------------------------------------------------------
+app.use('/api/v1/oxoo', oxooCentralRouter);
 
 // -------------------------------------------------------------
 // 2. AUTHENTICATION ROUTES (POSTGRESQL)
@@ -1044,8 +1051,8 @@ app.post('/api/customer/renew-order', async (req, res, next) => {
     const safeTax = parseFloat((safeAmount - safeSubtotal).toFixed(2));
     const amountPaise = Math.round(safeAmount * 100);
 
-    const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tqu6q5BYPuxhzd';
-    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'VzzE4JIz1vaKtWJkAqurKwT8';
+    const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
+    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
     let razorpayOrderId = null;
     try {
@@ -1658,45 +1665,71 @@ function getCanonicalApp(raw) {
 // HELPER: Resolve authenticated customer or team member context
 // -------------------------------------------------------------
 async function resolveCustomerContext(req) {
-  let userEmail = (req.headers['x-user-email'] || req.query.email || req.body?.email || '').trim().toLowerCase();
-  let userCompany = (req.headers['x-user-company'] || req.query.company || req.body?.company || req.body?.companyName || '').trim();
-  let userId = null;
-  let userName = null;
-  let userRole = null;
-  let memberRecord = null;
-
-  // 1. Try decoding Authorization Bearer JWT
+  // 1. Require validated session or signed token
+  let token = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    try {
-      const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
-      if (decoded) {
-        if (!userEmail && decoded.email) userEmail = decoded.email.trim().toLowerCase();
-        if (!userCompany && decoded.organization) userCompany = decoded.organization.trim();
-        userId = decoded.id;
-        userName = decoded.name;
-        userRole = decoded.role;
-      }
-    } catch (e) {}
+    token = authHeader.split(' ')[1];
   }
 
-  // 2. Query users / team_members in database for canonical org & role
-  if (isDbConnected && (userEmail || userId)) {
+  let decoded = req.user;
+  if (!decoded && token) {
     try {
-      const uRes = await query(
-        `SELECT id, name, email, organization, role, apps_access, active FROM users WHERE ${userId ? 'id = $1' : 'LOWER(email) = LOWER($1)'} LIMIT 1`,
-        [userId || userEmail]
-      );
-      if (uRes.rows.length > 0) {
-        const u = uRes.rows[0];
-        userId = u.id;
-        if (!userName) userName = u.name;
-        if (!userEmail) userEmail = u.email.toLowerCase();
-        if (!userCompany && u.organization) userCompany = u.organization;
-        if (!userRole) userRole = u.role;
+      decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+    } catch (err) {
+      const e = new Error('Authentication failed: Invalid or expired token.');
+      e.status = 401;
+      throw e;
+    }
+  }
+
+  if (!decoded) {
+    const e = new Error('Authentication required: Valid Bearer token must be provided.');
+    e.status = 401;
+    throw e;
+  }
+
+  // 2. Reject relying on client-supplied headers without verification
+  const requestedCompany = (req.headers['x-user-company'] || req.query.company || req.body?.company || req.body?.companyName || '').trim();
+  const requestedEmail = (req.headers['x-user-email'] || req.query.email || req.body?.email || '').trim().toLowerCase();
+
+  let userEmail = (decoded.email || '').trim().toLowerCase();
+  let userId = decoded.id;
+  let userName = decoded.name;
+  let userRole = decoded.role || 'customer';
+  let userCompany = (decoded.organization || '').trim();
+  let memberRecord = null;
+  let oxooOrgUuid = decoded.oxoo_organization_uuid || null;
+
+  // 3. Look up authoritative database records
+  if (isDbConnected && (userId || userEmail)) {
+    try {
+      let uRes = null;
+      if (userId && typeof userId === 'number') {
+        uRes = await query(
+          `SELECT id, name, email, organization, role, apps_access, active, oxoo_user_uuid FROM users WHERE id = $1 LIMIT 1`,
+          [userId]
+        );
+      } else if (userEmail) {
+        uRes = await query(
+          `SELECT id, name, email, organization, role, apps_access, active, oxoo_user_uuid FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+          [userEmail]
+        );
       }
 
-      // Check if user is a team member with specific app restrictions
+      if (uRes && uRes.rows.length > 0) {
+        const u = uRes.rows[0];
+        userId = u.id;
+        userEmail = u.email.toLowerCase();
+        userName = u.name;
+        userRole = u.role;
+        if (u.organization) {
+          userCompany = u.organization;
+        }
+      }
+
+      // Check team_members table for scoped memberships
       if (userEmail) {
         const tmRes = await query(
           `SELECT * FROM team_members WHERE LOWER(email) = LOWER($1) AND status = 'Active' LIMIT 1`,
@@ -1704,38 +1737,72 @@ async function resolveCustomerContext(req) {
         );
         if (tmRes.rows.length > 0) {
           memberRecord = tmRes.rows[0];
-          if (!userCompany && memberRecord.company_name) {
+          if (memberRecord.company_name) {
             userCompany = memberRecord.company_name;
           }
-          if (!userName && memberRecord.name) userName = memberRecord.name;
-          if (!userRole) userRole = memberRecord.role;
+          if (memberRecord.name) userName = memberRecord.name;
+          if (memberRecord.role) userRole = memberRecord.role;
         }
       }
-    } catch (e) {}
+
+      // If company still empty, check customers table for this verified email
+      if (!userCompany && userEmail) {
+        const custRes = await query(`SELECT company_name FROM customers WHERE LOWER(email) = LOWER($1) LIMIT 1`, [userEmail]);
+        if (custRes.rows.length > 0 && custRes.rows[0].company_name) {
+          userCompany = custRes.rows[0].company_name;
+        } else {
+          const ordRes = await query(`SELECT company_name FROM orders WHERE LOWER(customer_email) = LOWER($1) AND status = 'Paid' ORDER BY id DESC LIMIT 1`, [userEmail]);
+          if (ordRes.rows.length > 0 && ordRes.rows[0].company_name) {
+            userCompany = ordRes.rows[0].company_name;
+          }
+        }
+      }
+
+      // Resolve oxoo_organization_uuid from organizations table
+      if (userCompany) {
+        const orgRes = await query(
+          `SELECT id, name, oxoo_organization_uuid FROM organizations WHERE LOWER(name) = LOWER($1) OR name ILIKE '%' || $2 || '%' LIMIT 1`,
+          [userCompany, userCompany]
+        );
+        if (orgRes.rows.length > 0) {
+          oxooOrgUuid = orgRes.rows[0].oxoo_organization_uuid || `org_${orgRes.rows[0].id}`;
+          userCompany = orgRes.rows[0].name;
+        }
+      }
+    } catch (dbErr) {
+      console.warn('Customer context DB lookup warning:', dbErr.message);
+    }
   }
 
-  // Fallback to customer or orders if company not resolved
-  if (isDbConnected && userEmail && !userCompany) {
-    try {
-      const custRes = await query(`SELECT company_name FROM customers WHERE LOWER(email) = LOWER($1) LIMIT 1`, [userEmail]);
-      if (custRes.rows.length > 0 && custRes.rows[0].company_name) {
-        userCompany = custRes.rows[0].company_name;
-      } else {
-        const ordRes = await query(`SELECT company_name FROM orders WHERE LOWER(customer_email) = LOWER($1) ORDER BY id DESC LIMIT 1`, [userEmail]);
-        if (ordRes.rows.length > 0 && ordRes.rows[0].company_name) {
-          userCompany = ordRes.rows[0].company_name;
-        }
-      }
-    } catch (e) {}
+  // Fallback defaults for verified user if company still null
+  if (!userCompany) {
+    userCompany = 'My Organization';
+  }
+
+  // 4. Cross-Tenant Protection:
+  // If the client explicitly requested a company or email, verify it matches the authenticated user's organization!
+  const isPrivilegedAdmin = userRole === 'admin' || userRole === 'super_admin';
+  if (!isPrivilegedAdmin) {
+    if (requestedCompany && requestedCompany.toLowerCase() !== userCompany.toLowerCase()) {
+      const e = new Error("Access denied: You do not have permission to access another organization's data.");
+      e.status = 403;
+      throw e;
+    }
+    if (requestedEmail && requestedEmail.toLowerCase() !== userEmail.toLowerCase()) {
+      const e = new Error('Access denied: Cannot impersonate another user identity.');
+      e.status = 403;
+      throw e;
+    }
   }
 
   return {
     userEmail: userEmail || 'customer@oxoo.ai',
-    userCompany: userCompany || 'My Organization',
+    userCompany: userCompany,
     userId,
     userName: userName || (userEmail ? userEmail.split('@')[0] : 'Customer'),
-    userRole: userRole || 'owner',
-    memberRecord
+    userRole: userRole || 'customer',
+    memberRecord,
+    oxoo_organization_uuid: oxooOrgUuid
   };
 }
 
@@ -1774,7 +1841,7 @@ app.get('/api/customer/plans', async (req, res, next) => {
 // -------------------------------------------------------------
 // 2. GET /api/customer/overview - Database-Grounded Overview
 // -------------------------------------------------------------
-app.get('/api/customer/overview', async (req, res, next) => {
+app.get('/api/customer/overview', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const { userEmail, userCompany, memberRecord } = ctx;
@@ -1990,7 +2057,7 @@ app.get('/api/customer/overview', async (req, res, next) => {
 // -------------------------------------------------------------
 // 3. GET /api/customer/billing - Single Source of Truth for Billing
 // -------------------------------------------------------------
-app.get('/api/customer/billing', async (req, res, next) => {
+app.get('/api/customer/billing', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const { userEmail, userCompany } = ctx;
@@ -2071,7 +2138,7 @@ app.get('/api/customer/billing', async (req, res, next) => {
 // -------------------------------------------------------------
 // 4. GET /api/customer/invoices/:invoiceNumber/pdf - Real PDF Download
 // -------------------------------------------------------------
-app.get('/api/customer/invoices/:invoiceNumber/pdf', async (req, res, next) => {
+app.get('/api/customer/invoices/:invoiceNumber/pdf', verifyToken, async (req, res, next) => {
   try {
     const { invoiceNumber } = req.params;
     if (!invoiceNumber) {
@@ -2096,6 +2163,22 @@ app.get('/api/customer/invoices/:invoiceNumber/pdf', async (req, res, next) => {
 
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Invoice not found.' });
+    }
+
+    // Authorization check: Admin or tenant owner
+    const isStaffOrAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
+    if (!isStaffOrAdmin) {
+      const userOrg = (req.user.organization || '').toLowerCase().trim();
+      const userEmail = (req.user.email || '').toLowerCase().trim();
+      const invCompany = (invoice.company_name || '').toLowerCase().trim();
+      const ordEmail = (order?.customer_email || '').toLowerCase().trim();
+
+      const isOwner = (userOrg && invCompany && userOrg === invCompany) ||
+                      (userEmail && ordEmail && userEmail === ordEmail);
+
+      if (!isOwner) {
+        return res.status(403).json({ success: false, message: 'Access denied: You do not have permission to view this invoice.' });
+      }
     }
 
     const safeAmount = Number(invoice.amount || 0);
@@ -2130,7 +2213,7 @@ app.get('/api/customer/invoices/:invoiceNumber/pdf', async (req, res, next) => {
 // -------------------------------------------------------------
 // 5. POST /api/customer/upgrade - Request Plan Upgrade
 // -------------------------------------------------------------
-app.post('/api/customer/upgrade', async (req, res, next) => {
+app.post('/api/customer/upgrade', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const { planName } = req.body || {};
@@ -2171,7 +2254,7 @@ app.post('/api/customer/upgrade', async (req, res, next) => {
 // -------------------------------------------------------------
 // 6. Customer Team Management (GET, POST, PUT, DELETE)
 // -------------------------------------------------------------
-app.get('/api/customer/team', async (req, res, next) => {
+app.get('/api/customer/team', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     let members = [];
@@ -2200,7 +2283,7 @@ app.get('/api/customer/team', async (req, res, next) => {
 });
 
 // Invite / Add Team Member
-app.post('/api/customer/team', async (req, res, next) => {
+app.post('/api/customer/team', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const { name, email, role, appsAccess } = req.body || {};
@@ -2280,7 +2363,7 @@ app.post('/api/customer/team', async (req, res, next) => {
 });
 
 // Update Team Member (Edit Role, Status, Apps Access)
-app.put('/api/customer/team/:id', async (req, res, next) => {
+app.put('/api/customer/team/:id', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const memberId = parseInt(req.params.id, 10);
@@ -2338,7 +2421,7 @@ app.put('/api/customer/team/:id', async (req, res, next) => {
 });
 
 // Remove / Revoke Team Member Access
-app.delete('/api/customer/team/:id', async (req, res, next) => {
+app.delete('/api/customer/team/:id', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const memberId = parseInt(req.params.id, 10);
@@ -2368,7 +2451,7 @@ app.delete('/api/customer/team/:id', async (req, res, next) => {
 // -------------------------------------------------------------
 // 7. Support Center - Real Tickets & Two-Way Customer Chat
 // -------------------------------------------------------------
-app.get('/api/customer/tickets', async (req, res, next) => {
+app.get('/api/customer/tickets', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     let tickets = [];
@@ -2635,13 +2718,59 @@ app.get('/api/tickets/attachments/:id', async (req, res, next) => {
     if (!isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database unavailable' });
     }
+
+    // 1. Authenticate the request
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required to access attachments.' });
+    }
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired authentication token.' });
+    }
+
+    // 2. Fetch attachment metadata
     const q = await query(`SELECT * FROM ticket_attachments WHERE attachment_id = $1 LIMIT 1`, [id]);
     if (q.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Attachment not found.' });
     }
     const att = q.rows[0];
+
+    // 3. Authorization check: Staff/Admin or ticket owner
+    const isStaffOrAdmin = decoded.role === 'admin' || decoded.role === 'super_admin' || decoded.role === 'support' || decoded.role === 'staff';
+    if (!isStaffOrAdmin) {
+      const ticketRes = await query(
+        `SELECT company_name, user_email, contact_email FROM support_tickets WHERE ticket_number = $1 OR ticket_id = $1 LIMIT 1`,
+        [att.ticket_number]
+      );
+      if (ticketRes.rows.length === 0) {
+        return res.status(403).json({ success: false, message: 'Access denied: Associated support ticket not found.' });
+      }
+      const ticket = ticketRes.rows[0];
+      const userCompany = (decoded.organization || '').toLowerCase().trim();
+      const userEmail = (decoded.email || '').toLowerCase().trim();
+      const ticketCompany = (ticket.company_name || '').toLowerCase().trim();
+      const ticketUserEmail = (ticket.user_email || '').toLowerCase().trim();
+      const ticketContactEmail = (ticket.contact_email || '').toLowerCase().trim();
+
+      const isOwner = (userCompany && ticketCompany && userCompany === ticketCompany) ||
+                      (userEmail && (userEmail === ticketUserEmail || userEmail === ticketContactEmail));
+
+      if (!isOwner) {
+        return res.status(403).json({ success: false, message: 'Access denied: You do not have permission to view attachments for this ticket.' });
+      }
+    }
+
+    // 4. Secure headers to prevent XSS / path traversal / MIME confusion
+    const cleanFileName = (att.file_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
     res.setHeader('Content-Type', att.mime_type || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `inline; filename="${att.file_name}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${cleanFileName}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+
     if (att.storage_path && att.storage_path.startsWith('data:')) {
       const parts = att.storage_path.split(',');
       const buf = Buffer.from(parts[1], 'base64');
@@ -2654,7 +2783,7 @@ app.get('/api/tickets/attachments/:id', async (req, res, next) => {
 });
 
 // Create Customer Support Ticket (with attachment validation and First-Ticket Email Acknowledgement)
-app.post('/api/customer/tickets', async (req, res, next) => {
+app.post('/api/customer/tickets', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const { subject, description, priority = 'Medium', category = 'Technical', attachments = [] } = req.body || {};
@@ -2810,7 +2939,7 @@ app.post('/api/customer/tickets', async (req, res, next) => {
 });
 
 // Reply to Support Ticket as Customer (Two-Way Conversation with Attachments)
-app.post('/api/customer/tickets/:id/reply', async (req, res, next) => {
+app.post('/api/customer/tickets/:id/reply', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     const tId = req.params.id;
@@ -2929,7 +3058,7 @@ app.post('/api/customer/tickets/:id/reply', async (req, res, next) => {
 // -------------------------------------------------------------
 // 8. Notifications Endpoints
 // -------------------------------------------------------------
-app.get('/api/customer/notifications', async (req, res, next) => {
+app.get('/api/customer/notifications', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     let notifications = [];
@@ -2951,7 +3080,7 @@ app.get('/api/customer/notifications', async (req, res, next) => {
 });
 
 // Mark single notification read
-app.put('/api/customer/notifications/:id/read', async (req, res, next) => {
+app.put('/api/customer/notifications/:id/read', verifyToken, async (req, res, next) => {
   try {
     const nid = parseInt(req.params.id, 10);
     if (isDbConnected && nid) {
@@ -2964,7 +3093,7 @@ app.put('/api/customer/notifications/:id/read', async (req, res, next) => {
 });
 
 // Mark all notifications read
-app.put('/api/customer/notifications/mark-all-read', async (req, res, next) => {
+app.put('/api/customer/notifications/mark-all-read', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     if (isDbConnected) {
@@ -2980,7 +3109,7 @@ app.put('/api/customer/notifications/mark-all-read', async (req, res, next) => {
 });
 
 // Delete read notifications
-app.delete('/api/customer/notifications/read', async (req, res, next) => {
+app.delete('/api/customer/notifications/read', verifyToken, async (req, res, next) => {
   try {
     const ctx = await resolveCustomerContext(req);
     if (isDbConnected) {
@@ -4291,7 +4420,7 @@ app.get('/api/admin/customers/:id', requireAdminAuth, async (req, res, next) => 
 // MODULES 1-4: APPLICATIONS, PAYMENTS & INVOICES, USERS & ROLES, SUPPORT TICKETS
 // -------------------------------------------------------------
 const adminModulesRouter = require('./adminModulesRoutes');
-app.use('/api/admin', adminModulesRouter);
+app.use('/api/admin', requireAdminAuth, adminModulesRouter);
 
 // -------------------------------------------------------------
 // OXOO AGENT: AI CUSTOMER ASSISTANT ROUTER
@@ -5849,21 +5978,154 @@ const PRICING_CONFIG = {
   }
 };
 
-// Calculate pricing function with strict server-side validation
-function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCycle = 'monthly' }) {
+// 0. GET /api/geo/detect — Reliable Country Detection (CDN headers + privacy-preserving IP fallback)
+app.get('/api/geo/detect', async (req, res) => {
+  try {
+    // A. Check mock/test query parameter or header for automated testing
+    const testCountry = req.query.testCountry || req.headers['x-test-country'] || req.headers['x-client-country'];
+    if (testCountry && /^[a-zA-Z]{2}$/.test(String(testCountry).trim())) {
+      const countryCode = String(testCountry).trim().toUpperCase();
+      const region = resolvePricingRegion(countryCode);
+      return res.json({
+        success: true,
+        countryCode,
+        detectedCountry: countryCode,
+        countryName: region.countryName || countryCode,
+        regionCode: region.regionCode,
+        currency: region.currency,
+        symbol: region.symbol,
+        source: 'test-override'
+      });
+    }
+
+    // B. Check trusted CDN / Hosting headers
+    const cdnCountry =
+      req.headers['cf-ipcountry'] ||
+      req.headers['x-country-code'] ||
+      req.headers['x-vercel-ip-country'] ||
+      req.headers['cloudfront-viewer-country'] ||
+      req.headers['fastly-client-country'];
+
+    if (cdnCountry && /^[a-zA-Z]{2}$/.test(String(cdnCountry).trim()) && String(cdnCountry).trim().toUpperCase() !== 'XX') {
+      const countryCode = String(cdnCountry).trim().toUpperCase();
+      const region = resolvePricingRegion(countryCode);
+      return res.json({
+        success: true,
+        countryCode,
+        detectedCountry: countryCode,
+        countryName: region.countryName || countryCode,
+        regionCode: region.regionCode,
+        currency: region.currency,
+        symbol: region.symbol,
+        source: 'cdn-header'
+      });
+    }
+
+    // C. Non-blocking IP Geolocation fallback with strict timeout (1500ms)
+    let clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '';
+    if (clientIp.startsWith('::ffff:')) clientIp = clientIp.replace('::ffff:', '');
+
+    const isPrivate = !clientIp ||
+      clientIp === '127.0.0.1' ||
+      clientIp === '::1' ||
+      clientIp === 'localhost' ||
+      clientIp.startsWith('10.') ||
+      clientIp.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(clientIp);
+
+    let detectedCountry = 'IN'; // Safe default
+    let source = 'default';
+
+    if (!isPrivate) {
+      try {
+        const geoController = new AbortController();
+        const timeoutId = setTimeout(() => geoController.abort(), 1500);
+        const geoRes = await fetch(`https://ipapi.co/${clientIp}/json/`, {
+          signal: geoController.signal,
+          headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+        });
+        clearTimeout(timeoutId);
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData && geoData.country_code && /^[a-zA-Z]{2}$/.test(geoData.country_code)) {
+            detectedCountry = geoData.country_code.toUpperCase();
+            source = 'ipapi';
+          }
+        }
+      } catch (e) {
+        // Fallback safely to default without throwing
+      }
+    } else {
+      // For local development on loopback, attempt a quick outbound lookup to detect server country
+      try {
+        const geoController = new AbortController();
+        const timeoutId = setTimeout(() => geoController.abort(), 1200);
+        const geoRes = await fetch('https://ipapi.co/json/', {
+          signal: geoController.signal,
+          headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+        });
+        clearTimeout(timeoutId);
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData && geoData.country_code && /^[a-zA-Z]{2}$/.test(geoData.country_code)) {
+            detectedCountry = geoData.country_code.toUpperCase();
+            source = 'server-public-ip';
+          }
+        }
+      } catch (e) {
+        // Safe fallback
+      }
+    }
+
+    const region = resolvePricingRegion(detectedCountry);
+    return res.json({
+      success: true,
+      countryCode: detectedCountry,
+      detectedCountry,
+      countryName: region.countryName || detectedCountry,
+      regionCode: region.regionCode,
+      currency: region.currency,
+      symbol: region.symbol,
+      source
+    });
+  } catch (err) {
+    const defaultRegion = resolvePricingRegion('IN');
+    return res.json({
+      success: true,
+      countryCode: 'IN',
+      detectedCountry: 'IN',
+      countryName: defaultRegion.countryName,
+      regionCode: defaultRegion.regionCode,
+      currency: defaultRegion.currency,
+      symbol: defaultRegion.symbol,
+      source: 'fallback-error'
+    });
+  }
+});
+
+// Calculate pricing function with strict server-side validation & regional pricing
+function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCycle = 'monthly', country, region }) {
   const users = Math.max(1, parseInt(userCount, 10) || 1);
   const isYearly = billingCycle === 'yearly';
-  const appsCount = Math.max(1, Array.isArray(selectedApps) ? selectedApps.length : 1);
-
-  let perUserPerMonth = 0;
+  const isCustom = planId === 'custom-apps' || planId === 'custom' || planId === 'pro' || (Array.isArray(selectedApps) && selectedApps.length >= 2);
+  const isBasic = !isCustom;
+  const defaultMinApps = isCustom ? 2 : 1;
+  const appsCount = Array.isArray(selectedApps) && selectedApps.length > 0 ? selectedApps.length : defaultMinApps;
+  const pricingRegion = resolvePricingRegion(region || country || 'IN');
+  const currency = pricingRegion.currency;
+  const locale = pricingRegion.locale;
+  const taxRate = pricingRegion.taxRate || 0.00;
 
   if (planId === 'free-demo' || planId === 'free') {
     return {
       planId: 'free-demo',
       planName: 'Free Demo',
+      planTier: 'Free',
       userCount: users,
       billingCycle,
       appsCount: 1,
+      regionCode: pricingRegion.regionCode,
+      currency,
       perUserPerMonth: 0,
       regularRatePerUser: 0,
       regularTotal: 0,
@@ -5873,45 +6135,55 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
       taxAmount: 0,
       totalAmount: 0,
       totalAmountPaise: 0,
-      formattedPerUser: '₹0',
-      formattedDiscount: '₹0',
-      formattedSubtotal: '₹0',
-      formattedTax: '₹0',
-      formattedTotal: '₹0'
+      totalAmountSmallestUnit: 0,
+      formattedPerUser: formatRegionalCurrency(0, pricingRegion.regionCode),
+      formattedDiscount: formatRegionalCurrency(0, pricingRegion.regionCode),
+      formattedSubtotal: formatRegionalCurrency(0, pricingRegion.regionCode),
+      formattedTax: formatRegionalCurrency(0, pricingRegion.regionCode),
+      formattedTotal: formatRegionalCurrency(0, pricingRegion.regionCode)
     };
   }
 
-  let regularRatePerUser = 0;
-  if (planId === 'single-app' || planId === 'single' || appsCount === 1) {
-    perUserPerMonth = isYearly ? 560 : 740;
-    regularRatePerUser = isYearly ? 740 : 975;
-  } else {
-    // Custom Softwares: 2 apps base (1280 monthly / 980 yearly), each additional (740 monthly / 560 yearly)
-    const baseRate = isYearly ? 980 : 1280;
-    const extraRate = isYearly ? 560 : 740;
-    perUserPerMonth = baseRate + Math.max(0, appsCount - 2) * extraRate;
+  const planCfg = isBasic ? pricingRegion.plans.singleApp : pricingRegion.plans.customApps;
 
-    const regularBase = isYearly ? 1280 : 1660;
-    const regularExtra = isYearly ? 740 : 975;
-    regularRatePerUser = regularBase + Math.max(0, appsCount - 2) * regularExtra;
+  let perUserPerMonth = 0;
+  let regularRatePerUser = 0;
+
+  if (isBasic) {
+    perUserPerMonth = isYearly ? planCfg.yearlyPrice : planCfg.monthlyPrice;
+    regularRatePerUser = isYearly ? planCfg.yearlyStrikethroughPrice : planCfg.monthlyStrikethroughPrice;
+  } else {
+    // Custom / Pro: base covers 2 apps, each additional adds per-app rate
+    const baseRate = isYearly ? planCfg.yearlyBasePrice : planCfg.monthlyBasePrice;
+    const extraRate = isYearly ? planCfg.yearlyAdditionalAppPrice : planCfg.monthlyAdditionalAppPrice;
+    const extraApps = Math.max(0, appsCount - 2);
+    perUserPerMonth = baseRate + extraApps * extraRate;
+
+    const regularBase = isYearly ? planCfg.yearlyStrikethroughBasePrice : planCfg.monthlyStrikethroughBasePrice;
+    const regularExtra = isYearly ? planCfg.yearlyAdditionalAppPrice : planCfg.monthlyAdditionalAppPrice;
+    regularRatePerUser = regularBase + extraApps * regularExtra;
   }
 
   const months = isYearly ? 12 : 1;
-  let subtotal = perUserPerMonth * users * months;
-  let regularTotal = regularRatePerUser * users * months;
-  let discountAmount = Math.max(0, regularTotal - subtotal);
-  const gstRate = 0.18;
-  const taxAmount = Math.round(subtotal * gstRate);
-  const totalAmount = subtotal + taxAmount;
-  const totalAmountPaise = totalAmount * 100;
-  const discountPercent = planId === 'custom-apps' || appsCount > 1 ? 23 : 24;
+  const subtotal = parseFloat((perUserPerMonth * users * months).toFixed(2));
+  const regularTotal = parseFloat((regularRatePerUser * users * months).toFixed(2));
+  const discountAmount = Math.max(0, parseFloat((regularTotal - subtotal).toFixed(2)));
+  const discountPercent = regularTotal > 0 ? Math.round((discountAmount / regularTotal) * 100) : 0;
+  const taxAmount = parseFloat((subtotal * taxRate).toFixed(2));
+  const totalAmount = parseFloat((subtotal + taxAmount).toFixed(2));
+  const totalAmountSmallestUnit = Math.round(totalAmount * 100);
 
   return {
-    planId: planId || (appsCount > 1 ? 'custom-apps' : 'single-app'),
-    planName: planId === 'custom-apps' || appsCount > 1 ? 'Custom Pack' : 'Standard Pack',
+    planId: isBasic ? 'single-app' : 'custom-apps',
+    planName: isBasic ? 'Standard Pack' : 'Custom Pack',
+    planTier: isBasic ? 'Basic' : 'Pro',
     userCount: users,
     billingCycle,
     appsCount,
+    regionCode: pricingRegion.regionCode,
+    countryName: pricingRegion.countryName,
+    currency,
+    locale,
     perUserPerMonth,
     regularRatePerUser,
     regularTotal,
@@ -5919,24 +6191,40 @@ function calculatePricing({ planId, selectedApps = [], userCount = 1, billingCyc
     discountPercent,
     monthlyBase: subtotal,
     subtotal,
+    taxRate,
+    taxName: pricingRegion.taxName,
     taxAmount,
     totalAmount,
-    totalAmountPaise,
-    formattedPerUser: `₹${perUserPerMonth.toLocaleString('en-IN')}`,
-    formattedDiscount: `₹${discountAmount.toLocaleString('en-IN')}`,
-    formattedSubtotal: `₹${subtotal.toLocaleString('en-IN')}`,
-    formattedTax: `₹${taxAmount.toLocaleString('en-IN')}`,
-    formattedTotal: `₹${totalAmount.toLocaleString('en-IN')}`
+    totalAmountPaise: totalAmountSmallestUnit, // backwards-compatible for paise/cents
+    totalAmountSmallestUnit,
+    formattedPerUser: formatRegionalCurrency(perUserPerMonth, pricingRegion.regionCode),
+    formattedDiscount: formatRegionalCurrency(discountAmount, pricingRegion.regionCode),
+    formattedSubtotal: formatRegionalCurrency(subtotal, pricingRegion.regionCode),
+    formattedTax: formatRegionalCurrency(taxAmount, pricingRegion.regionCode),
+    formattedTotal: formatRegionalCurrency(totalAmount, pricingRegion.regionCode)
   };
 }
 
 // 1. GET /api/pricing/plans
-app.get('/api/pricing/plans', (_req, res) => {
+app.get('/api/pricing/plans', (req, res) => {
+  const country = req.query.country || req.query.region || 'IN';
+  const region = resolvePricingRegion(country);
   res.json({
     success: true,
-    plans: PRICING_CONFIG,
-    taxRate: 0.18,
-    currency: 'INR'
+    region: region.regionCode,
+    country: region.countryName,
+    currency: region.currency,
+    symbol: region.symbol,
+    taxRate: region.taxRate,
+    taxName: region.taxName,
+    plans: region.plans,
+    allRegions: Object.keys(REGIONAL_PRICING).map(k => ({
+      regionCode: REGIONAL_PRICING[k].regionCode,
+      countryName: REGIONAL_PRICING[k].countryName,
+      flag: REGIONAL_PRICING[k].flag,
+      currency: REGIONAL_PRICING[k].currency,
+      symbol: REGIONAL_PRICING[k].symbol
+    }))
   });
 });
 
@@ -5961,14 +6249,27 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       companyName,
       customerName,
       customerEmail,
-      customerPhone
+      customerPhone,
+      country,
+      region,
+      currency: requestedCurrency
     } = req.body || {};
 
     if (!companyName || !customerEmail) {
       return res.status(400).json({ success: false, message: 'Company name and email are required.' });
     }
 
-    const calc = calculatePricing({ planId, selectedApps, userCount, billingCycle });
+    const calc = calculatePricing({ planId, selectedApps, userCount, billingCycle, country, region });
+
+    // Validate requested currency against authoritative regional currency
+    if (requestedCurrency && requestedCurrency.toUpperCase() !== calc.currency) {
+      return res.status(400).json({
+        success: false,
+        error: 'CURRENCY_MISMATCH',
+        message: `Requested currency ${requestedCurrency} does not match authoritative regional currency ${calc.currency}.`
+      });
+    }
+
     const orderNumber = `OXOO-ORD-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     const safeSubtotal = parseFloat(Number(calc.subtotal || 0).toFixed(2));
@@ -5988,19 +6289,22 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       subtotal: safeSubtotal,
       taxAmount: safeTax,
       totalAmount: safeTotal,
-      totalAmountPaise: calc.totalAmountPaise,
-      currency: 'INR',
+      totalAmountPaise: calc.totalAmountSmallestUnit,
+      currency: calc.currency,
+      pricingRegion: calc.regionCode,
       status: 'Created'
     };
 
     if (isDbConnected) {
       await query(
-        `INSERT INTO orders (order_number, company_name, customer_name, customer_email, customer_phone, plan_name, selected_apps, user_count, billing_cycle, subtotal, tax_amount, total_amount, currency, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'INR', 'Created')
+        `INSERT INTO orders (order_number, company_name, customer_name, customer_email, customer_phone, plan_name, selected_apps, user_count, billing_cycle, subtotal, tax_amount, total_amount, currency, pricing_region, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'Created')
          ON CONFLICT (order_number) DO UPDATE
          SET subtotal = EXCLUDED.subtotal,
              tax_amount = EXCLUDED.tax_amount,
              total_amount = EXCLUDED.total_amount,
+             currency = EXCLUDED.currency,
+             pricing_region = EXCLUDED.pricing_region,
              updated_at = NOW()`,
         [
           orderNumber,
@@ -6014,39 +6318,49 @@ app.post('/api/payment/create-order', async (req, res, next) => {
           calc.billingCycle,
           safeSubtotal,
           safeTax,
-          safeTotal
+          safeTotal,
+          calc.currency,
+          calc.regionCode
         ]
       );
     }
 
-    const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tqu6q5BYPuxhzd';
-    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'VzzE4JIz1vaKtWJkAqurKwT8';
+    const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
+    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
     let razorpayOrderId = null;
-    try {
-      const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
-      const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount: calc.totalAmountPaise,
-          currency: 'INR',
-          receipt: orderNumber.slice(-40),
-          notes: {
-            companyName: companyName || '',
-            customerEmail: customerEmail || ''
+    if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
+      try {
+        const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
+        const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            amount: calc.totalAmountSmallestUnit,
+            currency: calc.currency,
+            receipt: orderNumber.slice(-40),
+            notes: {
+              companyName: companyName || '',
+              customerEmail: customerEmail || '',
+              pricingRegion: calc.regionCode
+            }
+          })
+        });
+        const rzpData = await rzpRes.json();
+        if (rzpData && rzpData.id) {
+          razorpayOrderId = rzpData.id;
+          if (isDbConnected) {
+            await query(`UPDATE orders SET payment_id = $1 WHERE order_number = $2`, [razorpayOrderId, orderNumber]);
           }
-        })
-      });
-      const rzpData = await rzpRes.json();
-      if (rzpData && rzpData.id) {
-        razorpayOrderId = rzpData.id;
+        } else if (rzpData && rzpData.error) {
+          console.warn('[Razorpay] Order creation note:', rzpData.error.description || rzpData.error);
+        }
+      } catch (rzpErr) {
+        console.warn('[Razorpay] Order creation notice:', rzpErr.message);
       }
-    } catch (rzpErr) {
-      console.warn('[Razorpay] Order creation notice:', rzpErr.message);
     }
 
     res.json({
@@ -6054,8 +6368,10 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       order,
       razorpayOrderId,
       razorpayKeyId: RAZORPAY_KEY_ID,
-      amountPaise: calc.totalAmountPaise,
-      currency: 'INR'
+      amountPaise: calc.totalAmountSmallestUnit,
+      totalAmountSmallestUnit: calc.totalAmountSmallestUnit,
+      currency: calc.currency,
+      pricingRegion: calc.regionCode
     });
   } catch (err) {
     next(err);
@@ -6068,91 +6384,164 @@ app.post('/api/payment/verify', async (req, res, next) => {
     const {
       orderNumber,
       paymentId,
-      paymentMethod = 'Credit / Debit Card',
-      companyName,
-      customerName,
-      customerEmail,
-      selectedApps = [],
-      planName = 'Single App',
-      billingCycle = 'monthly',
-      totalAmount = 560,
+      paymentMethod = 'Razorpay',
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
       invoiceNumber: clientInvoiceNumber
     } = req.body || {};
 
-    const safeTotalAmount = parseFloat(Number(totalAmount || 0).toFixed(2));
-    const verifiedPaymentId = paymentId || `pay_rzp_${Date.now().toString().slice(-8)}`;
+    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, message: 'Missing required orderNumber.' });
+    }
+
+    if (!isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database service unavailable.' });
+    }
+
+    // 1. Fetch authoritative order from database
+    const ordRes = await query(`SELECT * FROM orders WHERE order_number = $1 LIMIT 1`, [orderNumber]);
+    if (ordRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Order not found in records.' });
+    }
+
+    const order = ordRes.rows[0];
+
+    // 2. Idempotency Check: if already fulfilled, return existing records safely without duplicate mutations
+    if (order.status === 'Paid') {
+      const invRes = await query(
+        `SELECT * FROM invoices WHERE invoice_number = $1 OR company_name = $2 ORDER BY id DESC LIMIT 1`,
+        [order.order_number, order.company_name]
+      );
+      const subRes = await query(
+        `SELECT * FROM subscriptions WHERE LOWER(company_name) = LOWER($1) ORDER BY id DESC LIMIT 1`,
+        [order.company_name]
+      );
+      return res.json({
+        success: true,
+        idempotent: true,
+        message: 'Payment already verified and subscription activated.',
+        orderNumber: order.order_number,
+        paymentId: order.payment_id,
+        invoiceNumber: invRes.rows[0]?.invoice_number || order.order_number,
+        status: 'Paid',
+        planName: order.plan_name,
+        amountPaid: parseFloat(order.total_amount)
+      });
+    }
+
+    // 3. Cryptographic Signature Verification
+    const effectiveOrderId = razorpay_order_id || order.payment_id;
+    const effectivePaymentId = razorpay_payment_id || paymentId;
+
+    if (!razorpay_signature) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed: Missing Razorpay signature.' });
+    }
+
+    if (!effectiveOrderId || !effectivePaymentId) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed: Missing order or payment identifier.' });
+    }
+
+    if (!RAZORPAY_KEY_SECRET) {
+      return res.status(500).json({ success: false, message: 'Payment gateway configuration error: Secret not configured.' });
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', RAZORPAY_KEY_SECRET)
+      .update(`${effectiveOrderId}|${effectivePaymentId}`)
+      .digest('hex');
+
+    const sigBuf = Buffer.from(razorpay_signature, 'utf8');
+    const expBuf = Buffer.from(expectedSignature, 'utf8');
+
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed: Invalid cryptographic signature.' });
+    }
+
+    // 4. Derive authoritative attributes from database order record (DO NOT trust client-supplied prices/apps/names)
+    const companyName = order.company_name;
+    const customerEmail = order.customer_email;
+    const customerName = order.customer_name;
+    const planName = order.plan_name;
+    const billingCycle = order.billing_cycle || 'monthly';
+    const safeTotalAmount = parseFloat(order.total_amount);
+    let selectedApps = [];
+    if (order.selected_apps) {
+      selectedApps = Array.isArray(order.selected_apps)
+        ? order.selected_apps
+        : (typeof order.selected_apps === 'string' ? JSON.parse(order.selected_apps) : []);
+    }
+
     const curYear = new Date().getFullYear();
     let invoiceNumber = clientInvoiceNumber || `INV-${curYear}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
-    const effectiveStorageId = 'STG-' + (orderNumber ? String(orderNumber).replace(/[^0-9]/g, '').slice(-8) : Date.now().toString().slice(-8));
+    const effectiveStorageId = order.storage_id || ('STG-' + String(orderNumber).replace(/[^0-9]/g, '').slice(-8));
 
-    if (isDbConnected) {
-      // Check if invoice_number already exists in database, and generate a new one if it does
-      const existingInv = await query(`SELECT id FROM invoices WHERE invoice_number = $1`, [invoiceNumber]);
-      if (existingInv.rows && existingInv.rows.length > 0) {
-        invoiceNumber = `INV-${curYear}-${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`;
-      }
+    // Update order status to Paid
+    await query(
+      `UPDATE orders SET status = 'Paid', payment_id = $1, payment_method = $2, storage_id = $3, updated_at = NOW() WHERE order_number = $4`,
+      [effectivePaymentId, paymentMethod, effectiveStorageId, orderNumber]
+    );
 
-      await query(
-        `UPDATE orders SET status = 'Paid', payment_id = $1, payment_method = $2, storage_id = $3, updated_at = NOW() WHERE order_number = $4`,
-        [verifiedPaymentId, paymentMethod, effectiveStorageId, orderNumber]
+    // Merge apps
+    const existingAppsSet = new Set();
+    try {
+      const priorSubs = await query(
+        `SELECT active_apps FROM subscriptions WHERE LOWER(company_name) = LOWER($1)`,
+        [companyName]
       );
+      priorSubs.rows.forEach(r => {
+        if (r.active_apps) {
+          const arr = Array.isArray(r.active_apps) ? r.active_apps : (typeof r.active_apps === 'string' ? JSON.parse(r.active_apps) : []);
+          arr.forEach(a => existingAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
+        }
+      });
+    } catch (e) {}
 
-      // Collect any already owned apps for this customer/company from DB
-      const existingAppsSet = new Set();
-      try {
-        const priorSubs = await query(
-          `SELECT active_apps FROM subscriptions 
-           WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'`,
-          [companyName || '__none__', companyName || '__none__']
-        );
-        priorSubs.rows.forEach(r => {
-          if (r.active_apps) {
-            const arr = Array.isArray(r.active_apps) ? r.active_apps : (typeof r.active_apps === 'string' ? JSON.parse(r.active_apps) : []);
-            arr.forEach(a => existingAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
-          }
-        });
-      } catch (e) {}
+    selectedApps.forEach(a => existingAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
+    const mergedApps = Array.from(existingAppsSet);
 
-      // Add newly purchased apps
-      (selectedApps || []).forEach(a => existingAppsSet.add(typeof a === 'string' ? a : (a.name || a.id)));
-      const mergedApps = Array.from(existingAppsSet);
+    const orderCurrency = order.currency || 'INR';
+    const orderRegion = order.pricing_region || 'IN';
 
-      const renewalInterval = billingCycle === 'yearly' ? '1 year' : '1 month';
-      await query(
-        `INSERT INTO subscriptions (company_name, plan, amount, currency, billing_cycle, status, start_date, renewal_date, active_apps)
-         VALUES ($1, $2, $3, 'INR', $4, 'Active', NOW(), NOW() + INTERVAL '${renewalInterval}', $5)`,
-        [companyName || 'My Organization', planName, safeTotalAmount, billingCycle, JSON.stringify(mergedApps)]
-      );
+    const renewalInterval = billingCycle === 'yearly' ? '1 year' : '1 month';
+    await query(
+      `INSERT INTO subscriptions (company_name, plan, amount, currency, billing_cycle, status, start_date, renewal_date, active_apps, pricing_region)
+       VALUES ($1, $2, $3, $4, $5, 'Active', NOW(), NOW() + INTERVAL '${renewalInterval}', $6, $7)`,
+      [companyName || 'My Organization', planName, safeTotalAmount, orderCurrency, billingCycle, JSON.stringify(mergedApps), orderRegion]
+    );
 
-      await query(
-        `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items)
-         VALUES ($1, $2, $3, $4, 'INR', 'Paid', NOW(), $5)
-         ON CONFLICT (invoice_number) DO UPDATE
-         SET status = 'Paid',
-             amount = EXCLUDED.amount,
-             company_name = EXCLUDED.company_name,
-             plan = EXCLUDED.plan,
-             items = EXCLUDED.items`,
-        [invoiceNumber, companyName || 'My Organization', planName, safeTotalAmount, JSON.stringify(selectedApps)]
-      );
+    await query(
+      `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items)
+       VALUES ($1, $2, $3, $4, $5, 'Paid', NOW(), $6)
+       ON CONFLICT (invoice_number) DO UPDATE
+       SET status = 'Paid',
+           amount = EXCLUDED.amount,
+           currency = EXCLUDED.currency,
+           company_name = EXCLUDED.company_name,
+           plan = EXCLUDED.plan,
+           items = EXCLUDED.items`,
+      [invoiceNumber, companyName || 'My Organization', planName, safeTotalAmount, orderCurrency, JSON.stringify(selectedApps)]
+    );
 
-      await query(
-        `UPDATE organizations SET plan = $1, active_apps = $2, status = 'Active', mrr = $3, updated_at = NOW()
-         WHERE name = $4 OR id = 1`,
-        [planName, JSON.stringify(mergedApps), safeTotalAmount, companyName]
-      );
+    await query(
+      `UPDATE organizations SET plan = $1, active_apps = $2, status = 'Active', mrr = $3, updated_at = NOW()
+       WHERE LOWER(name) = LOWER($4) OR id = 1`,
+      [planName, JSON.stringify(mergedApps), safeTotalAmount, companyName]
+    );
 
-      // Upsert into customers table using normalized email/phone to prevent duplicate customer records
-      const normEmail = (customerEmail || '').toLowerCase().trim();
-      const normPhone = (req.body?.customerPhone || '').trim();
-      
+    // Upsert into customers table using normalized email/phone
+    const normEmail = (customerEmail || '').toLowerCase().trim();
+    const normPhone = (order.customer_phone || '').trim();
+
+    if (normEmail) {
       const existingCustRes = await query(
         `SELECT customer_id FROM customers WHERE LOWER(TRIM(email)) = $1 OR (phone != '' AND phone = $2) LIMIT 1`,
         [normEmail, normPhone]
       );
 
       if (existingCustRes.rows.length > 0) {
-        // Existing customer: attach new purchase/software without duplicating
         await query(
           `UPDATE customers SET
             plan = $1,
@@ -6167,8 +6556,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
            WHERE customer_id = $5`,
           [planName, safeTotalAmount, billingCycle, JSON.stringify(mergedApps), existingCustRes.rows[0].customer_id]
         );
-      } else if (normEmail) {
-        // New customer: generate collision-resistant ID and insert
+      } else {
         const maxCustRes = await query(`SELECT COUNT(*) as count FROM customers`);
         const nextId = parseInt(maxCustRes.rows[0]?.count || 0, 10) + 1;
         const newCstId = `CST-${String(nextId).padStart(4, '0')}`;
@@ -6193,78 +6581,71 @@ app.post('/api/payment/verify', async (req, res, next) => {
           ]
         );
       }
-
-      let userAlreadyRegistered = false;
-      const userCheckRes = await query(`SELECT id FROM users WHERE LOWER(email) = $1`, [normEmail]);
-      if (userCheckRes.rows.length > 0) {
-        userAlreadyRegistered = true;
-      }
-
-      if (customerEmail) {
-        try {
-          if (!userAlreadyRegistered) {
-            // STRICT RULE: New customer has NOT created their password yet.
-            // DO NOT create temporary password, DO NOT insert into users yet, and DO NOT send credentials/invoice email yet!
-            // Checkout Step 5 will prompt the user to set their password.
-            // Only after they submit their password (/api/customer/setup-password), their account is created and invoice + credentials email is dispatched!
-            console.log(`[Payment Verify] New customer purchase verified for ${normEmail}. Awaiting customer password creation.`);
-          } else {
-            // Already registered customer: update organization, storage ID, and last login
-            await query(
-              `UPDATE users SET organization = $1, storage_id = COALESCE(users.storage_id, $2), last_login = NOW() WHERE LOWER(email) = $3`,
-              [companyName || 'My Organization', effectiveStorageId, normEmail]
-            );
-
-            // Send confirmation invoice email to existing registered customer
-            try {
-              const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
-              await sendInvoiceAndCredentialsEmail({
-                toEmail: normEmail,
-                customerName: customerName || companyName || 'Customer',
-                companyName: companyName || 'My Organization',
-                invoiceNumber,
-                orderNumber,
-                storageId: effectiveStorageId,
-                amount: safeTotalAmount,
-                billingCycle,
-                planName,
-                selectedApps,
-                password: '• • • • • • • • (Existing Password)',
-                loginUrl: `${origin}/login`
-              });
-            } catch (emailErr) {
-              console.error('Error sending invoice email to existing customer:', emailErr.message);
-            }
-
-            // Record in-app notification for the customer
-            try {
-              await query(
-                `INSERT INTO customer_notifications (company_name, customer_email, title, message, type, link)
-                 VALUES ($1, $2, $3, $4, 'purchase', '/customer?tab=apps')`,
-                [
-                  companyName || 'My Organization',
-                  normEmail,
-                  'Software Purchase Confirmed',
-                  `Your purchase of ${planName} (${(selectedApps || []).join(', ')}) has been verified. Invoice ${invoiceNumber} is available.`
-                ]
-              );
-            } catch (notifErr) {
-              console.error('Failed to log purchase notification:', notifErr.message);
-            }
-          }
-        } catch (uErr) {
-          console.error('Error recording customer in users table:', uErr.message);
-        }
-      }
-
-      await logAudit('Payment Succeeded & Verified', `${orderNumber} (${invoiceNumber})`, customerEmail || customerName, req.ip, {
-        amount: safeTotalAmount,
-        paymentId: verifiedPaymentId,
-        paymentMethod,
-        storageId: effectiveStorageId,
-        alreadyRegistered: userAlreadyRegistered
-      });
     }
+
+    let userAlreadyRegistered = false;
+    const userCheckRes = await query(`SELECT id FROM users WHERE LOWER(email) = $1`, [normEmail]);
+    if (userCheckRes.rows.length > 0) {
+      userAlreadyRegistered = true;
+    }
+
+    if (customerEmail) {
+      try {
+        if (!userAlreadyRegistered) {
+          console.log(`[Payment Verify] New customer purchase verified for ${normEmail}. Awaiting customer password creation.`);
+        } else {
+          await query(
+            `UPDATE users SET organization = $1, storage_id = COALESCE(users.storage_id, $2), last_login = NOW() WHERE LOWER(email) = $3`,
+            [companyName || 'My Organization', effectiveStorageId, normEmail]
+          );
+
+          try {
+            const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+            await sendInvoiceAndCredentialsEmail({
+              toEmail: normEmail,
+              customerName: customerName || companyName || 'Customer',
+              companyName: companyName || 'My Organization',
+              invoiceNumber,
+              orderNumber,
+              storageId: effectiveStorageId,
+              amount: safeTotalAmount,
+              billingCycle,
+              planName,
+              selectedApps,
+              password: '• • • • • • • • (Existing Password)',
+              loginUrl: `${origin}/login`
+            });
+          } catch (emailErr) {
+            console.error('Error sending invoice email to existing customer:', emailErr.message);
+          }
+
+          try {
+            await query(
+              `INSERT INTO customer_notifications (company_name, customer_email, title, message, type, link)
+               VALUES ($1, $2, $3, $4, 'purchase', '/customer?tab=apps')`,
+              [
+                companyName || 'My Organization',
+                normEmail,
+                'Software Purchase Confirmed',
+                `Your purchase of ${planName} (${(selectedApps || []).join(', ')}) has been verified. Invoice ${invoiceNumber} is available.`
+              ]
+            );
+          } catch (notifErr) {
+            console.error('Failed to log purchase notification:', notifErr.message);
+          }
+        }
+      } catch (uErr) {
+        console.error('Error recording customer in users table:', uErr.message);
+      }
+    }
+
+    await logAudit('Payment Succeeded & Verified', `${orderNumber} (${invoiceNumber})`, customerEmail || customerName, req.ip, {
+      amount: safeTotalAmount,
+      paymentId: effectivePaymentId,
+      paymentMethod,
+      storageId: effectiveStorageId,
+      alreadyRegistered: userAlreadyRegistered
+    });
 
     const now = new Date();
     const dueDate = new Date(now);
@@ -6280,7 +6661,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
         ? 'Payment verified and software activated in customer dashboard successfully!'
         : 'Payment verified! Please create your account password to activate portal access and receive your invoice.',
       orderNumber,
-      paymentId: verifiedPaymentId,
+      paymentId: effectivePaymentId,
       invoiceNumber,
       storageId: effectiveStorageId,
       planName,
@@ -6346,13 +6727,39 @@ app.get('/api/payment/invoice/:orderNumber', async (req, res, next) => {
 app.use((req, res) => res.status(404).json({ message: 'API route not found.' }));
 
 app.use((err, _req, res, _next) => {
-  console.error('Server error:', err);
-  res.status(500).json({
-    message: process.env.NODE_ENV === 'production' ? 'An unexpected server error occurred.' : err.message
+  const status = err.status || 500;
+  if (status >= 500) {
+    console.error('Server error:', err);
+  }
+  res.status(status).json({
+    success: false,
+    message: err.message || (process.env.NODE_ENV === 'production' ? 'An unexpected server error occurred.' : 'Internal server error')
   });
 });
 
 async function start() {
+  // Security environment validation
+  if (!process.env.DATABASE_URL) {
+    console.error('FATAL SECURITY ERROR: DATABASE_URL is not configured.');
+    process.exit(1);
+  }
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'oxoo-super-secret-jwt-key-2026') {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('FATAL SECURITY ERROR: Insecure or default JWT_SECRET is prohibited in production.');
+      process.exit(1);
+    } else {
+      console.warn('SECURITY WARNING: Using default development JWT_SECRET. Set a strong secret before deployment.');
+    }
+  }
+  if (process.env.ADMIN_API_KEY === 'oxoo-admin-secret-key-2026') {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('FATAL SECURITY ERROR: Insecure default ADMIN_API_KEY is prohibited in production.');
+      process.exit(1);
+    } else {
+      console.warn('SECURITY WARNING: Using default ADMIN_API_KEY. Override with an unguessable key in production.');
+    }
+  }
+
   try {
     await initDb();
     isDbConnected = true;
@@ -6362,8 +6769,8 @@ async function start() {
     console.log('Server running with high-speed built-in fallbacks.');
   }
 
-  app.listen(PORT, () => {
-    console.log(`Oxoo.ai API server listening on port ${PORT} with Neon PostgreSQL backend`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Oxoo.ai API server listening on port ${PORT} (0.0.0.0) with Neon PostgreSQL backend`);
   });
 }
 

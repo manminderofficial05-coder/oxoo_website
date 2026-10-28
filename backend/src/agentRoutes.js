@@ -47,9 +47,13 @@ function requireAdminAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     const adminKey = req.headers['x-admin-key'];
 
-    if (adminKey && (adminKey === process.env.ADMIN_API_KEY || adminKey === JWT_SECRET)) {
-      req.adminUser = { id: 1, role: 'admin', name: 'Root Administrator' };
-      return next();
+    if (adminKey && process.env.ADMIN_API_KEY && process.env.ADMIN_API_KEY !== 'oxoo-admin-secret-key-2026') {
+      const keyBuf = Buffer.from(adminKey);
+      const expectedBuf = Buffer.from(process.env.ADMIN_API_KEY);
+      if (keyBuf.length === expectedBuf.length && crypto.timingSafeEqual(keyBuf, expectedBuf)) {
+        req.adminUser = { id: 1, role: 'super_admin', name: 'Root Administrator' };
+        return next();
+      }
     }
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -57,11 +61,6 @@ function requireAdminAuth(req, res, next) {
     }
 
     const token = authHeader.split(' ')[1];
-    if (token === 'demo-admin-jwt-token-88') {
-      req.adminUser = { id: 1, role: 'super_admin', name: 'Manminder Singh' };
-      return next();
-    }
-
     const decoded = jwt.verify(token, JWT_SECRET);
     if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
       return res.status(403).json({ success: false, message: 'Access Denied: Administrator privileges required.' });

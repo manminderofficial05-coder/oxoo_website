@@ -1,0 +1,1439 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SYSTEM_ADMIN
+  SUPPLY_CHAIN_MANAGER
+  WAREHOUSE_MANAGER
+  WAREHOUSE_OPERATOR
+  PROCUREMENT_MANAGER
+  PURCHASING_OFFICER
+  MANUFACTURING_MANAGER
+  QUALITY_INSPECTOR
+  MAINTENANCE_TECHNICIAN
+  READ_ONLY_AUDITOR
+  SUPPLIER
+}
+
+enum ProductType {
+  STOCKABLE
+  CONSUMABLE
+  SERVICE
+}
+
+enum TrackingMethod {
+  NONE
+  BY_LOT
+  BY_SERIAL
+}
+
+enum POStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CLOSED
+  CANCELLED
+}
+
+enum ReceiptStatus {
+  DRAFT
+  PENDING_INSPECTION
+  VALIDATED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  DRAFT
+  PICKING
+  PACKED
+  SHIPPED
+  CANCELLED
+}
+
+enum TransferStatus {
+  DRAFT
+  RESERVED
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}
+
+enum MOStatus {
+  DRAFT
+  CONFIRMED
+  PLANNED
+  IN_PROGRESS
+  PARTIALLY_PRODUCED
+  COMPLETED
+  CANCELLED
+}
+
+enum QualityCheckStatus {
+  PENDING
+  PASSED
+  FAILED
+}
+
+enum QualityCheckType {
+  PASS_FAIL
+  NUMERIC
+  VISUAL
+  CHECKLIST
+}
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WorkOrderStatus {
+  SCHEDULED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+}
+
+enum ECOStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  APPLIED
+}
+
+enum ReturnStatus {
+  DRAFT
+  PENDING_INSPECTION
+  RESTOCKED
+  QUARANTINED
+  SCRAPPED
+  CANCELLED
+}
+
+enum MovementType {
+  RECEIPT
+  DELIVERY
+  INTERNAL_TRANSFER_OUT
+  INTERNAL_TRANSFER_IN
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  MFG_CONSUMPTION
+  MFG_PRODUCTION
+  SCRAP
+  RETURN_IN
+}
+
+enum ApprovalType {
+  PURCHASE_ORDER
+  INVENTORY_ADJUSTMENT
+  SCRAP
+  ECO
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role     @default(WAREHOUSE_OPERATOR)
+  department   String?
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  supplierId          String?
+  supplier            Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  createdPOs          PurchaseOrder[]      @relation("POCreator")
+  approvedPOs         PurchaseOrder[]      @relation("POApprover")
+  auditLogs           AuditLog[]
+  qualityChecks       QualityCheck[]
+  maintenanceAssigned MaintenanceWorkOrder[]
+  approvalRequests    ApprovalRequest[]    @relation("ApprovalRequester")
+  approvalDecisions   ApprovalRequest[]    @relation("ApprovalReviewer")
+  notifications       Notification[]
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  currency    String   @default("USD")
+  poThreshold Float    @default(5000.0) // PO approvals required above this amount
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  warehouses  Warehouse[]
+}
+
+model Warehouse {
+  id          String   @id @default(uuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  code        String   @unique
+  name        String
+  address     String?
+  capacity    Float?   // in cubic meters or pallets
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  locations       Location[]
+  stockBalances   InventoryBalance[]
+  movementsSource StockMovement[]    @relation("SourceWarehouse")
+  movementsDest   StockMovement[]    @relation("DestWarehouse")
+  purchaseOrders  PurchaseOrder[]
+  receipts        GoodsReceipt[]
+  deliveries      Delivery[]
+  transfersFrom   InternalTransfer[] @relation("FromWarehouse")
+  transfersTo     InternalTransfer[] @relation("ToWarehouse")
+  mfgOrders       ManufacturingOrder[]
+  reorderRules    ReorderRule[]
+}
+
+model Location {
+  id          String   @id @default(uuid())
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  type        String   // RECEIVING, STORAGE, SHIPPING, QUALITY, SCRAP, RETURN, PACKING
+  aisle       String?
+  shelf       String?
+  bin         String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stockBalances InventoryBalance[]
+  lots          Lot[]
+  serialNumbers SerialNumber[]
+
+  @@unique([warehouseId, code])
+}
+
+model ProductCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+}
+
+model UnitOfMeasure {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  symbol      String   @unique
+  category    String   // Unit, Weight, Length, Volume
+  createdAt   DateTime @default(now())
+
+  products    Product[]
+}
+
+model Product {
+  id              String         @id @default(uuid())
+  name            String
+  sku             String         @unique
+  internalRef     String?
+  barcode         String         @unique
+  description     String?
+  categoryId      String
+  category        ProductCategory @relation(fields: [categoryId], references: [id])
+  type            ProductType    @default(STOCKABLE)
+  uomId           String
+  uom             UnitOfMeasure  @relation(fields: [uomId], references: [id])
+  costPrice       Float          @default(0.0)
+  salesPrice      Float          @default(0.0)
+  taxRate         Float          @default(0.0)
+  trackingMethod  TrackingMethod @default(NONE)
+  supplierLeadDays Int           @default(7)
+  preferredSupplierId String?
+  preferredSupplier   Supplier?  @relation(fields: [preferredSupplierId], references: [id])
+  minStock        Float          @default(10.0)
+  maxStock        Float          @default(100.0)
+  reorderQty      Float          @default(20.0)
+  imageUrl        String?
+  storageReqs     String?        // Cold storage, dry, hazardous, etc.
+  shelfLifeDays   Int?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  balances        InventoryBalance[]
+  movements       StockMovement[]
+  lots            Lot[]
+  serialNumbers   SerialNumber[]
+  poLines         PurchaseOrderLine[]
+  receiptLines    GoodsReceiptLine[]
+  deliveryLines   DeliveryLine[]
+  transferLines   TransferLine[]
+  reorderRules    ReorderRule[]
+  bomOutputs      BillOfMaterials[] @relation("BOMFinishedProduct")
+  bomInputs       BOMComponent[]
+  mfgOrders       ManufacturingOrder[]
+  qualityChecks   QualityCheck[]
+  returns         Return[]
+  scraps          ScrapTransaction[]
+  stockReservations StockReservation[]
+  sparePartUsage  MaintenanceWorkOrder[] @relation("SparePart")
+  supplierProducts SupplierProduct[]
+  ecoAffects      EngineeringChange[]
+  prLines         PurchaseRequisitionLine[]
+  rfqLines        RFQLine[]
+  quoteLines      SupplierQuoteLine[]
+  forecasts       DemandForecast[]
+  jobWorkRawMaterials JobWorkOrder[] @relation("JobWorkRawMaterial")
+  jobWorkFinished     JobWorkOrder[] @relation("JobWorkFinished")
+  debitNotes          DebitNote[]
+}
+
+model Supplier {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  taxId         String?
+  paymentTerms  String   @default("Net 30")
+  currency      String   @default("USD")
+  leadTimeDays  Int      @default(7)
+  rating        Float    @default(5.0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  products      SupplierProduct[]
+  preferredFor  Product[]
+  purchaseOrders PurchaseOrder[]
+  receipts      GoodsReceipt[]
+  returns       Return[]
+  users         User[]
+  rfqs          RFQSupplier[]
+  quotes        SupplierQuote[]
+  jobWorkOrders JobWorkOrder[]
+  debitNotes    DebitNote[]
+}
+
+model SupplierProduct {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vendorSku  String?
+  unitPrice  Float
+  minOrderQty Float   @default(1)
+  createdAt  DateTime @default(now())
+
+  @@unique([supplierId, productId])
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  contact     String?
+  email       String?
+  phone       String?
+  address     String?
+  createdAt   DateTime @default(now())
+
+  deliveries  Delivery[]
+  returns     Return[]
+  creditProfile CustomerCreditProfile?
+  deliveryChallans DeliveryChallan[]
+}
+
+model InventoryBalance {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  onHandQty   Float    @default(0.0)
+  reservedQty Float    @default(0.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([productId, warehouseId, locationId])
+}
+
+model StockReservation {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId String
+  quantity    Float
+  reference   String   // Delivery ID, Manufacturing Order ID, Transfer ID
+  status      String   @default("ACTIVE") // ACTIVE, FULFILLED, RELEASED
+  createdAt   DateTime @default(now())
+}
+
+model StockMovement {
+  id                String       @id @default(uuid())
+  movementNumber    String       @unique
+  productId         String
+  product           Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity          Float
+  type              MovementType
+  sourceWarehouseId String?
+  sourceWarehouse   Warehouse?   @relation("SourceWarehouse", fields: [sourceWarehouseId], references: [id])
+  destWarehouseId   String?
+  destWarehouse     Warehouse?   @relation("DestWarehouse", fields: [destWarehouseId], references: [id])
+  sourceLocation    String?
+  destLocation      String?
+  lotNumber         String?
+  serialNumber      String?
+  unitCost          Float        @default(0.0)
+  totalCost         Float        @default(0.0)
+  referenceType     String?      // PO, RECEIPT, DELIVERY, TRANSFER, MO, COUNT, SCRAP
+  referenceId       String?
+  notes             String?
+  performedBy       String?
+  idempotencyKey    String?      @unique
+  isReversal        Boolean      @default(false)
+  reversedMovementId String?
+  createdAt         DateTime     @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+  @@index([idempotencyKey])
+}
+
+model Lot {
+  id             String    @id @default(uuid())
+  lotNumber      String    @unique
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  locationId     String?
+  location       Location? @relation(fields: [locationId], references: [id])
+  quantity       Float     @default(0.0)
+  expirationDate DateTime?
+  isBlocked      Boolean   @default(false)
+  blockReason    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model SerialNumber {
+  id             String    @id @default(uuid())
+  serialNumber   String    @unique
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  locationId     String?
+  location       Location? @relation(fields: [locationId], references: [id])
+  status         String    @default("IN_STOCK") // IN_STOCK, ALLOCATED, DELIVERED, SCRAPPED, MAINTENANCE
+  expirationDate DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model PurchaseOrder {
+  id               String    @id @default(uuid())
+  poNumber         String    @unique
+  supplierId       String
+  supplier         Supplier  @relation(fields: [supplierId], references: [id])
+  warehouseId      String
+  warehouse        Warehouse @relation(fields: [warehouseId], references: [id])
+  status           POStatus  @default(DRAFT)
+  subtotal         Float     @default(0.0)
+  taxAmount        Float     @default(0.0)
+  shippingCost     Float     @default(0.0)
+  discount         Float     @default(0.0)
+  totalAmount      Float     @default(0.0)
+  orderDate        DateTime  @default(now())
+  expectedArrival  DateTime?
+  notes            String?
+  createdById      String
+  createdBy        User      @relation("POCreator", fields: [createdById], references: [id])
+  approvedById     String?
+  approvedBy       User?     @relation("POApprover", fields: [approvedById], references: [id])
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  lines            PurchaseOrderLine[]
+  receipts         GoodsReceipt[]
+  debitNotes       DebitNote[]
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(uuid())
+  poId            String
+  po              PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantityOrdered Float
+  quantityReceived Float        @default(0.0)
+  unitPrice       Float
+  lineTotal       Float
+  createdAt       DateTime      @default(now())
+}
+
+model GoodsReceipt {
+  id             String        @id @default(uuid())
+  receiptNumber  String        @unique
+  poId           String?
+  po             PurchaseOrder? @relation(fields: [poId], references: [id])
+  supplierId     String?
+  supplier       Supplier?     @relation(fields: [supplierId], references: [id])
+  warehouseId    String
+  warehouse      Warehouse     @relation(fields: [warehouseId], references: [id])
+  status         ReceiptStatus @default(DRAFT)
+  receiptDate    DateTime      @default(now())
+  trackingRef    String?
+  notes          String?
+  validatedAt    DateTime?
+  validatedBy    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  lines          GoodsReceiptLine[]
+  qualityChecks  QualityCheck[]
+  debitNotes     DebitNote[]
+}
+
+model GoodsReceiptLine {
+  id             String       @id @default(uuid())
+  receiptId      String
+  receipt        GoodsReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  quantityExpected Float
+  quantityReceived Float
+  quantityDamaged Float       @default(0.0)
+  locationCode   String?
+  lotNumber      String?
+  serialNumber   String?
+  createdAt      DateTime     @default(now())
+}
+
+model Delivery {
+  id             String         @id @default(uuid())
+  deliveryNumber String         @unique
+  customerId     String?
+  customer       Customer?      @relation(fields: [customerId], references: [id])
+  warehouseId    String
+  warehouse      Warehouse      @relation(fields: [warehouseId], references: [id])
+  orderReference String?
+  status         DeliveryStatus @default(DRAFT)
+  scheduledDate  DateTime?
+  shippedDate    DateTime?
+  shippingAddress String?
+  trackingNumber String?
+  notes          String?
+  validatedBy    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  lines          DeliveryLine[]
+}
+
+model DeliveryLine {
+  id              String   @id @default(uuid())
+  deliveryId      String
+  delivery        Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  quantityOrdered Float
+  quantityPicked  Float    @default(0.0)
+  lotNumber       String?
+  serialNumber    String?
+  createdAt       DateTime @default(now())
+}
+
+model InternalTransfer {
+  id             String         @id @default(uuid())
+  transferNumber String         @unique
+  fromWarehouseId String
+  fromWarehouse  Warehouse      @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouseId  String
+  toWarehouse    Warehouse      @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+  status         TransferStatus @default(DRAFT)
+  notes          String?
+  dispatchedAt   DateTime?
+  dispatchedBy   String?
+  receivedAt     DateTime?
+  receivedBy     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  lines          TransferLine[]
+}
+
+model TransferLine {
+  id                 String           @id @default(uuid())
+  transferId         String
+  transfer           InternalTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  productId          String
+  product            Product          @relation(fields: [productId], references: [id])
+  quantityRequested  Float
+  quantityDispatched Float            @default(0.0)
+  quantityReceived   Float            @default(0.0)
+  fromLocationCode   String?
+  toLocationCode     String?
+  lotNumber          String?
+  createdAt          DateTime         @default(now())
+}
+
+model InventoryCount {
+  id           String   @id @default(uuid())
+  countNumber  String   @unique
+  warehouseId  String
+  locationCode String?
+  status       String   @default("IN_PROGRESS") // IN_PROGRESS, REVIEW, APPROVED, COMPLETED
+  countType    String   @default("CYCLE_COUNT") // CYCLE_COUNT, BLIND_COUNT, FULL_PHYSICAL
+  notes        String?
+  createdBy    String?
+  approvedBy   String?
+  approvedAt   DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  adjustments  InventoryAdjustment[]
+}
+
+model InventoryAdjustment {
+  id              String         @id @default(uuid())
+  countId         String?
+  inventoryCount  InventoryCount? @relation(fields: [countId], references: [id], onDelete: SetNull)
+  warehouseId     String
+  locationCode    String
+  productId       String
+  productSku      String
+  productName     String
+  systemQuantity  Float
+  countedQuantity Float
+  differenceQty   Float
+  costDifference  Float          @default(0.0)
+  reason          String
+  approvedBy      String?
+  isApplied       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+}
+
+model ReorderRule {
+  id           String    @id @default(uuid())
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId  String
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  minStock     Float
+  maxStock     Float
+  reorderQty   Float
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([productId, warehouseId])
+}
+
+model BillOfMaterials {
+  id                 String   @id @default(uuid())
+  bomNumber          String   @unique
+  finishedProductId  String
+  finishedProduct    Product  @relation("BOMFinishedProduct", fields: [finishedProductId], references: [id])
+  version            String   @default("1.0")
+  estimatedHours     Float    @default(1.0)
+  scrapRatePercent   Float    @default(0.0)
+  routingSteps       String?  // JSON or text of operation sequences
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  components         BOMComponent[]
+  mfgOrders          ManufacturingOrder[]
+}
+
+model BOMComponent {
+  id                 String          @id @default(uuid())
+  bomId              String
+  bom                BillOfMaterials @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  componentProductId String
+  componentProduct   Product         @relation(fields: [componentProductId], references: [id])
+  quantityRequired   Float
+  createdAt          DateTime        @default(now())
+}
+
+model ManufacturingOrder {
+  id                 String          @id @default(uuid())
+  moNumber           String          @unique
+  bomId              String
+  bom                BillOfMaterials @relation(fields: [bomId], references: [id])
+  finishedProductId  String
+  finishedProduct    Product         @relation(fields: [finishedProductId], references: [id])
+  warehouseId        String
+  warehouse          Warehouse       @relation(fields: [warehouseId], references: [id])
+  status             MOStatus        @default(DRAFT)
+  plannedQuantity    Float
+  producedQuantity   Float           @default(0.0)
+  scrapQuantity      Float           @default(0.0)
+  startDate          DateTime?
+  completedDate      DateTime?
+  assignedTo         String?
+  notes              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+model QualityCheck {
+  id             String             @id @default(uuid())
+  checkNumber    String             @unique
+  type           QualityCheckType   @default(PASS_FAIL)
+  status         QualityCheckStatus @default(PENDING)
+  productId      String
+  product        Product            @relation(fields: [productId], references: [id])
+  receiptId      String?
+  receipt        GoodsReceipt?      @relation(fields: [receiptId], references: [id])
+  sampleQuantity Float              @default(1.0)
+  threshold      String?            // Numeric range or acceptance criteria
+  actualValue    String?            // Measured value or checklist output
+  inspectorId    String?
+  inspector      User?              @relation(fields: [inspectorId], references: [id])
+  notes          String?
+  holdActive     Boolean            @default(false)
+  resolvedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  issues         QualityIssue[]
+}
+
+model QualityIssue {
+  id             String        @id @default(uuid())
+  issueNumber    String        @unique
+  qualityCheckId String
+  qualityCheck   QualityCheck  @relation(fields: [qualityCheckId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  severity       IssueSeverity @default(MEDIUM)
+  status         String        @default("OPEN") // OPEN, IN_REVIEW, RESOLVED, CLOSED
+  assignedTo     String?
+  correctiveAction String?
+  resolvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model MaintenanceAsset {
+  id             String   @id @default(uuid())
+  assetCode      String   @unique
+  name           String
+  category       String   // FORKLIFT, CONVEYOR, PACKAGING_MACHINE, ROBOTIC_ARM, PALLET_JACK
+  serialNumber   String?
+  location       String?
+  status         String   @default("OPERATIONAL") // OPERATIONAL, UNDER_MAINTENANCE, OUT_OF_SERVICE
+  purchaseDate   DateTime?
+  warrantyExpiry DateTime?
+  maintenanceIntervalDays Int @default(90)
+  lastMaintenanceDate DateTime?
+  nextDueDate    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workOrders     MaintenanceWorkOrder[]
+}
+
+model MaintenanceWorkOrder {
+  id             String           @id @default(uuid())
+  orderNumber    String           @unique
+  assetId        String
+  asset          MaintenanceAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  type           MaintenanceType  @default(PREVENTIVE)
+  priority       String           @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status         WorkOrderStatus  @default(SCHEDULED)
+  assignedToId   String?
+  assignedTo     User?            @relation(fields: [assignedToId], references: [id])
+  description    String
+  downtimeHours  Float            @default(0.0)
+  cost           Float            @default(0.0)
+  sparePartId    String?
+  sparePart      Product?         @relation("SparePart", fields: [sparePartId], references: [id])
+  sparePartQty   Float            @default(0.0)
+  scheduledDate  DateTime?
+  completedDate  DateTime?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model EngineeringChange {
+  id             String    @id @default(uuid())
+  ecoNumber      String    @unique
+  title          String
+  description    String
+  reason         String
+  status         ECOStatus @default(DRAFT)
+  affectedProductId String?
+  affectedProduct Product?  @relation(fields: [affectedProductId], references: [id])
+  oldVersion     String?
+  newVersion     String?
+  requestedBy    String?
+  approvedBy     String?
+  effectiveDate  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Return {
+  id             String       @id @default(uuid())
+  returnNumber   String       @unique
+  orderReference String?
+  customerId     String?
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  supplierId     String?
+  supplier       Supplier?    @relation(fields: [supplierId], references: [id])
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  quantity       Float
+  reason         String
+  condition      String       // UNOPENED, DAMAGED, DEFECTIVE, WRONG_ITEM
+  status         ReturnStatus @default(DRAFT)
+  inspectionNotes String?
+  destinationLocation String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model ScrapTransaction {
+  id             String   @id @default(uuid())
+  scrapNumber    String   @unique
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  quantity       Float
+  sourceLocation String?
+  scrapLocation  String   @default("SCRAP-ZONE-01")
+  reason         String
+  unitCost       Float    @default(0.0)
+  totalCostImpact Float   @default(0.0)
+  authorizedBy   String?
+  status         String   @default("APPROVED")
+  createdAt      DateTime @default(now())
+}
+
+model ApprovalRequest {
+  id             String         @id @default(uuid())
+  type           ApprovalType
+  referenceId    String
+  referenceNumber String
+  title          String
+  amount         Float?
+  status         ApprovalStatus @default(PENDING)
+  requestedById  String
+  requestedBy    User           @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  reviewedById   String?
+  reviewedBy     User?          @relation("ApprovalReviewer", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Notification {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  message        String
+  type           String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR
+  link           String?
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  entity         String
+  entityId       String
+  action         String
+  actorId        String?
+  actor          User?    @relation(fields: [actorId], references: [id])
+  actorName      String?
+  details        String?  // JSON string of before/after or payload
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ========================================================
+// EXPANDED SUPPLY CHAIN PLATFORM MODULES (APPS 1 - 26)
+// ========================================================
+
+enum PRStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  CONVERTED_TO_RFQ
+  CONVERTED_TO_PO
+  REJECTED
+}
+
+enum RFQStatus {
+  DRAFT
+  SENT
+  RESPONSES_RECEIVED
+  AWARDED
+  CLOSED
+  CANCELLED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+enum ShipmentStatus {
+  DRAFT
+  BOOKED
+  DISPATCHED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  EXCEPTION
+  CANCELLED
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  ON_TRIP
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum TripStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CustomsType {
+  IMPORT
+  EXPORT
+}
+
+enum CustomsStatus {
+  DRAFT
+  DOCS_SUBMITTED
+  CUSTOMS_HOLD
+  INSPECTION
+  DUTY_PAID
+  CLEARED
+  RELEASED
+}
+
+enum DemandModelType {
+  MOVING_AVERAGE
+  EXPONENTIAL_SMOOTHING
+  SEASONAL_TREND
+}
+
+enum ForecastScenario {
+  CONSERVATIVE
+  BASELINE
+  AGGRESSIVE
+}
+
+// 1. Procurement & Requisitions
+model PurchaseRequisition {
+  id              String                    @id @default(uuid())
+  prNumber        String                    @unique
+  department      String
+  requestedBy     String
+  justification   String?
+  requiredByDate  DateTime
+  status          PRStatus                  @default(DRAFT)
+  estimatedTotal  Float                     @default(0.0)
+  notes           String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  lines           PurchaseRequisitionLine[]
+}
+
+model PurchaseRequisitionLine {
+  id            String              @id @default(uuid())
+  prId          String
+  pr            PurchaseRequisition @relation(fields: [prId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product             @relation(fields: [productId], references: [id])
+  quantity      Float
+  estimatedCost Float               @default(0.0)
+  notes         String?
+  createdAt     DateTime            @default(now())
+}
+
+// 2. RFQ Manager & Supplier Bidding
+model RFQ {
+  id           String          @id @default(uuid())
+  rfqNumber    String          @unique
+  title        String
+  status       RFQStatus       @default(DRAFT)
+  deadline     DateTime
+  terms        String?
+  notes        String?
+  awardedPoId  String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  lines        RFQLine[]
+  suppliers    RFQSupplier[]
+  quotes       SupplierQuote[]
+}
+
+model RFQLine {
+  id          String              @id @default(uuid())
+  rfqId       String
+  rfq         RFQ                 @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product             @relation(fields: [productId], references: [id])
+  quantity    Float
+  targetPrice Float?
+  notes       String?
+  createdAt   DateTime            @default(now())
+
+  quoteLines  SupplierQuoteLine[]
+}
+
+model RFQSupplier {
+  id         String    @id @default(uuid())
+  rfqId      String
+  rfq        RFQ       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplierId String
+  supplier   Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  sentAt     DateTime?
+  viewedAt   DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([rfqId, supplierId])
+}
+
+model SupplierQuote {
+  id           String              @id @default(uuid())
+  quoteNumber  String              @unique
+  rfqId        String
+  rfq          RFQ                 @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplierId   String
+  supplier     Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  totalAmount  Float               @default(0.0)
+  leadTimeDays Int                 @default(7)
+  validUntil   DateTime?
+  status       QuoteStatus         @default(SUBMITTED)
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  lines        SupplierQuoteLine[]
+}
+
+model SupplierQuoteLine {
+  id         String        @id @default(uuid())
+  quoteId    String
+  quote      SupplierQuote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  rfqLineId  String?
+  rfqLine    RFQLine?      @relation(fields: [rfqLineId], references: [id], onDelete: SetNull)
+  productId  String
+  product    Product       @relation(fields: [productId], references: [id])
+  quantity   Float
+  unitPrice  Float
+  totalPrice Float
+  leadDays   Int           @default(7)
+  createdAt  DateTime      @default(now())
+}
+
+// 3. Logistics 360 & Freight Tracking
+model Carrier {
+  id                 String     @id @default(uuid())
+  code               String     @unique
+  name               String
+  serviceType        String     @default("STANDARD_FREIGHT")
+  trackingUrlPattern String?
+  contactPhone       String?
+  contactEmail       String?
+  rating             Float      @default(4.8)
+  isActive           Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+
+  shipments          Shipment[]
+}
+
+model Shipment {
+  id                String              @id @default(uuid())
+  shipmentNumber    String              @unique
+  trackingNumber    String              @unique
+  carrierId         String
+  carrier           Carrier             @relation(fields: [carrierId], references: [id])
+  deliveryId        String?
+  transferId        String?
+  originWarehouseId String?
+  destAddress       String
+  status            ShipmentStatus      @default(BOOKED)
+  freightCost       Float               @default(0.0)
+  estimatedArrival  DateTime?
+  actualArrival     DateTime?
+  proofOfDelivery   String?
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  milestones        ShipmentMilestone[]
+}
+
+model ShipmentMilestone {
+  id          String         @id @default(uuid())
+  shipmentId  String
+  shipment    Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status      ShipmentStatus
+  location    String
+  description String
+  actor       String?
+  timestamp   DateTime       @default(now())
+}
+
+// 4. Fleet Management
+model FleetVehicle {
+  id                  String            @id @default(uuid())
+  vehicleCode         String            @unique
+  registrationNumber  String            @unique
+  make                String
+  model               String
+  year                Int               @default(2023)
+  capacityKg          Float             @default(5000.0)
+  status              VehicleStatus     @default(AVAILABLE)
+  assignedDriverName  String?
+  assignedDriverPhone String?
+  mileageKm           Float             @default(0.0)
+  operatingCostPerKm  Float             @default(0.85)
+  lastServiceDate     DateTime?
+  nextServiceDate     DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  trips               VehicleTrip[]
+  fuelLogs            VehicleFuelLog[]
+}
+
+model VehicleTrip {
+  id             String       @id @default(uuid())
+  tripNumber     String       @unique
+  vehicleId      String
+  vehicle        FleetVehicle @relation(fields: [vehicleId], references: [id])
+  driverName     String
+  destination    String
+  status         TripStatus   @default(SCHEDULED)
+  departureTime  DateTime?
+  arrivalTime    DateTime?
+  distanceKm     Float        @default(0.0)
+  fuelLitersUsed Float        @default(0.0)
+  operatingCost  Float        @default(0.0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model VehicleFuelLog {
+  id          String       @id @default(uuid())
+  vehicleId   String
+  vehicle     FleetVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  liters      Float
+  totalCost   Float
+  odometerKm  Float
+  stationName String?
+  loggedAt    DateTime     @default(now())
+}
+
+// 5. Import & Export Customs
+model CustomsShipment {
+  id                 String        @id @default(uuid())
+  customsRefNumber   String        @unique
+  type               CustomsType   @default(IMPORT)
+  originCountry      String
+  destinationCountry String
+  incoterms          String        @default("FOB")
+  portOfEntry        String?
+  declaredValue      Float         @default(0.0)
+  currency           String        @default("USD")
+  dutiesAmount       Float         @default(0.0)
+  taxesAmount        Float         @default(0.0)
+  freightCharges     Float         @default(0.0)
+  insuranceCharges   Float         @default(0.0)
+  landedCostTotal    Float         @default(0.0)
+  status             CustomsStatus @default(DRAFT)
+  inspectionRequired Boolean       @default(false)
+  hsCodes            String?
+  documentsJson      String?
+  notes              String?
+  clearedAt          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+}
+
+// 6. Demand Planning & Forecasting
+model DemandForecast {
+  id               String           @id @default(uuid())
+  productId        String
+  product          Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  periodMonth      String           // Format: "YYYY-MM"
+  modelType        DemandModelType  @default(MOVING_AVERAGE)
+  scenario         ForecastScenario @default(BASELINE)
+  projectedDemand  Float
+  actualDemand     Float?
+  variance         Float?
+  confidenceScore  Float            @default(0.85)
+  assumptions      String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([productId, periodMonth, scenario])
+}
+
+// 7. Workflow Engine & Automation
+model WorkflowRule {
+  id             String                 @id @default(uuid())
+  name           String
+  description    String
+  category       String                 @default("INVENTORY") // INVENTORY, QUALITY, PROCUREMENT, LOGISTICS, SALES, MAINTENANCE
+  triggerEvent   String                 // e.g. stock.balance_changed, inventory.low_stock, quality.inspection_failed
+  conditions     String                 @default("[]") // JSON string of condition objects
+  actions        String                 @default("[]") // JSON string of action objects
+  executionOrder Int                    @default(0)
+  isActive       Boolean                @default(true)
+  executionCount Int                    @default(0)
+  successCount   Int                    @default(0)
+  failureCount   Int                    @default(0)
+  lastExecutedAt DateTime?
+  createdById    String?
+  updatedById    String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  logs           WorkflowExecutionLog[]
+}
+
+model WorkflowExecutionLog {
+  id             String       @id @default(uuid())
+  ruleId         String
+  rule           WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ruleName       String
+  triggerEvent   String
+  status         String       @default("SUCCESS") // SUCCESS, FAILED, SIMULATED
+  isSimulation   Boolean      @default(false)
+  inputPayload   String?      // JSON string of triggering event
+  outputDetails  String       // Human-readable summary of actions taken
+  failureReason  String?
+  canRetry       Boolean      @default(false)
+  retryCount     Int          @default(0)
+  retriedAt      DateTime?
+  executedAt     DateTime     @default(now())
+
+  @@index([ruleId])
+  @@index([executedAt])
+}
+
+model BusinessEvent {
+  id             String    @id @default(uuid())
+  eventType      String    // stock.balance_changed, inventory.low_stock, etc.
+  entityType     String    // Product, PurchaseOrder, QualityCheck, etc.
+  entityId       String
+  payload        String    // JSON string
+  actorId        String?
+  actorEmail     String?
+  idempotencyKey String?   @unique
+  processed      Boolean   @default(false)
+  processedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([eventType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model JobWorkOrder {
+  id                        String    @id @default(uuid())
+  orderNumber               String    @unique
+  vendorId                  String
+  vendor                    Supplier  @relation(fields: [vendorId], references: [id])
+  serviceType               String    // Heat Treatment, Powder Coating, CNC Turning, Galvanizing, Assembly
+  status                    String    @default("ISSUED") // ISSUED, IN_PROCESS, PARTIALLY_RECEIVED, COMPLETED, CANCELLED
+  
+  rawMaterialProductId      String
+  rawMaterialProduct        Product   @relation("JobWorkRawMaterial", fields: [rawMaterialProductId], references: [id])
+  rawMaterialQty            Float
+  rawMaterialUom            String    @default("KG")
+  
+  expectedFinishedProductId String
+  expectedFinishedProduct   Product   @relation("JobWorkFinished", fields: [expectedFinishedProductId], references: [id])
+  expectedFinishedQty       Float
+  wastageTolerancePct       Float     @default(5.0)
+  
+  receivedFinishedQty       Float     @default(0.0)
+  scrapReturnedQty          Float     @default(0.0)
+  burningLossQty            Float     @default(0.0)
+  
+  issueChallanNumber        String?
+  returnChallanNumber       String?
+  expectedReturnDate        DateTime?
+  actualReturnDate          DateTime?
+  
+  ratePerUnit               Float     @default(0.0)
+  totalCost                 Float     @default(0.0)
+  notes                     String?
+  createdById               String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+}
+
+model DebitNote {
+  id               String         @id @default(uuid())
+  noteNumber       String         @unique
+  supplierId       String
+  supplier         Supplier       @relation(fields: [supplierId], references: [id])
+  purchaseOrderId  String?
+  purchaseOrder    PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  receiptId        String?
+  receipt          GoodsReceipt?  @relation(fields: [receiptId], references: [id])
+  productId        String
+  product          Product        @relation(fields: [productId], references: [id])
+  
+  rejectedQty      Float
+  unitPrice        Float
+  totalDebitAmount Float
+  reason           String         // DAMAGED_IN_TRANSIT, SHORTAGE_IN_CHALLAN, QUALITY_REJECTED, SPEC_MISMATCH
+  status           String         @default("ISSUED") // DRAFT, ISSUED, ADJUSTED_AGAINST_BILL, SETTLED
+  notes            String?
+  createdById      String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([supplierId])
+  @@index([status])
+}
+
+model CustomerCreditProfile {
+  id                 String    @id @default(uuid())
+  customerId         String    @unique
+  customer           Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  creditLimit        Float     @default(10000.0)
+  currentOutstanding Float     @default(0.0)
+  overdueAmount      Float     @default(0.0)
+  paymentTermsDays   Int       @default(30)
+  creditHold         Boolean   @default(false)
+  lastPaymentDate    DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model DeliveryChallan {
+  id               String    @id @default(uuid())
+  challanNumber    String    @unique
+  deliveryId       String?
+  customerId       String
+  customer         Customer  @relation(fields: [customerId], references: [id])
+  vehicleNumber    String?   // e.g. MH-12-AB-4052 or DL-1L-8821
+  driverName       String?
+  driverPhone      String?
+  transporterName  String?
+  totalPackages    Int       @default(1)
+  grossWeightKg    Float     @default(0.0)
+  dispatchStatus   String    @default("DISPATCHED") // DISPATCHED, IN_TRANSIT, DELIVERED, REJECTED_PARTIAL
+  whatsappShareUrl String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([dispatchStatus])
+}
+
+
+// Oxoo Central integration mappings.
+// These models map existing product-local IDs to canonical Oxoo UUIDs.
+// They do not replace Organization/User models or by themselves enforce tenant isolation.
+model OxooTenantMapping {
+  productTenantId          String   @id @map("product_tenant_id")
+  oxooOrganizationUuid     String   @unique @db.Uuid @map("oxoo_organization_uuid")
+  status                   String   @default("pending")
+  lastEntitlementCheckAt   DateTime? @db.Timestamptz(6) @map("last_entitlement_check_at")
+  createdAt                DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt                DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  userMappings             OxooUserMapping[]
+  entitlements             OxooEntitlementCache[]
+
+  @@index([status])
+  @@map("oxoo_tenant_mapping")
+}
+
+model OxooUserMapping {
+  productUserId      String   @id @map("product_user_id")
+  oxooUserUuid       String   @db.Uuid @map("oxoo_user_uuid")
+  productTenantId    String   @map("product_tenant_id")
+  status             String   @default("pending")
+  createdAt          DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt          DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  tenant             OxooTenantMapping @relation(fields: [productTenantId], references: [productTenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([oxooUserUuid, productTenantId])
+  @@index([oxooUserUuid])
+  @@index([productTenantId, status])
+  @@map("oxoo_user_mapping")
+}
+
+model OxooEntitlementCache {
+  productTenantId String   @map("product_tenant_id")
+  productCode     String   @map("product_code")
+  status          String   @default("pending")
+  checkedAt       DateTime? @db.Timestamptz(6) @map("checked_at")
+  validUntil      DateTime? @db.Timestamptz(6) @map("valid_until")
+  sourceVersion   String?  @map("source_version")
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  tenant          OxooTenantMapping @relation(fields: [productTenantId], references: [productTenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([productTenantId, productCode])
+  @@index([status, validUntil])
+  @@map("oxoo_entitlement_cache")
+}

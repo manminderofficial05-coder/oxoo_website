@@ -1,0 +1,162 @@
+{
+  "findings": [
+    {
+      "id": "AUTH-02",
+      "severity": "HIGH",
+      "title": "Admin Key Shared with JWT Secret / Default Insecure Key",
+      "file": "backend/src/server.js",
+      "line": 119,
+      "snippet": "if (adminKey && (adminKey === process.env.ADMIN_API_KEY || adminKey === JWT_SECRET)) {",
+      "description": "Admin auth middleware accepts JWT_SECRET as x-admin-key and default fallback secret."
+    },
+    {
+      "id": "AUTH-01",
+      "severity": "CRITICAL",
+      "title": "Hardcoded Super Admin JWT Token Bypass",
+      "file": "backend/src/server.js",
+      "line": 129,
+      "snippet": "if (token === 'demo-admin-jwt-token-88') {",
+      "description": "Hardcoded token `demo-admin-jwt-token-88` bypasses JWT signature verification and grants super_admin role."
+    },
+    {
+      "id": "SEC-01",
+      "severity": "HIGH",
+      "title": "Hardcoded Payment Gateway Test Secret in Source Code",
+      "file": "backend/src/server.js",
+      "line": 1053,
+      "snippet": "const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tqu6q5BYPuxhzd';",
+      "description": "Hardcoded fallback Razorpay Key ID and Secret in backend/src/server.js."
+    },
+    {
+      "id": "SEC-01",
+      "severity": "HIGH",
+      "title": "Hardcoded Payment Gateway Test Secret in Source Code",
+      "file": "backend/src/server.js",
+      "line": 1054,
+      "snippet": "const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'VzzE4JIz1vaKtWJkAqurKwT8';",
+      "description": "Hardcoded fallback Razorpay Key ID and Secret in backend/src/server.js."
+    },
+    {
+      "id": "SEC-01",
+      "severity": "HIGH",
+      "title": "Hardcoded Payment Gateway Test Secret in Source Code",
+      "file": "backend/src/server.js",
+      "line": 6028,
+      "snippet": "const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tqu6q5BYPuxhzd';",
+      "description": "Hardcoded fallback Razorpay Key ID and Secret in backend/src/server.js."
+    },
+    {
+      "id": "SEC-01",
+      "severity": "HIGH",
+      "title": "Hardcoded Payment Gateway Test Secret in Source Code",
+      "file": "backend/src/server.js",
+      "line": 6029,
+      "snippet": "const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'VzzE4JIz1vaKtWJkAqurKwT8';",
+      "description": "Hardcoded fallback Razorpay Key ID and Secret in backend/src/server.js."
+    },
+    {
+      "id": "BOLA-01",
+      "severity": "CRITICAL",
+      "title": "Broken Object-Level Authorization (BOLA) via Client-Controlled Headers/Query Params",
+      "file": "backend/src/server.js",
+      "line": 1666,
+      "snippet": "let userEmail = (req.headers['x-user-email'] || req.query.email || req.body?.email || '').trim().toLowerCase(); | let userCompany = (req.headers['x-user-company'] || req.query.company || req.body?.company || req.body?.companyName || '').trim();",
+      "description": "resolveCustomerContext() trusts unauthenticated client-supplied `x-user-email`, `x-user-company`, `query.email`, and `query.company` without requiring a valid Bearer token. Anyone can impersonate another tenant by spoofing headers."
+    },
+    {
+      "id": "BFLA-01",
+      "severity": "HIGH",
+      "title": "Endpoint /api/customer/overview Lacks verifyToken Middleware",
+      "file": "backend/src/server.js",
+      "line": 1783,
+      "snippet": "app.get('/api/customer/overview', async (req, res, next) => {",
+      "description": "Endpoint /api/customer/overview does not use verifyToken middleware; relies on optional resolveCustomerContext() which accepts spoofed headers."
+    },
+    {
+      "id": "BFLA-01",
+      "severity": "HIGH",
+      "title": "Endpoint /api/customer/billing Lacks verifyToken Middleware",
+      "file": "backend/src/server.js",
+      "line": 1999,
+      "snippet": "app.get('/api/customer/billing', async (req, res, next) => {",
+      "description": "Endpoint /api/customer/billing does not use verifyToken middleware; relies on optional resolveCustomerContext() which accepts spoofed headers."
+    },
+    {
+      "id": "BFLA-01",
+      "severity": "HIGH",
+      "title": "Endpoint /api/customer/team Lacks verifyToken Middleware",
+      "file": "backend/src/server.js",
+      "line": 2180,
+      "snippet": "app.get('/api/customer/team', async (req, res, next) => {",
+      "description": "Endpoint /api/customer/team does not use verifyToken middleware; relies on optional resolveCustomerContext() which accepts spoofed headers."
+    },
+    {
+      "id": "BFLA-01",
+      "severity": "HIGH",
+      "title": "Endpoint /api/customer/tickets Lacks verifyToken Middleware",
+      "file": "backend/src/server.js",
+      "line": 2377,
+      "snippet": "app.get('/api/customer/tickets', async (req, res, next) => {",
+      "description": "Endpoint /api/customer/tickets does not use verifyToken middleware; relies on optional resolveCustomerContext() which accepts spoofed headers."
+    },
+    {
+      "id": "PAY-01",
+      "severity": "CRITICAL",
+      "title": "Missing Cryptographic Payment Signature Verification",
+      "file": "backend/src/server.js",
+      "line": 6072,
+      "snippet": "app.post('/api/payment/verify', async (req, res, next) => {",
+      "description": "POST /api/payment/verify creates active subscriptions and invoices without verifying Razorpay HMAC SHA256 signature. Any client can forge payment success."
+    },
+    {
+      "id": "FILE-01",
+      "severity": "MEDIUM",
+      "title": "File Attachments Stored as Raw Base64 in Database without Antivirus/Malware Inspection",
+      "file": "backend/src/server.js",
+      "line": 2663,
+      "snippet": "app.post('/api/customer/tickets', async (req, res, next) => {",
+      "description": "Attachments are received as base64 JSON payload and stored in PostgreSQL JSONB/disk without virus scanning or magic bytes content-type verification."
+    },
+    {
+      "id": "FILE-02",
+      "severity": "HIGH",
+      "title": "Unauthenticated Ticket Attachment Access (IDOR)",
+      "file": "backend/src/server.js",
+      "line": 2638,
+      "snippet": "app.get('/api/tickets/attachments/:id', async (req, res, next) => {",
+      "description": "GET /api/tickets/attachments/:id has no authentication middleware or tenant ownership check. Anyone with an attachment ID can download private customer files."
+    }
+  ],
+  "productMap": [
+    {
+      "product": "ai-demo",
+      "usesCentralAuth": false,
+      "authMechanism": "Local / Mock / Standalone"
+    },
+    {
+      "product": "hrms-demo",
+      "usesCentralAuth": false,
+      "authMechanism": "Local / Mock / Standalone"
+    },
+    {
+      "product": "oxoo-finance-demo",
+      "usesCentralAuth": false,
+      "authMechanism": "Local / Mock / Standalone"
+    },
+    {
+      "product": "sales-demo",
+      "usesCentralAuth": false,
+      "authMechanism": "Local / Mock / Standalone"
+    },
+    {
+      "product": "supply_chain",
+      "usesCentralAuth": false,
+      "authMechanism": "Local / Mock / Standalone"
+    },
+    {
+      "product": "website-builder-demo",
+      "usesCentralAuth": false,
+      "authMechanism": "Local / Mock / Standalone"
+    }
+  ]
+}

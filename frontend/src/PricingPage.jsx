@@ -4,6 +4,7 @@ import { ArrowRight, Sparkles, Check, Building2, HelpCircle } from 'lucide-react
 import { Header, Footer } from './components';
 import { ALL_APPS_CATEGORIES } from './AllAppsDirectory';
 import DemoInquiryModal from './demo/DemoInquiryModal';
+import { useRegionPricing } from './RegionPricingContext';
 import './pricing.css';
 
 // --------------------------------------------------------------------------
@@ -20,7 +21,7 @@ export const SOFTWARE_MODULES = [
     color: '#2563eb',
     bgColor: '#eff6ff',
     priceMonthly: 740,
-    priceYearly: 560
+    priceYearly: 580
   },
   {
     id: 'sales',
@@ -32,7 +33,7 @@ export const SOFTWARE_MODULES = [
     color: '#ec4899',
     bgColor: '#fdf2f8',
     priceMonthly: 740,
-    priceYearly: 560
+    priceYearly: 580
   },
   {
     id: 'supply-chain',
@@ -44,7 +45,7 @@ export const SOFTWARE_MODULES = [
     color: '#ea580c',
     bgColor: '#fff7ed',
     priceMonthly: 740,
-    priceYearly: 560
+    priceYearly: 580
   },
   {
     id: 'human-resources',
@@ -56,7 +57,7 @@ export const SOFTWARE_MODULES = [
     color: '#7c3aed',
     bgColor: '#f5f3ff',
     priceMonthly: 740,
-    priceYearly: 560
+    priceYearly: 580
   },
   {
     id: 'productivity',
@@ -68,7 +69,7 @@ export const SOFTWARE_MODULES = [
     color: '#6d28d9',
     bgColor: '#faf5ff',
     priceMonthly: 740,
-    priceYearly: 560
+    priceYearly: 580
   }
 ];
 
@@ -77,6 +78,7 @@ export const SOFTWARE_CATEGORIES = ALL_APPS_CATEGORIES;
 export default function PricingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { currentRegion, formatPrice } = useRegionPricing();
 
   // Read incoming query params from Demos or Landing links
   const querySoftware = searchParams.get('software') || searchParams.get('app') || searchParams.get('apps') || searchParams.get('demo') || searchParams.get('product') || '';
@@ -108,10 +110,38 @@ export default function PricingPage() {
 
   const activeModule = SOFTWARE_MODULES.find((m) => m.id === selectedSoftware) || SOFTWARE_MODULES[0];
 
+  // Derived regional plan prices safely aligned with pricingConfig schema
+  const single = currentRegion?.plans?.singleApp || {};
+  const custom = currentRegion?.plans?.customApps || {};
+
+  const singlePlan = {
+    price: isYearly ? (single.yearlyPrice ?? 580) : (single.monthlyPrice ?? 740),
+    originalPrice: isYearly ? (single.yearlyStrikethroughPrice ?? 740) : (single.monthlyStrikethroughPrice ?? 975),
+    discountPercent: isYearly ? (single.discountPercentYearly ?? 22) : (single.discountPercentMonthly ?? 24)
+  };
+
+  const customPlan = {
+    price: isYearly ? (custom.yearlyBasePrice ?? 980) : (custom.monthlyBasePrice ?? 1280),
+    originalPrice: isYearly ? (custom.yearlyStrikethroughBasePrice ?? 1280) : (custom.monthlyStrikethroughBasePrice ?? 1660),
+    discountPercent: isYearly ? (custom.discountPercentYearly ?? 23) : (custom.discountPercentMonthly ?? 23)
+  };
+
+  const addlPlan = {
+    price: isYearly ? (custom.yearlyAdditionalAppPrice ?? 580) : (custom.monthlyAdditionalAppPrice ?? 740)
+  };
+
+  const singleDiscount = singlePlan.originalPrice > singlePlan.price
+    ? Math.round(((singlePlan.originalPrice - singlePlan.price) / singlePlan.originalPrice) * 100)
+    : (singlePlan.discountPercent || 0);
+
+  const customDiscount = customPlan.originalPrice > customPlan.price
+    ? Math.round(((customPlan.originalPrice - customPlan.price) / customPlan.originalPrice) * 100)
+    : (customPlan.discountPercent || 0);
+
   // Navigate to full-page checkout flow carrying selected product and parameters forward!
   const handleGoToCheckout = (plan, trial = false) => {
     const compParam = queryCompany ? `&company=${encodeURIComponent(queryCompany)}` : '';
-    navigate(`/checkout?plan=${plan}&apps=${selectedSoftware}&billing=${isYearly ? 'yearly' : 'monthly'}${trial ? '&trial=true' : ''}${compParam}`);
+    navigate(`/checkout?plan=${plan}&apps=${selectedSoftware}&billing=${isYearly ? 'yearly' : 'monthly'}${trial ? '&trial=true' : ''}${compParam}&country=${currentRegion.regionCode}&currency=${currentRegion.currency}`);
   };
 
   return (
@@ -221,7 +251,7 @@ export default function PricingPage() {
               <h2 className="card-plan-title">Free Demo</h2>
 
               <div className="card-price-row">
-                <span className="price-currency blue">Rs</span>
+                <span className="price-currency blue">{currentRegion.symbol}</span>
                 <span className="price-val blue">0</span>
               </div>
               <div className="price-unit-caption">Completely Free</div>
@@ -237,7 +267,7 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Card 2: Standard Pack (Monthly 740 / Yearly 560) */}
+          {/* Card 2: Standard Pack (Single App) */}
           <div className="pricing-card">
             <div className="card-top-banner banner-coral">
               Best for Small Business
@@ -246,12 +276,14 @@ export default function PricingPage() {
               <h2 className="card-plan-title">Standard Pack</h2>
 
               <div className="card-price-row">
-                <span className="price-currency coral">Rs</span>
-                <span className="price-val coral">{isYearly ? '560' : '740'}</span>
-                <div className="price-strike-wrap">
-                  <span className="price-struck">{isYearly ? 'Rs 740' : 'Rs 975'}</span>
-                  <span className="discount-pill coral">24% OFF</span>
-                </div>
+                <span className="price-currency coral">{currentRegion.symbol}</span>
+                <span className="price-val coral">{singlePlan.price}</span>
+                {singleDiscount > 0 && (
+                  <div className="price-strike-wrap">
+                    <span className="price-struck">{currentRegion.symbol} {singlePlan.originalPrice}</span>
+                    <span className="discount-pill coral">{singleDiscount}% OFF</span>
+                  </div>
+                )}
               </div>
               <div className="price-unit-caption">
                 / user / month
@@ -273,7 +305,7 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Card 3: Custom Pack (Monthly 1280 / Yearly 980 for 2 softwares) */}
+          {/* Card 3: Custom Pack (2 Softwares included) */}
           <div className="pricing-card featured-card">
             <div className="card-top-banner banner-mint">
               Most Popular for Growing Business
@@ -282,12 +314,14 @@ export default function PricingPage() {
               <h2 className="card-plan-title">Custom Pack</h2>
 
               <div className="card-price-row">
-                <span className="price-currency mint">Rs</span>
-                <span className="price-val mint">{isYearly ? '980' : '1,280'}</span>
-                <div className="price-strike-wrap">
-                  <span className="price-struck">{isYearly ? 'Rs 1,280' : 'Rs 1,660'}</span>
-                  <span className="discount-pill mint">23% OFF</span>
-                </div>
+                <span className="price-currency mint">{currentRegion.symbol}</span>
+                <span className="price-val mint">{customPlan.price}</span>
+                {customDiscount > 0 && (
+                  <div className="price-strike-wrap">
+                    <span className="price-struck">{currentRegion.symbol} {customPlan.originalPrice}</span>
+                    <span className="discount-pill mint">{customDiscount}% OFF</span>
+                  </div>
+                )}
               </div>
               <div className="price-unit-caption">
                 / user / month (for 2 softwares)
@@ -298,7 +332,7 @@ export default function PricingPage() {
                 )}
               </div>
               <div className="price-extra-note">
-                Additional software: + Rs {isYearly ? '560' : '740'} each / user / month
+                Additional software: + {currentRegion.symbol} {addlPlan.price} each / user / month
               </div>
 
               <button

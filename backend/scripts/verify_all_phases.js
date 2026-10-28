@@ -139,23 +139,47 @@ async function runTests() {
     // TEST GROUP 4: Super Admin Inquiries Module
     // ----------------------------------------------------
     console.log('\n--- TEST GROUP 4: Super Admin Inquiries Endpoints ---');
-    // 4.1 Summary
-    const summaryRes = await fetch(`${BACKEND_URL}/api/admin/inquiries/summary`);
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'oxoo-super-secret-jwt-key-2026';
+    const adminToken = jwt.sign(
+      { id: 1, email: 'admin@oxoo.ai', name: 'Master Security Admin', role: 'super_admin' },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    const customerToken = jwt.sign(
+      { id: 'cust_priya', email: 'priya@retailmart.com', name: 'Priya Sharma', role: 'customer', organization: 'RetailMart Solutions' },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // 4.0 Verify unauthenticated request is rejected with 401
+    const unauthInq = await fetch(`${BACKEND_URL}/api/admin/inquiries/summary`);
+    assert(unauthInq.status === 401, 'Unauthenticated access to /api/admin/inquiries/summary is rejected with HTTP 401');
+
+    // 4.1 Summary with admin token
+    const summaryRes = await fetch(`${BACKEND_URL}/api/admin/inquiries/summary`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
     const summaryData = await summaryRes.json();
-    assert(summaryRes.ok, 'Admin inquiries summary returns HTTP 200');
+    assert(summaryRes.ok, 'Admin inquiries summary returns HTTP 200 with valid admin session');
     assert(typeof summaryData.total === 'number' && summaryData.total >= 1, `Total inquiries count is ${summaryData.total}`);
 
-    // 4.2 List
-    const listRes = await fetch(`${BACKEND_URL}/api/admin/inquiries?limit=10`);
+    // 4.2 List with admin token
+    const listRes = await fetch(`${BACKEND_URL}/api/admin/inquiries?limit=10`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
     const listData = await listRes.json();
-    assert(listRes.ok, 'Admin inquiries list returns HTTP 200');
+    assert(listRes.ok, 'Admin inquiries list returns HTTP 200 with valid admin session');
     assert(Array.isArray(listData.inquiries) && listData.inquiries.length > 0, `Returned ${listData.inquiries.length} inquiries`);
 
     // 4.3 Update inquiry status & note
     const targetInq = listData.inquiries[0];
     const updateRes = await fetch(`${BACKEND_URL}/api/admin/inquiries/${targetInq.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
       body: JSON.stringify({
         status: 'Contacted',
         assigned_to: 'Vikram Patel',
@@ -170,10 +194,13 @@ async function runTests() {
     // TEST GROUP 5: Support Tickets & Acknowledgement Flow
     // ----------------------------------------------------
     console.log('\n--- TEST GROUP 5: Support Tickets & Acknowledgement Flow ---');
-    // 5.1 Create customer ticket with attachment
+    // 5.1 Create customer ticket with attachment & token
     const ticketRes = await fetch(`${BACKEND_URL}/api/customer/tickets`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${customerToken}`
+      },
       body: JSON.stringify({
         customerName: 'Priya Sharma',
         customerEmail: 'priya@retailmart.com',
@@ -204,7 +231,10 @@ async function runTests() {
     // 5.2 Staff Reply (creates notification & logs email)
     const staffReplyRes = await fetch(`${BACKEND_URL}/api/admin/tickets/${createdTicketId}/reply`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
       body: JSON.stringify({
         sender: 'OXOO Support Team',
         message: 'Hello Priya, we have reviewed your attached screenshot. The GST rate for HSN code 998314 has been corrected to 18% on your account.'
@@ -219,10 +249,13 @@ async function runTests() {
     );
     assert(notifCheck.rows.length > 0, 'Customer in-app notification recorded in database');
 
-    // 5.4 Customer Reply back to conversation
+    // 5.4 Customer Reply back to conversation with token
     const custReplyRes = await fetch(`${BACKEND_URL}/api/customer/tickets/${createdTicketId}/reply`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${customerToken}`
+      },
       body: JSON.stringify({
         sender: 'Priya Sharma',
         customerEmail: 'priya@retailmart.com',
