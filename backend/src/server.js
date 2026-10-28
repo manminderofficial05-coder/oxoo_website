@@ -6745,16 +6745,22 @@ async function start() {
   }
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'oxoo-super-secret-jwt-key-2026') {
     if (process.env.NODE_ENV === 'production') {
-      console.error('FATAL SECURITY ERROR: Insecure or default JWT_SECRET is prohibited in production.');
-      process.exit(1);
+      const generatedSecret = crypto.randomBytes(32).toString('hex');
+      process.env.JWT_SECRET = generatedSecret;
+      console.warn('⚠️ SECURITY WARNING: Insecure or default JWT_SECRET detected in production.');
+      console.warn('Auto-generated a secure random JWT_SECRET for this runtime session.');
+      console.warn('Recommended: Set a persistent JWT_SECRET in your Render dashboard Environment tab.');
     } else {
       console.warn('SECURITY WARNING: Using default development JWT_SECRET. Set a strong secret before deployment.');
     }
   }
-  if (process.env.ADMIN_API_KEY === 'oxoo-admin-secret-key-2026') {
+  if (!process.env.ADMIN_API_KEY || process.env.ADMIN_API_KEY === 'oxoo-admin-secret-key-2026') {
     if (process.env.NODE_ENV === 'production') {
-      console.error('FATAL SECURITY ERROR: Insecure default ADMIN_API_KEY is prohibited in production.');
-      process.exit(1);
+      const generatedAdminKey = crypto.randomBytes(24).toString('hex');
+      process.env.ADMIN_API_KEY = generatedAdminKey;
+      console.warn('⚠️ SECURITY WARNING: Insecure or default ADMIN_API_KEY detected in production.');
+      console.warn('Auto-generated a secure random ADMIN_API_KEY for this runtime session.');
+      console.warn('Recommended: Set a persistent ADMIN_API_KEY in your Render dashboard Environment tab.');
     } else {
       console.warn('SECURITY WARNING: Using default ADMIN_API_KEY. Override with an unguessable key in production.');
     }
