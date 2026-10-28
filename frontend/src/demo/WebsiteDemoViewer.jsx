@@ -9,6 +9,7 @@ import { Logo } from '../components';
 import CompanyBrandLogo from '../CompanyBrandLogo';
 import { getAppBySlug, APPS_DATA } from '../appsData';
 import { sendEmailOtp, verifyEmailOtp } from '../api';
+import DemoInquiryModal from './DemoInquiryModal';
 import './demo.css';
 
 // 5 Interactive Application Demos Catalog
@@ -263,9 +264,63 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [timeExpiredModal, setTimeExpiredModal] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('Business Pro');
 
   const timerRef = useRef(null);
+
+  // Helper to determine if current demo requires inquiry journey
+  const isInquiryDemo = (id) => {
+    if (!id) return false;
+    const s = id.toLowerCase();
+    return s === 'website-builder-demo' || s.includes('website') || s.includes('marketplace') || s.includes('whatsapp');
+  };
+
+  // Helper to map software demo to core software package id
+  const mapDemoToSoftwareId = (demoId, activeAppSlug) => {
+    if (demoId === 'hrms-demo') return 'human-resources';
+    if (demoId === 'finance-demo') return 'finance';
+    if (demoId === 'sales-demo') return 'sales';
+    if (demoId === 'supply-chain-demo') return 'supply-chain';
+    if (demoId === 'ai-demo') return 'productivity';
+    return 'finance';
+  };
+
+  // Inquiry metadata helper
+  const getInquiryMeta = (demoId) => {
+    const s = (demoId || '').toLowerCase();
+    if (s.includes('marketplace')) {
+      return {
+        category: 'Marketplace',
+        productName: 'OXOO Multi-Vendor Marketplace Platform',
+        availablePlans: ['Starter Marketplace', 'Growth Marketplace', 'Enterprise High-Volume Marketplace']
+      };
+    }
+    if (s.includes('whatsapp')) {
+      return {
+        category: 'WhatsApp AI Chat',
+        productName: 'OXOO WhatsApp AI Chat & Flow Automation',
+        availablePlans: ['Growth Bot Pack', 'Pro Team Inbox & Flows', 'Enterprise Meta Cloud Suite']
+      };
+    }
+    return {
+      category: 'Website & Apps',
+      productName: 'OXOO Website Builder & Digital Studio',
+      availablePlans: ['Starter Builder', 'Growth Studio', 'Business eCommerce', 'Custom Enterprise Studio']
+    };
+  };
+
+  const inquiryMeta = getInquiryMeta(activeDemoId);
+
+  // Dedicated Buy Plan Click Handler (Phase 3 requirement)
+  const handleBuyPlanClick = () => {
+    if (isInquiryDemo(activeDemoId)) {
+      setInquiryModalOpen(true);
+    } else {
+      const softId = mapDemoToSoftwareId(activeDemoId, activeAppObj?.slug);
+      navigate(`/pricing?software=${softId}&demo=${activeDemoId}&company=${encodeURIComponent(company)}`);
+    }
+  };
 
   // Auto-authenticate any embedded demo sessions (e.g. AI / Productivity Hospital Cart demo)
   useEffect(() => {
@@ -343,7 +398,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     navigate(targetApp.slug ? `/apps/${targetApp.slug}` : '/apps');
   };
 
-  const handleChoosePlan = (planName) => {
+  const handleChoosePlan = (planKeyOrName) => {
     try {
       localStorage.removeItem('website_builder_current_config');
       localStorage.removeItem('website_builder_saved_sites');
@@ -351,7 +406,18 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
       localStorage.removeItem('website_builder_active_step');
       sessionStorage.removeItem('website_builder_active_step');
     } catch (e) {}
-    navigate(`/pricing?plan=${encodeURIComponent(planName)}`);
+
+    if (isInquiryDemo(activeDemoId)) {
+      setLeaveModalOpen(false);
+      setTimeExpiredModal(false);
+      setInquiryModalOpen(true);
+      return;
+    }
+
+    const softId = mapDemoToSoftwareId(activeDemoId, activeAppObj?.slug);
+    const isCustom = typeof planKeyOrName === 'string' && (planKeyOrName.toLowerCase().includes('custom') || planKeyOrName.toLowerCase().includes('enterprise'));
+    const planParam = isCustom ? 'custom' : 'single';
+    navigate(`/checkout?plan=${planParam}&apps=${softId}&billing=yearly&company=${encodeURIComponent(company)}`);
   };
 
   const handleRestartDemo = () => {
@@ -643,7 +709,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
           <button
             type="button"
             className="oxoo-viewer-btn-buy"
-            onClick={() => setLeaveModalOpen(true)}
+            onClick={handleBuyPlanClick}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -731,81 +797,120 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
             >
-              <div className="oxoo-plans-modal-header" style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 50%, #1e3a8a 100%)' }}>
+              <div className="oxoo-plans-modal-header" style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}>
                 <span className="oxoo-plans-header-pill" style={{ background: 'rgba(239, 68, 68, 0.25)', borderColor: '#ef4444', color: '#fca5a5' }}>
-                  <Clock size={12} /> 2-MINUTE FREE DEMO PERIOD FINISHED
+                  <Clock size={12} /> 2-MINUTE FREE DEMO PERIOD COMPLETED
                 </span>
-                <h2 className="oxoo-plans-header-title">Ready to Launch Your Full Suite?</h2>
+                <h2 className="oxoo-plans-header-title">
+                  {isInquiryDemo(activeDemoId) ? 'Ready to Build Your Custom Digital Platform?' : 'Ready to Launch Your Full Suite?'}
+                </h2>
                 <p className="oxoo-plans-header-subtitle">
-                  Your 2-minute interactive test session for {activeConfig.name} has completed. Choose an Oxoo plan to save your work, connect custom domains, and deploy live.
+                  {isInquiryDemo(activeDemoId)
+                    ? `Your preview session for ${activeConfig.name} has concluded. Submit an inquiry to receive a tailored solution blueprint and quote.`
+                    : `Your interactive session for ${activeConfig.name} has completed. Choose an official Oxoo software package or view our complete pricing catalog.`}
                 </p>
               </div>
 
-              {/* 4 Plan Cards */}
-              <div className="oxoo-plans-cards-grid">
-                {[
-                  {
-                    name: 'Starter',
-                    price: '₹15,000',
-                    popular: false,
-                    features: ['5 Team Seats', '3 Core Applications', 'Export HTML/CSS', 'Custom Domain SSL']
-                  },
-                  {
-                    name: 'Growth',
-                    price: '₹25,000',
-                    popular: false,
-                    features: ['10 Team Seats', '5 Business Applications', 'Website Builder Pro', 'eCommerce Storefront']
-                  },
-                  {
-                    name: 'Business Pro',
-                    price: '₹48,200',
-                    popular: true,
-                    features: ['15 Team Seats', '8 Core Applications', 'Unlimited Websites', '24/7 Dedicated SLA', 'Custom API & SSO']
-                  },
-                  {
-                    name: 'Enterprise',
-                    price: '₹1,24,000',
-                    popular: false,
-                    features: ['Unlimited Seats', 'All 24 Applications', 'Dedicated Account Lead', 'Multi-tenant Isolation']
-                  }
-                ].map((plan) => (
-                  <div
-                    key={plan.name}
-                    className={`oxoo-plan-tile ${plan.popular ? 'highlight' : ''}`}
+              {isInquiryDemo(activeDemoId) ? (
+                /* Dedicated Inquiry Card for Websites / Marketplace / WhatsApp */
+                <div style={{ padding: '28px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', margin: '20px', border: '1.5px solid #e2e8f0' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#eff6ff', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
+                    <Sparkles size={28} />
+                  </div>
+                  <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
+                    {inquiryMeta.productName}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#64748b', maxWidth: '480px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+                    Our digital studios, multi-vendor marketplace, and WhatsApp AI flow engines are tailored specifically to your company architecture and scale requirements.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimeExpiredModal(false);
+                      setInquiryModalOpen(true);
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '12px 28px',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 20px rgba(37, 99, 235, 0.25)'
+                    }}
                   >
-                    {plan.popular && (
-                      <span className="oxoo-plan-badge-popular">Recommended</span>
-                    )}
+                    Submit Sales Inquiry & Request Quote →
+                  </button>
+                </div>
+              ) : (
+                /* Genuine OXOO Software Plans */
+                <div className="oxoo-plans-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', padding: '16px 20px' }}>
+                  {/* Standard Pack */}
+                  <div className="oxoo-plan-tile">
                     <div>
-                      <h4 className="oxoo-plan-tile-name">{plan.name}</h4>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                        Standard Pack
+                      </span>
+                      <h4 className="oxoo-plan-tile-name" style={{ marginTop: '8px' }}>Single Core Software</h4>
                       <div className="oxoo-plan-tile-price">
-                        {plan.price}<span style={{ fontSize: '11px', color: '#64748b' }}>{plan.cycle}</span>
+                        ₹560<span style={{ fontSize: '12px', color: '#64748b' }}> / user / month</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, marginBottom: '10px' }}>
+                        Billed annually (Save 24%)
                       </div>
                       <ul className="oxoo-plan-tile-features">
-                        {plan.features.map((f, i) => (
-                          <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <Check size={12} color="#0284c7" />
-                            <span>{f}</span>
-                          </li>
-                        ))}
+                        <li style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Check size={12} color="#0284c7" /><span>Full access to {activeConfig.label}</span></li>
+                        <li style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Check size={12} color="#0284c7" /><span>Dedicated cloud workspace & tenant DB</span></li>
+                        <li style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Check size={12} color="#0284c7" /><span>Automated daily backups & GST compliance</span></li>
                       </ul>
                     </div>
-
                     <button
                       type="button"
                       className="oxoo-plan-btn-choose"
-                      onClick={() => handleChoosePlan(plan.name)}
+                      onClick={() => handleChoosePlan('single')}
                     >
-                      Purchase {plan.name}
+                      Buy Standard Pack (₹560/mo) →
                     </button>
                   </div>
-                ))}
-              </div>
+
+                  {/* Custom Pack */}
+                  <div className="oxoo-plan-tile highlight">
+                    <span className="oxoo-plan-badge-popular">Most Popular</span>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '3px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                        Custom Pack
+                      </span>
+                      <h4 className="oxoo-plan-tile-name" style={{ marginTop: '8px' }}>2 Core Software Suites</h4>
+                      <div className="oxoo-plan-tile-price">
+                        ₹980<span style={{ fontSize: '12px', color: '#64748b' }}> / user / month</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, marginBottom: '10px' }}>
+                        Includes 2 full softwares + extra modules
+                      </div>
+                      <ul className="oxoo-plan-tile-features">
+                        <li style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Check size={12} color="#0284c7" /><span>{activeConfig.label} + Any 2nd suite</span></li>
+                        <li style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Check size={12} color="#0284c7" /><span>Cross-app unified workflow automation</span></li>
+                        <li style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Check size={12} color="#0284c7" /><span>Priority support & migration assistance</span></li>
+                      </ul>
+                    </div>
+                    <button
+                      type="button"
+                      className="oxoo-plan-btn-choose"
+                      style={{ background: '#059669', borderColor: '#059669' }}
+                      onClick={() => handleChoosePlan('custom')}
+                    >
+                      Buy Custom Pack (₹980/mo) →
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Footer with Restart option */}
               <div className="oxoo-plans-modal-footer">
                 <span className="oxoo-plans-footer-left">
-                  🔒 Instant plan activation with automatic database synchronization.
+                  🔒 Enterprise security, dedicated database isolation, and instant workspace provisioning.
                 </span>
                 <div className="oxoo-plans-footer-btns">
                   <button
@@ -816,14 +921,19 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
                     <RefreshCw size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
                     Restart Demo
                   </button>
-                  <button
-                    type="button"
-                    className="oxoo-viewer-btn-leave"
-                    style={{ background: '#0284c7', color: '#fff', border: 'none' }}
-                    onClick={() => handleChoosePlan('Business Pro')}
-                  >
-                    Get Business Pro Now →
-                  </button>
+                  {!isInquiryDemo(activeDemoId) && (
+                    <button
+                      type="button"
+                      className="oxoo-viewer-btn-leave"
+                      style={{ background: '#0284c7', color: '#fff', border: 'none' }}
+                      onClick={() => {
+                        const softId = mapDemoToSoftwareId(activeDemoId, activeAppObj?.slug);
+                        navigate(`/pricing?software=${softId}&demo=${activeDemoId}&company=${encodeURIComponent(company)}`);
+                      }}
+                    >
+                      View Full Pricing Catalog →
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -853,42 +963,84 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
                   <X size={18} />
                 </button>
                 <span className="oxoo-plans-header-pill">
-                  <Crown size={12} /> SAVE YOUR WORK & UPGRADE
+                  <Crown size={12} /> UPGRADE YOUR WORKSPACE
                 </span>
-                <h2 className="oxoo-plans-header-title">Before You Leave - Choose a Plan!</h2>
+                <h2 className="oxoo-plans-header-title">
+                  {isInquiryDemo(activeDemoId) ? 'Request a Tailored Digital Solution' : 'Before You Leave - Choose a Plan!'}
+                </h2>
                 <p className="oxoo-plans-header-subtitle">
-                  Don't lose your customized template and configurations in {activeConfig.name}. Pick a tier to continue building permanently.
+                  {isInquiryDemo(activeDemoId)
+                    ? `Connect with our solutions engineering team to build and deploy ${activeConfig.name}.`
+                    : `Don't lose your customized configurations in ${activeConfig.name}. Pick a plan to deploy your permanent workspace.`}
                 </p>
               </div>
 
-              {/* 4 Plan Cards */}
-              <div className="oxoo-plans-cards-grid">
-                {[
-                  { name: 'Starter', price: '₹15,000/mo', desc: 'For freelancers & micro teams' },
-                  { name: 'Growth', price: '₹25,000/mo', desc: 'For scaling modern businesses' },
-                  { name: 'Business Pro', price: '₹48,200/mo', desc: 'Full Application Suite + All 5 Demos', popular: true },
-                  { name: 'Enterprise', price: '₹1,24,000/mo', desc: 'Full 24 Suite Apps + 24/7 SLA & Dedicated Support' }
-                ].map((p) => (
-                  <div
-                    key={p.name}
-                    className={`oxoo-plan-tile ${p.popular ? 'highlight' : ''}`}
+              {isInquiryDemo(activeDemoId) ? (
+                <div style={{ padding: '24px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '14px', margin: '16px 20px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0' }}>
+                    {inquiryMeta.productName}
+                  </h4>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0' }}>
+                    Speak with an OXOO architect for customized templates, domain integrations, and workflow setups.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLeaveModalOpen(false);
+                      setInquiryModalOpen(true);
+                    }}
+                    style={{
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '11px 24px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
                   >
-                    {p.popular && <span className="oxoo-plan-badge-popular">Best Value</span>}
+                    Open Solution Inquiry Form →
+                  </button>
+                </div>
+              ) : (
+                <div className="oxoo-plans-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', padding: '16px 20px' }}>
+                  <div className="oxoo-plan-tile">
                     <div>
-                      <h4 className="oxoo-plan-tile-name">{p.name}</h4>
-                      <div className="oxoo-plan-tile-price" style={{ fontSize: '18px' }}>{p.price}</div>
-                      <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '14px' }}>{p.desc}</p>
+                      <h4 className="oxoo-plan-tile-name">Standard Pack</h4>
+                      <div className="oxoo-plan-tile-price" style={{ fontSize: '18px' }}>₹560/mo</div>
+                      <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '14px' }}>
+                        Single software package, 6 core apps included, billed annually.
+                      </p>
                     </div>
                     <button
                       type="button"
                       className="oxoo-plan-btn-choose"
-                      onClick={() => handleChoosePlan(p.name)}
+                      onClick={() => handleChoosePlan('single')}
                     >
-                      Select {p.name}
+                      Select Standard Pack
                     </button>
                   </div>
-                ))}
-              </div>
+
+                  <div className="oxoo-plan-tile highlight">
+                    <span className="oxoo-plan-badge-popular">Best Value</span>
+                    <div>
+                      <h4 className="oxoo-plan-tile-name">Custom Pack</h4>
+                      <div className="oxoo-plan-tile-price" style={{ fontSize: '18px' }}>₹980/mo</div>
+                      <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '14px' }}>
+                        2 core softwares suite, extra apps for ₹560/mo, billed annually.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="oxoo-plan-btn-choose"
+                      onClick={() => handleChoosePlan('custom')}
+                    >
+                      Select Custom Pack
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="oxoo-plans-modal-footer">
                 <button
@@ -912,6 +1064,16 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Demo Inquiry Modal for Website & Apps, Marketplace, WhatsApp AI */}
+      <DemoInquiryModal
+        isOpen={inquiryModalOpen}
+        onClose={() => setInquiryModalOpen(false)}
+        category={inquiryMeta.category}
+        productName={inquiryMeta.productName}
+        defaultPlan={inquiryMeta.availablePlans[0]}
+        availablePlans={inquiryMeta.availablePlans}
+      />
 
       {/* Email OTP Verification Gate Modal (Guarantees demo only starts after OTP verification) */}
       {!isDemoVerified && (

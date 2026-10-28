@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, ShieldCheck, ArrowRight, CheckCircle2, Lock, Sparkles, Building2, KeyRound, Mail, X } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
-import { loginUser, forgotPassword } from './api';
+import { loginUser, registerUser, forgotPassword } from './api';
 
 export default function CustomerLoginPage() {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('priya@retailmart.in');
   const [password, setPassword] = useState('oxoo123');
   const [loading, setLoading] = useState(false);
@@ -46,11 +49,43 @@ export default function CustomerLoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (isSignUp) {
+      if (!name || !email || !password) {
+        setErrorMsg('Please enter your full name, email address, and password.');
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await registerUser({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+          organization: companyName.trim() || `${name.trim()} Enterprise`
+        });
+        if (res && res.token) {
+          localStorage.setItem('oxoo_token', res.token);
+          localStorage.setItem('oxoo_user', JSON.stringify(res.user));
+          window.dispatchEvent(new Event('oxoo_auth_change'));
+          setSuccessMsg(`Welcome, ${res.user?.name}! Your customer account has been created.`);
+          setTimeout(() => {
+            navigate('/customer');
+          }, 600);
+        }
+      } catch (err) {
+        setErrorMsg(err.message || 'Registration failed. Please check your details.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!email || !password) {
       setErrorMsg('Please enter both email and password.');
       return;
     }
-    setErrorMsg('');
     setLoading(true);
     try {
       const res = await loginUser(email, password);
@@ -60,7 +95,7 @@ export default function CustomerLoginPage() {
         window.dispatchEvent(new Event('oxoo_auth_change'));
         setSuccessMsg(`Welcome, ${res.user?.name || 'Customer'}! Redirecting to your dashboard...`);
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/customer');
         }, 600);
       }
     } catch (err) {
@@ -115,51 +150,102 @@ export default function CustomerLoginPage() {
               margin: '12px 0 6px',
               fontFamily: 'Manrope, sans-serif'
             }}>
-              Customer Sign In
+              {isSignUp ? 'Create Customer Account' : 'Customer Sign In'}
             </h1>
             <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-              Access your active multi-app subscriptions, billing history, invoices, and support tickets.
+              {isSignUp ? 'Start your 14-day free trial with full access to the OXOO platform.' : 'Access your active multi-app subscriptions, billing history, invoices, and support tickets.'}
             </p>
           </div>
 
-          {/* 1-Click Demo Shortcut */}
+          {/* Mode Switch Tabs (Sign In / Create Account) */}
           <div style={{
-            background: '#f8fafc',
-            border: '1px dashed #93c5fd',
-            borderRadius: '12px',
-            padding: '12px 14px',
-            marginBottom: '18px',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '10px'
+            background: '#f1f5f9',
+            borderRadius: '10px',
+            padding: '4px',
+            marginBottom: '18px',
+            border: '1px solid #e2e8f0'
           }}>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>
-                ⚡ Demo Customer Account
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>
-                Priya Sharma (RetailMart Solutions)
-              </div>
-            </div>
             <button
               type="button"
-              onClick={handleQuickFill}
+              onClick={() => { setIsSignUp(false); setErrorMsg(''); setSuccessMsg(''); }}
               style={{
-                background: '#0284c7',
-                color: '#ffffff',
+                flex: 1,
+                padding: '8px 12px',
                 border: 'none',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: 600,
-                padding: '6px 11px',
+                borderRadius: '8px',
+                background: !isSignUp ? '#ffffff' : 'transparent',
+                color: !isSignUp ? '#0284c7' : '#64748b',
+                fontWeight: !isSignUp ? 700 : 500,
+                fontSize: '13px',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                boxShadow: !isSignUp ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 0.15s ease'
               }}
             >
-              Auto-Fill
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsSignUp(true); setErrorMsg(''); setSuccessMsg(''); }}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: '8px',
+                background: isSignUp ? '#ffffff' : 'transparent',
+                color: isSignUp ? '#0284c7' : '#64748b',
+                fontWeight: isSignUp ? 700 : 500,
+                fontSize: '13px',
+                cursor: 'pointer',
+                boxShadow: isSignUp ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Create Account
             </button>
           </div>
+
+          {/* 1-Click Demo Shortcut (Only shown in Sign In mode) */}
+          {!isSignUp && (
+            <div style={{
+              background: '#f8fafc',
+              border: '1px dashed #93c5fd',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px'
+            }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>
+                  ⚡ Demo Customer Account
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Priya Sharma (RetailMart Solutions)
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleQuickFill}
+                style={{
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  padding: '6px 11px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Auto-Fill
+              </button>
+            </div>
+          )}
 
           {/* Feedback messages */}
           {errorMsg && (
@@ -195,14 +281,57 @@ export default function CustomerLoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit}>
+            {isSignUp && (
+              <>
+                <label style={{ display: 'block', marginBottom: '14px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                  Your Full Name
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Rahul Sharma"
+                    style={{
+                      width: '100%',
+                      marginTop: '5px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13.5px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </label>
+
+                <label style={{ display: 'block', marginBottom: '14px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                  Company or Business Name
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g. Nexus Global Infotech"
+                    style={{
+                      width: '100%',
+                      marginTop: '5px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13.5px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </label>
+              </>
+            )}
+
             <label style={{ display: 'block', marginBottom: '14px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-              Customer Email Address or Storage ID
+              {isSignUp ? 'Work Email Address' : 'Customer Email Address or Storage ID'}
               <input
                 type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. name@company.com or STG-08643413"
+                placeholder="e.g. name@company.com"
                 style={{
                   width: '100%',
                   marginTop: '5px',
@@ -218,27 +347,29 @@ export default function CustomerLoginPage() {
             <div style={{ marginBottom: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Password</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForgotInput(email.includes('@') || email.startsWith('STG-') ? email : '');
-                    setForgotError('');
-                    setForgotMsg('');
-                    setShowForgotModal(true);
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    fontSize: '12px',
-                    color: '#0284c7',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  Forgot password?
-                </button>
+                {!isSignUp && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotInput(email.includes('@') || email.startsWith('STG-') ? email : '');
+                      setForgotError('');
+                      setForgotMsg('');
+                      setShowForgotModal(true);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      fontSize: '12px',
+                      color: '#0284c7',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                )}
               </div>
               <input
                 type="password"
@@ -274,9 +405,38 @@ export default function CustomerLoginPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              {loading ? 'Signing in...' : 'Sign In to Customer Portal ➔'}
+              {loading
+                ? (isSignUp ? 'Creating Account...' : 'Signing in...')
+                : (isSignUp ? 'Create Account & Start 14-Day Free Trial ➔' : 'Sign In to Customer Portal ➔')}
             </button>
           </form>
+
+          {/* Toggle bottom link */}
+          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#64748b' }}>
+            {isSignUp ? (
+              <span>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setIsSignUp(false); setErrorMsg(''); setSuccessMsg(''); }}
+                  style={{ background: 'none', border: 'none', padding: 0, color: '#0284c7', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Sign In
+                </button>
+              </span>
+            ) : (
+              <span>
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setIsSignUp(true); setErrorMsg(''); setSuccessMsg(''); }}
+                  style={{ background: 'none', border: 'none', padding: 0, color: '#0284c7', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Create an account
+                </button>
+              </span>
+            )}
+          </div>
 
           {/* FORGOT PASSWORD MODAL */}
           {showForgotModal && (

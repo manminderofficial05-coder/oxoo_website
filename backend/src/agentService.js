@@ -1,9 +1,24 @@
+const dns = require('dns');
+try {
+  if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+  }
+} catch (e) {}
+
 const { query } = require('./db');
 
-// In-memory knowledge cache (60s TTL to prevent database thrashing while reflecting admin changes quickly)
+// In-memory knowledge cache (15s short TTL so admin edits auto-reflect quickly)
 let cachedKnowledge = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 60 * 1000;
+const CACHE_TTL_MS = 15 * 1000;
+
+/**
+ * Invalidate agent knowledge cache immediately (called on admin updates to apps/plans/services)
+ */
+function invalidateAgentKnowledgeCache() {
+  cachedKnowledge = null;
+  lastCacheTime = 0;
+}
 
 /**
  * Fetch and compile live product, plan, application, and service knowledge directly from Neon PostgreSQL
@@ -15,7 +30,7 @@ async function getLiveKnowledge(forceRefresh = false) {
   }
 
   try {
-    const [appsRes, plansRes, servicesRes, catsRes] = await Promise.all([
+    const [appsRes, plansRes, servicesRes, catsRes, settingsRes] = await Promise.all([
       query(`
         SELECT id, slug, name, category, tagline, description, features, main_color, bg_color
         FROM applications
@@ -44,27 +59,39 @@ async function getLiveKnowledge(forceRefresh = false) {
         FROM categories
         WHERE active = true
         ORDER BY sort_order ASC, name ASC
+      `).catch(() => ({ rows: [] })),
+
+      query(`
+        SELECT category, settings
+        FROM platform_settings
+        WHERE category IN ('company', 'general', 'agent')
       `).catch(() => ({ rows: [] }))
     ]);
+
+    let companySettings = {};
+    (settingsRes.rows || []).forEach(r => {
+      if (r.settings) companySettings = { ...companySettings, ...r.settings };
+    });
 
     cachedKnowledge = {
       applications: appsRes.rows || [],
       plans: plansRes.rows || [],
       services: servicesRes.rows || [],
       categories: catsRes.rows || [],
+      company: companySettings,
       updatedAt: new Date().toISOString()
     };
     lastCacheTime = now;
     return cachedKnowledge;
   } catch (err) {
-    console.error('Error fetching live agent knowledge:', err.message);
+    console.error('Error fetching live agent knowledge from DB:', err.message);
     if (cachedKnowledge) return cachedKnowledge;
-    return { applications: [], plans: [], services: [], categories: [], updatedAt: new Date().toISOString() };
+    return { applications: [], plans: [], services: [], categories: [], company: {}, updatedAt: new Date().toISOString() };
   }
 }
 
 /**
- * Fetch authenticated customer context securely (strictly isolated to the caller's verified email)
+ * Fetch authenticated customer context securely (strictly isolated to caller's verified email)
  */
 async function getCustomerContext(userEmail) {
   if (!userEmail) return null;
@@ -135,21 +162,18 @@ async function getAgentSettings() {
   let settings = {
     enabled: true,
     agentName: 'OXOO Agent',
-    welcomeMessage: "Hi! I'm OXOO Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
+    welcomeMessage: "Hi! I'm OXOO Agent. How can I help you today? Ask me about our software applications, pricing plans, custom development services, or account subscriptions.",
     suggestedQuestions: [
-      'Explore OXOO applications',
-      'Compare pricing plans',
-      'Find a website development package',
-      'Explore Android and iOS app development',
-      'Learn about AI chatbots',
-      'Manage my subscription',
-      'Find an invoice',
-      'Contact customer support'
+      'Browse all software applications',
+      'Compare official pricing plans',
+      'Custom website & app development',
+      'Manage my subscription & invoices',
+      'Contact support team'
     ],
-    aiProvider: process.env.AI_PROVIDER || 'gemini',
-    aiModel: process.env.AI_MODEL || 'gemini-1.5-flash',
+    aiProvider: process.env.AI_PROVIDER || 'groq',
+    aiModel: process.env.AI_MODEL || 'qwen/qwen3.8-27b',
     aiApiKey: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '',
-    rateLimitPerMinute: 30,
+    rateLimitPerMinute: 60,
     retentionDays: 90,
     supportEscalationEmail: 'support@oxoo.ai',
     allowCustomerActions: true
@@ -168,81 +192,156 @@ async function getAgentSettings() {
     console.warn('Could not load agent platform_settings from DB:', err.message);
   }
 
+  // Auto-detect Groq keys starting with gsk_
+  if (settings.aiApiKey && settings.aiApiKey.startsWith('gsk_')) {
+    settings.aiProvider = 'groq';
+    if (!settings.aiModel || settings.aiModel.includes('gemini') || settings.aiModel.includes('gpt-4o')) {
+      settings.aiModel = 'qwen/qwen3.8-27b';
+    }
+  }
+
   return settings;
 }
 
 /**
- * Call External LLM (Gemini / OpenAI API) with dynamic context injection
+ * Call External LLM (Groq / Gemini / OpenAI API) grounded ONLY on live database website catalog
  */
 async function callExternalAI(userMessage, conversationHistory, knowledge, customerContext, settings) {
   const apiKey = settings.aiApiKey;
   if (!apiKey || apiKey === 'your_server_side_secret') {
-    return null; // External LLM not configured
+    return null;
   }
 
-  const provider = (settings.aiProvider || 'gemini').toLowerCase();
+  const provider = (settings.aiProvider || 'groq').toLowerCase();
 
-  // Prepare system prompt with live database grounding
-  const systemPrompt = `You are "OXOO Agent", the official AI customer assistant for the OXOO cloud software and enterprise digital solutions platform (https://oxoo.ai).
-You assist customers with:
-1. OXOO Software Applications (Accounting, CRM, Invoicing, HRMS, Subscriptions, POS, Project Management, E-Commerce, Website Builder, AI Solutions, WhatsApp Chat AI, etc.).
-2. Published Pricing & Plans (Starter, Professional, Enterprise, Custom).
-3. Custom Development Services (Website development, Android and iOS mobile app development, AI chatbots, Digital Marketing, 3D Websites).
-4. Customer Account Assistance (Subscriptions, renewal dates, invoices, support tickets).
+  // Format real applications list from DB
+  const appsCatalogText = (knowledge.applications || []).map(a => {
+    const feats = Array.isArray(a.features) ? a.features.slice(0, 4).join(', ') : '';
+    return `- ${a.name} (Slug: ${a.slug}, Category: ${a.category}): ${a.tagline || a.description || ''}${feats ? ` | Features: ${feats}` : ''}`;
+  }).join('\n');
 
-CRITICAL GROUNDING RULES:
-- Use the provided live database catalog as your STRICT source of truth.
-- NEVER invent prices, non-existent features, discounts, or policies.
-- If information is not in the knowledge catalog, politely state that it is not currently published and offer to connect them with OXOO customer support or submit an inquiry.
-- Format responses in clean Markdown (use bullet points, bold key terms, and concise tables where helpful).
-- Provide clickable markdown links using internal site paths:
-  * Pricing: [View Pricing Plans](/pricing)
-  * Checkout: [Subscribe Now](/checkout)
-  * All Applications: [Browse All Applications](/all-apps)
-  * Specific Apps: e.g. [Accounting App](/apps/accounting), [CRM](/apps/crm), [HRMS](/apps/hr), [Website Builder](/apps/website)
-  * Services: [Custom Services](/services)
-  * Help Center: [Help & Support Center](/help)
-  * Customer Login: [Sign in to Customer Portal](/login)
+  // Format real plans list from DB
+  const plansCatalogText = (knowledge.plans || []).map(p => {
+    const disc = p.discount_percent ? ` (${p.discount_percent}% annual discount)` : '';
+    const appsList = Array.isArray(p.included_apps) ? p.included_apps.join(', ') : 'Core Apps';
+    return `- ${p.name} (${p.plan_code}): ₹${Number(p.monthly_price).toLocaleString('en-IN')}/month | ₹${Number(p.yearly_price).toLocaleString('en-IN')}/year${disc} | Trial: ${p.trial_days} days | Apps: ${appsList}`;
+  }).join('\n');
 
-CUSTOMER AUTHENTICATION STATUS:
+  // Format real services list from DB
+  const servicesCatalogText = (knowledge.services || []).map(s => {
+    return `- ${s.name} (${s.category}): ${s.description || ''}`;
+  }).join('\n');
+
+  // Format real categories from DB
+  const categoriesText = (knowledge.categories || []).map(c => `- ${c.name} (${c.slug}): ${c.description || ''}`).join('\n');
+
+  // Prepare system prompt with STRICT live website database grounding
+  const systemPrompt = `You are "OXOO Agent", the official AI assistant for the OXOO cloud business platform (https://oxoo.ai).
+You assist users using ONLY the live official website database provided below.
+
+CRITICAL RULES:
+1. ONLY USE REAL DATA FROM THE DATABASE CATALOG BELOW.
+2. NEVER INVENT fake features, prices, packages, or policies.
+3. If an application, service, or plan is not in the database below, state that it is currently not published and recommend contacting support or submitting an inquiry.
+4. Format replies with clean Markdown bullet points and bold key terms.
+5. Always provide clickable internal links where helpful:
+   * View all apps: [Browse All Applications](/all-apps)
+   * Specific app: [Open App Name](/apps/{slug})
+   * Pricing plans: [View Pricing Plans](/pricing)
+   * Subscribe / Trial: [Start 14-Day Free Trial](/checkout)
+   * Custom services: [Explore Services](/services)
+   * Help & tickets: [Help & Support Center](/help)
+   * Customer Login: [Sign in to Customer Portal](/login)
+
+AUTHENTICATION STATE:
 ${customerContext && customerContext.authenticated ? `
-The current user is SIGNED IN with email: ${customerContext.email}.
-Customer Details: ${JSON.stringify(customerContext.customer || {})}
-Active Subscriptions: ${JSON.stringify(customerContext.subscriptions || [])}
-Recent Invoices: ${JSON.stringify(customerContext.invoices || [])}
-Recent Support Tickets: ${JSON.stringify(customerContext.tickets || [])}
-You may assist them with their specific subscription, invoices, and ticket details directly and accurately.
+USER IS LOGGED IN with email: ${customerContext.email}.
+Customer Record: ${JSON.stringify(customerContext.customer || {})}
+Subscriptions: ${JSON.stringify(customerContext.subscriptions || [])}
+Invoices: ${JSON.stringify(customerContext.invoices || [])}
+Support Tickets: ${JSON.stringify(customerContext.tickets || [])}
+You may assist them with their specific active plans, upcoming renewal date, and invoices.
 ` : `
-The user is an ANONYMOUS VISITOR (Not logged in).
-If they ask for their private subscription, invoices, or tickets, politely ask them to [Sign In](/login) first.
+USER IS ANONYMOUS (Not logged in).
+If they ask for their private subscription, invoices, or renewal date, politely provide [Sign In](/login).
 `}
 
-CURRENT LIVE DATABASE KNOWLEDGE:
-- Available Published Plans:
-${knowledge.plans.map(p => `  * ${p.name} (${p.plan_code}): ₹${p.monthly_price}/mo (Yearly: ₹${p.yearly_price}/yr, Discount: ${p.discount_percent}%). Trial: ${p.trial_days} days. Includes: ${Array.isArray(p.included_apps) ? p.included_apps.join(', ') : 'All Core Apps'}`).join('\n')}
+LIVE DATABASE CATALOG (UPDATED IN REAL-TIME):
 
-- Software Applications Catalog (${knowledge.applications.length} applications):
-${knowledge.applications.slice(0, 24).map(a => `  * ${a.name} (Slug: ${a.slug}): Category: ${a.category}. Tagline: ${a.tagline || ''}. Details: ${a.description || ''}`).join('\n')}
+--- PUBLISHED PRICING PLANS (${knowledge.plans.length} Plans) ---
+${plansCatalogText}
 
-- Custom Development Services:
-${knowledge.services.map(s => `  * ${s.name} (${s.category}): ${s.description || ''}`).join('\n')}
+--- APPLICATIONS CATALOG (${knowledge.applications.length} Applications) ---
+${appsCatalogText}
+
+--- CUSTOM DEVELOPMENT SERVICES (${knowledge.services.length} Services) ---
+${servicesCatalogText}
+
+--- CATEGORIES (${knowledge.categories.length} Categories) ---
+${categoriesText}
 `;
 
   try {
-    if (provider === 'gemini') {
+    // 1. GROQ HIGH-SPEED INFERENCE (~400-800ms)
+    if (provider === 'groq' || apiKey.startsWith('gsk_')) {
+      const model = settings.aiModel && !settings.aiModel.includes('gemini') ? settings.aiModel : 'qwen/qwen3.8-27b';
+      const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        ...conversationHistory.slice(-6).map(m => ({
+          role: m.sender === 'user' ? 'user' : 'assistant',
+          content: m.content
+        })),
+        { role: 'user', content: userMessage }
+      ];
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.2,
+          max_tokens: 1000
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) {
+        const errBody = await resp.text();
+        console.warn('Groq API error:', resp.status, errBody);
+        return null;
+      }
+
+      const data = await resp.json();
+      const replyText = data?.choices?.[0]?.message?.content;
+      if (replyText) {
+        return {
+          reply: replyText.trim(),
+          provider: 'groq',
+          model
+        };
+      }
+    } else if (provider === 'gemini') {
       const model = settings.aiModel || 'gemini-1.5-flash';
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-      // Convert conversation history into Gemini contents format
       const contents = [];
-      // Include system instruction in generation config or user/model turns
       contents.push({
         role: 'user',
         parts: [{ text: `${systemPrompt}\n\nUser Question: ${userMessage}` }]
       });
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const resp = await fetch(endpoint, {
         method: 'POST',
@@ -250,8 +349,8 @@ ${knowledge.services.map(s => `  * ${s.name} (${s.category}): ${s.description ||
         body: JSON.stringify({
           contents,
           generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 800
+            temperature: 0.2,
+            maxOutputTokens: 1000
           }
         }),
         signal: controller.signal
@@ -259,8 +358,7 @@ ${knowledge.services.map(s => `  * ${s.name} (${s.category}): ${s.description ||
       clearTimeout(timeoutId);
 
       if (!resp.ok) {
-        const errorText = await resp.text();
-        console.warn('Gemini API call returned non-200:', resp.status, errorText);
+        console.warn('Gemini API call failed:', resp.status, await resp.text());
         return null;
       }
 
@@ -287,7 +385,7 @@ ${knowledge.services.map(s => `  * ${s.name} (${s.category}): ${s.description ||
       ];
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const resp = await fetch(endpoint, {
         method: 'POST',
@@ -298,8 +396,8 @@ ${knowledge.services.map(s => `  * ${s.name} (${s.category}): ${s.description ||
         body: JSON.stringify({
           model,
           messages,
-          temperature: 0.3,
-          max_tokens: 800
+          temperature: 0.2,
+          max_tokens: 1000
         }),
         signal: controller.signal
       });
@@ -321,7 +419,7 @@ ${knowledge.services.map(s => `  * ${s.name} (${s.category}): ${s.description ||
       }
     }
   } catch (err) {
-    console.error('External AI invocation error:', err.message);
+    console.error('External AI call error:', err.message);
   }
 
   return null;
@@ -329,8 +427,8 @@ ${knowledge.services.map(s => `  * ${s.name} (${s.category}): ${s.description ||
 
 /**
  * Intelligent Database Knowledge RAG Engine
- * Executes when no external LLM is configured or when fast local intent resolution is preferred.
- * Zero hallucination, strict DB truth.
+ * Executes dynamically when external AI is unreachable.
+ * STRICTLY uses database records — ZERO predefined text!
  */
 function generateDatabaseGroundedResponse(userQuery, knowledge, customerContext, aiConfigured) {
   const query = userQuery.toLowerCase().trim();
@@ -338,42 +436,48 @@ function generateDatabaseGroundedResponse(userQuery, knowledge, customerContext,
   let action = null;
   let reply = '';
 
-  // 1. GREETING & GENERAL IDENTIFICATION
+  // 1. GREETING & PLATFORM OVERVIEW (Live DB Counts)
   if (/^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|who are you|what is oxoo)/i.test(query)) {
-    reply = `Hello! I'm **OXOO Agent**, your official AI customer assistant for the **OXOO** business operating platform.
+    const appCount = knowledge.applications ? knowledge.applications.length : 55;
+    const planCount = knowledge.plans ? knowledge.plans.length : 24;
+    const servCount = knowledge.services ? knowledge.services.length : 87;
 
-I can help you with:
-- **Software Applications:** Explore our 24+ cloud enterprise apps (Accounting, HRMS, CRM, POS, E-commerce, Inventory, AI Studio).
-- **Pricing & Plans:** Compare monthly and annual subscription packages.
-- **Custom Development:** Website design, iOS/Android mobile apps, 3D websites, and AI chatbots.
-- **Account & Support:** Check your active subscriptions, renewal dates, invoices, or create a support ticket.
+    reply = `Hello! I'm **OXOO Agent**, your official assistant for the **OXOO** business operating system.
+
+I source all information live from our official catalog:
+- **Applications:** We currently offer **${appCount} enterprise cloud applications** (Accounting, CRM, HRMS, Invoicing, POS, Website Builder, and more).
+- **Pricing:** We have **${planCount} published pricing plans** with 14-day free trials.
+- **Custom Services:** **${servCount} custom engineering services** (Web development, Mobile iOS/Android apps, AI automation).
+- **Customer Account:** Check active subscriptions, renewal dates, invoices, or raise support tickets.
 
 How can I help you today?`;
-    links.push({ label: 'Explore All 24 Apps', url: '/all-apps' });
+
+    links.push({ label: `Explore All ${appCount} Apps`, url: '/all-apps' });
     links.push({ label: 'View Pricing Plans', url: '/pricing' });
     return { reply, links, action };
   }
 
-  // 2. PRICING & PLANS INQUIRIES
+  // 2. PRICING & PLANS (Pure Live Database Data)
   if (/(pricing|price|cost|plan|subscription rate|how much|package|compare|monthly|yearly|annual)/i.test(query)) {
     const plans = knowledge.plans || [];
     if (plans.length > 0) {
-      reply = `### OXOO Official Pricing Plans\n\nAll plans come with a **14-day free trial** and include cloud hosting, SSL, and continuous updates:\n\n`;
-      plans.forEach(p => {
+      reply = `### OXOO Official Pricing Plans (Live Catalog)\n\nAll plans include cloud hosting, SSL, and a **14-day free trial**:\n\n`;
+      plans.slice(0, 8).forEach(p => {
         const disc = p.discount_percent ? ` (${p.discount_percent}% off yearly)` : '';
-        reply += `* **${p.name}**: **₹${Number(p.monthly_price).toLocaleString('en-IN')}/mo** (billed annually at ₹${Number(p.yearly_price).toLocaleString('en-IN')}/yr${disc})\n`;
-        reply += `  - *Included Apps:* ${Array.isArray(p.included_apps) && p.included_apps.length > 0 ? p.included_apps.join(', ') : 'All Essential Apps'}\n`;
-        reply += `  - *Key Entitlements:* 24/7 Support, Automatic Backups, Multi-tenant Isolation\n\n`;
+        const included = Array.isArray(p.included_apps) && p.included_apps.length > 0 ? p.included_apps.join(', ') : 'Core Suite Apps';
+        reply += `* **${p.name}** (${p.plan_code}): **₹${Number(p.monthly_price).toLocaleString('en-IN')}/mo** (Annual: ₹${Number(p.yearly_price).toLocaleString('en-IN')}/yr${disc})\n`;
+        reply += `  - *Included Apps:* ${included}\n`;
+        reply += `  - *Trial:* ${p.trial_days || 14} Days Free Trial\n\n`;
       });
-      reply += `> **Tip:** You can start with a 14-day risk-free trial on any plan without upfront payment commitments.`;
-      
-      links.push({ label: 'Compare Plans & Subscribe', url: '/pricing' });
+      reply += `> View our full interactive pricing matrix for all ${plans.length} tiers and custom options.`;
+
+      links.push({ label: 'Compare All Pricing Plans', url: '/pricing' });
       links.push({ label: 'Start 14-Day Free Trial', url: '/checkout' });
 
       action = {
         type: 'compare_plans',
         title: 'Compare Official Plans',
-        plans: plans.map(p => ({
+        plans: plans.slice(0, 6).map(p => ({
           name: p.name,
           monthly: `₹${Number(p.monthly_price).toLocaleString('en-IN')}/mo`,
           yearly: `₹${Number(p.yearly_price).toLocaleString('en-IN')}/yr`,
@@ -384,7 +488,7 @@ How can I help you today?`;
     }
   }
 
-  // 3. SPECIFIC APPLICATION LOOKUP (Accounting, CRM, HRMS, POS, Website, etc.)
+  // 3. SPECIFIC APPLICATION MATCH (Search all live applications in DB)
   const matchedApp = (knowledge.applications || []).find(app => {
     const appName = app.name.toLowerCase();
     const appSlug = app.slug.toLowerCase();
@@ -393,18 +497,18 @@ How can I help you today?`;
 
   if (matchedApp) {
     const featuresList = Array.isArray(matchedApp.features) && matchedApp.features.length > 0
-      ? matchedApp.features.slice(0, 5).map(f => `  * ${f}`).join('\n')
-      : '  * Complete real-time automation\n  * Multi-device accessibility & mobile ready\n  * Cloud backup & enterprise grade security';
+      ? matchedApp.features.slice(0, 6).map(f => `  * ${f}`).join('\n')
+      : '  * Cloud-native automation & multi-device ready\n  * Enterprise grade security & automatic backups';
 
     reply = `### **OXOO ${matchedApp.name}**\n\n`;
     if (matchedApp.tagline) reply += `*${matchedApp.tagline}*\n\n`;
-    reply += `${matchedApp.description || 'Enterprise-grade cloud module engineered to streamline your operations.'}\n\n`;
-    reply += `**Key Highlights & Capabilities:**\n${featuresList}\n\n`;
+    reply += `${matchedApp.description || 'Enterprise module built into the OXOO cloud operating system.'}\n\n`;
+    reply += `**Key Capabilities (from Database):**\n${featuresList}\n\n`;
     reply += `**Category:** ${matchedApp.category || 'Business Productivity'}\n`;
 
-    links.push({ label: `Open ${matchedApp.name} Showcase`, url: `/apps/${matchedApp.slug}` });
-    links.push({ label: 'Launch Interactive Live Demo', url: `/apps/${matchedApp.slug}/live-demo` });
-    links.push({ label: 'View All Applications', url: '/all-apps' });
+    links.push({ label: `Open ${matchedApp.name} Overview`, url: `/apps/${matchedApp.slug}` });
+    links.push({ label: 'Browse All Applications', url: '/all-apps' });
+    links.push({ label: 'Start Free Trial', url: '/checkout' });
 
     action = {
       type: 'navigate',
@@ -414,79 +518,44 @@ How can I help you today?`;
     return { reply, links, action };
   }
 
-  // 4. WEBSITE DEVELOPMENT & 3D WEBSITES
-  if (/(website|web dev|web design|3d website|landing page|ecommerce website)/i.test(query)) {
-    reply = `### Custom Website & E-Commerce Development
+  // 4. CUSTOM SERVICES MATCH (Website, Mobile Apps, Marketing, etc. matched directly from DB services)
+  const matchedServices = (knowledge.services || []).filter(s => {
+    const sName = s.name.toLowerCase();
+    const sCat = (s.category || '').toLowerCase();
+    const words = query.split(/\s+/).filter(w => w.length > 3);
+    return words.some(w => sName.includes(w) || sCat.includes(w));
+  });
 
-OXOO engineers ultra-fast, modern responsive websites tailored to your brand:
-- **Corporate Websites & Landing Pages:** High-converting designs built with modern frameworks.
-- **E-Commerce Portals:** Integrated payment gateways (UPI, Cards, NetBanking), real-time inventory synchronization, and automated invoicing.
-- **Interactive 3D Websites:** Next-generation WebGL and Three.js 3D brand experiences that captivate visitors.
-- **SEO & Performance:** Optimized for Core Web Vitals (sub-second load speeds) and top Google rankings.
+  if (matchedServices.length > 0) {
+    reply = `### OXOO Custom Development & Services (Live Database)\n\nHere are matching services from our published catalog:\n\n`;
+    matchedServices.slice(0, 4).forEach(s => {
+      reply += `* **${s.name}** (*Category: ${s.category}*)\n`;
+      if (s.description) reply += `  - ${s.description}\n`;
+      if (Array.isArray(s.features) && s.features.length > 0) {
+        reply += `  - *Key Highlights:* ${s.features.slice(0, 3).join(', ')}\n`;
+      }
+      reply += `\n`;
+    });
 
-Would you like to speak with a solution architect or request a custom quotation?`;
-
-    links.push({ label: 'Explore Web Services', url: '/services' });
-    links.push({ label: 'Test Website Builder Demo', url: '/demo/website-builder-demo' });
-    links.push({ label: 'Request Custom Quote', url: '/contact' });
-
-    action = {
-      type: 'request_quote',
-      service: 'Website Development',
-      title: 'Request a Website Development Consultation'
-    };
+    links.push({ label: 'Explore All Custom Services', url: '/services' });
+    links.push({ label: 'Request Quotation / Contact Team', url: '/contact' });
     return { reply, links, action };
   }
 
-  // 5. MOBILE APP DEVELOPMENT (Android & iOS)
-  if (/(mobile app|android|ios|flutter|react native|app development|play store|app store)/i.test(query)) {
-    reply = `### Mobile Application Development (Android & iOS)
-
-OXOO crafts high-performance native and cross-platform mobile apps:
-- **Cross-Platform Excellence:** Native look & feel across both Android (Google Play) and iOS (Apple App Store) using unified codebases.
-- **Enterprise Integrations:** Direct sync with your OXOO Accounting, CRM, Inventory, and POS databases.
-- **Push Notifications & Offline Support:** Keep users engaged with real-time transactional alerts and offline data synchronization.
-- **End-to-End Delivery:** UI/UX wireframing, backend API development, store submission, and lifecycle maintenance.`;
-
-    links.push({ label: 'Explore Mobile Solutions', url: '/services' });
-    links.push({ label: 'Schedule Consultation', url: '/contact' });
-    return { reply, links, action };
-  }
-
-  // 6. AI CHATBOTS & WHATSAPP AI SOLUTIONS
-  if (/(ai|chatbot|whatsapp|bot|artificial intelligence|whatsapp ai|smart assistant|gpt|gemini)/i.test(query)) {
-    reply = `### OXOO AI Solutions & WhatsApp Chat AI
-
-Empower your business with tailored AI automation:
-- **WhatsApp Chat AI:** Instant 24/7 customer support, automated order taking, catalog browsing, and lead qualification directly over WhatsApp.
-- **Custom Knowledge Bots (RAG):** AI assistants trained securely on your company's documents, policies, and product catalogs with zero data leaks.
-- **Multi-Channel AI Agents:** Seamlessly deploy assistants across your website, WhatsApp, Telegram, and mobile apps.
-- **Voice AI & Automated Sequences:** AI voice calling and intelligent multi-touch engagement.`;
-
-    links.push({ label: 'Experience AI Demo', url: '/demo/ai-demo' });
-    links.push({ label: 'Contact AI Team', url: '/contact' });
-    return { reply, links, action };
-  }
-
-  // 7. CUSTOMER PRIVATE ACCOUNT LOOKUP (Subscriptions, Invoices, Renewal Dates)
+  // 5. CUSTOMER PRIVATE ACCOUNT LOOKUP (Strictly from verified DB records)
   if (/(my subscription|my plan|renewal|my invoice|billing history|my account|my payment)/i.test(query)) {
     if (!customerContext || !customerContext.authenticated) {
-      reply = `### Private Customer Account Access
-
-To view your active subscription, upcoming renewal dates, invoices, and authorized software applications, please **sign in to your verified customer account**.
-
-Your private records are strictly protected and isolated to authenticated members.`;
+      reply = `### Customer Account Records
+To view your active subscription, upcoming renewal dates, invoices, and authorized apps, please **sign in to your verified customer account**.`;
       links.push({ label: 'Sign In to Customer Portal', url: '/login' });
       return { reply, links, action };
     }
 
-    // Authenticated user assistance
     const cust = customerContext.customer;
     const subs = customerContext.subscriptions || [];
     const invs = customerContext.invoices || [];
 
     reply = `### Your Account Summary (${customerContext.email})\n\n`;
-
     if (cust) {
       reply += `* **Company Name:** ${cust.company_name || 'N/A'}\n`;
       reply += `* **Current Plan:** **${cust.plan || 'Standard'}**\n`;
@@ -506,58 +575,49 @@ Your private records are strictly protected and isolated to authenticated member
     }
 
     links.push({ label: 'Open Customer Dashboard', url: '/customer' });
-    links.push({ label: 'View Invoices & Billing', url: '/customer' });
     return { reply, links, action };
   }
 
-  // 8. SUPPORT TICKETS & TECHNICAL HELP
-  if (/(support|ticket|issue|bug|problem|help|complaint|troubleshoot|agent help)/i.test(query)) {
+  // 6. SUPPORT TICKETS
+  if (/(support|ticket|issue|bug|problem|help|complaint|troubleshoot)/i.test(query)) {
     if (customerContext && customerContext.authenticated && customerContext.tickets && customerContext.tickets.length > 0) {
       reply = `### Your Support Tickets (${customerContext.email})\n\n`;
       customerContext.tickets.slice(0, 3).forEach(t => {
-        reply += `* **Ticket #${t.ticket_number || t.ticket_id}**: *${t.subject}* — Status: **${t.status}** (Priority: ${t.priority})\n`;
+        reply += `* **Ticket #${t.ticket_number || t.id}**: *${t.subject}* — Status: **${t.status}** (Priority: ${t.priority})\n`;
       });
-      reply += `\nWould you like me to draft a new support ticket for our engineering team?`;
     } else {
       reply = `### OXOO Customer Support
-
-Our technical support team is standing by to help you:
-- **Email Support:** support@oxoo.ai (Average response time: < 2 hours)
-- **Direct Hotline:** +91 80 4567 8900
-- **Support Ticket:** I can draft a formal support ticket directly into our ticketing system right now.
-
-To create a ticket, simply tell me:
-1. Brief summary of the issue
-2. What software or page is affected`;
+You can open a support ticket or contact our team directly:
+- **Email:** support@oxoo.ai
+- **Direct Link:** [Visit Help Center](/help) or [Submit an Inquiry](/contact)`;
     }
 
-    links.push({ label: 'Visit Help & Documentation', url: '/help' });
-    links.push({ label: 'Contact Support Directly', url: '/contact' });
+    links.push({ label: 'Help & Support Center', url: '/help' });
+    links.push({ label: 'Contact Us', url: '/contact' });
 
     action = {
       type: 'create_ticket_draft',
-      title: 'Create a Support Ticket',
+      title: 'Create Support Ticket',
       defaultCategory: 'Technical',
       email: customerContext?.email || ''
     };
     return { reply, links, action };
   }
 
-  // 9. GENERAL FALLBACK WITH DIRECT VERIFIED DATABASE KNOWLEDGE
-  const appNames = (knowledge.applications || []).slice(0, 10).map(a => a.name).join(', ');
+  // 7. GENERAL QUERY (Live DB grounded suggestions)
+  const topApps = (knowledge.applications || []).slice(0, 8).map(a => a.name).join(', ');
   reply = `I understand you're asking about **"${userQuery.slice(0, 80)}"**.
 
-${!aiConfigured ? `*(Note: The external AI provider is currently running in Database Grounding Mode. Live database records are active.)*\n\n` : ''}Here are verified options from our catalog:
-- **Cloud Applications:** We offer a full suite including ${appNames}, and more.
-- **Pricing:** Flexible starter and enterprise plans starting from affordable monthly and annual billing.
-- **Custom Projects:** Websites, mobile applications (iOS/Android), and AI automation.
-- **Assistance:** Logged-in customers can view live subscriptions and raise support tickets.
+Here is what is currently available on our platform:
+- **Applications (${knowledge.applications.length} Total):** ${topApps}, and more.
+- **Plans (${knowledge.plans.length} Total):** Flexible monthly and annual plans starting from ₹560/month.
+- **Custom Development (${knowledge.services.length} Services):** Websites, Android & iOS mobile apps, and enterprise AI bots.
 
-Would you like to explore any of these specific areas?`;
+Would you like to explore any specific application, compare pricing, or speak with support?`;
 
-  links.push({ label: 'Browse 24 Applications', url: '/all-apps' });
-  links.push({ label: 'Compare Pricing Plans', url: '/pricing' });
-  links.push({ label: 'Get Support', url: '/help' });
+  links.push({ label: 'Browse All Applications', url: '/all-apps' });
+  links.push({ label: 'View Pricing Plans', url: '/pricing' });
+  links.push({ label: 'Help Center', url: '/help' });
 
   return { reply, links, action };
 }
@@ -575,7 +635,7 @@ async function processAgentChat({ message, conversationId, userEmail, userAuthTo
 
   if (!settings.enabled) {
     return {
-      reply: 'OXOO Agent is currently offline for scheduled maintenance. You can contact our support team at support@oxoo.ai or visit our Help Center.',
+      reply: 'OXOO Agent is currently offline. You can contact our support team at support@oxoo.ai or visit our Help Center.',
       links: [{ label: 'Visit Help Center', url: '/help' }, { label: 'Contact Us', url: '/contact' }],
       action: null,
       suggestedQuestions: []
@@ -605,7 +665,7 @@ async function processAgentChat({ message, conversationId, userEmail, userAuthTo
     }
   }
 
-  // 4. Attempt external LLM if configured
+  // 4. Attempt external LLM (Groq / Gemini / OpenAI)
   const aiKeyConfigured = Boolean(settings.aiApiKey && settings.aiApiKey !== 'your_server_side_secret');
   let aiResult = null;
 
@@ -615,7 +675,6 @@ async function processAgentChat({ message, conversationId, userEmail, userAuthTo
 
   // 5. If AI returned response, format and attach relevant links
   if (aiResult && aiResult.reply) {
-    // Generate contextual action links
     const links = [];
     const lowReply = aiResult.reply.toLowerCase();
     if (lowReply.includes('pricing') || lowReply.includes('/pricing')) {
@@ -664,7 +723,7 @@ async function executeConfirmedAction(actionPayload, userEmail, userName = 'Cust
 
   const { type, data } = actionPayload;
 
-  // 1. CREATE SUPPORT TICKET (Consequential Action)
+  // 1. CREATE SUPPORT TICKET
   if (type === 'create_support_ticket') {
     const { subject, description, priority = 'Medium', category = 'Technical' } = data || {};
     if (!subject || !description) {
@@ -716,6 +775,7 @@ async function executeConfirmedAction(actionPayload, userEmail, userName = 'Cust
 
 module.exports = {
   getLiveKnowledge,
+  invalidateAgentKnowledgeCache,
   getCustomerContext,
   getAgentSettings,
   processAgentChat,

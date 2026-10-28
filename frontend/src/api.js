@@ -111,9 +111,17 @@ export function getAdminHeaders() {
 
 export function getCustomerHeaders() {
   const token = localStorage.getItem('oxoo_token') || '';
+  let user = null;
+  try {
+    const su = localStorage.getItem('oxoo_user');
+    if (su) user = JSON.parse(su);
+  } catch (e) {}
+
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(user?.email ? { 'x-user-email': user.email } : {}),
+    ...(user?.organization ? { 'x-user-company': user.organization } : {})
   };
 }
 
@@ -301,9 +309,49 @@ export async function renewCustomerSubscription(payload) {
   return await r.json();
 }
 
+export async function getCustomerPlans(appFilter = '') {
+  try {
+    const q = appFilter ? `?app=${encodeURIComponent(appFilter)}` : '';
+    const r = await fetch(`${API_URL}/api/customer/plans${q}`, {
+      headers: getCustomerHeaders()
+    });
+    if (!r.ok) throw new Error('Plans API unavailable');
+    return await r.json();
+  } catch (err) {
+    console.error('Error fetching customer plans:', err.message);
+    return { success: false, plans: [] };
+  }
+}
+
+export async function downloadInvoicePdf(invoiceNumber) {
+  try {
+    const headers = getCustomerHeaders();
+    delete headers['Content-Type'];
+    const r = await fetch(`${API_URL}/api/customer/invoices/${encodeURIComponent(invoiceNumber)}/pdf`, {
+      headers
+    });
+    if (!r.ok) throw new Error('Invoice PDF unavailable');
+    const blob = await r.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Tax-Invoice-${invoiceNumber}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    return true;
+  } catch (err) {
+    console.error('Download invoice PDF failed:', err);
+    throw err;
+  }
+}
+
 export async function getCustomerTeam() {
   try {
-    const r = await fetch(`${API_URL}/api/customer/team`);
+    const r = await fetch(`${API_URL}/api/customer/team`, {
+      headers: getCustomerHeaders()
+    });
     if (!r.ok) throw new Error('Team API unavailable');
     return await r.json();
   } catch {
@@ -314,22 +362,38 @@ export async function getCustomerTeam() {
 export async function inviteTeamMember(payload) {
   const r = await fetch(`${API_URL}/api/customer/team`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getCustomerHeaders(),
     body: JSON.stringify(payload)
   });
-  return await r.json();
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to add team member.');
+  return data;
+}
+
+export async function updateTeamMember(id, payload) {
+  const r = await fetch(`${API_URL}/api/customer/team/${id}`, {
+    method: 'PUT',
+    headers: getCustomerHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update team member.');
+  return data;
 }
 
 export async function removeTeamMember(id) {
   const r = await fetch(`${API_URL}/api/customer/team/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: getCustomerHeaders()
   });
   return await r.json();
 }
 
 export async function getCustomerTickets() {
   try {
-    const r = await fetch(`${API_URL}/api/customer/tickets`);
+    const r = await fetch(`${API_URL}/api/customer/tickets`, {
+      headers: getCustomerHeaders()
+    });
     if (!r.ok) throw new Error('Tickets API unavailable');
     return await r.json();
   } catch {
@@ -340,8 +404,58 @@ export async function getCustomerTickets() {
 export async function createCustomerTicket(payload) {
   const r = await fetch(`${API_URL}/api/customer/tickets`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getCustomerHeaders(),
     body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to create ticket.');
+  return data;
+}
+
+export async function replyCustomerTicket(ticketId, payload) {
+  const body = typeof payload === 'string' ? { message: payload } : payload;
+  const r = await fetch(`${API_URL}/api/customer/tickets/${encodeURIComponent(ticketId)}/reply`, {
+    method: 'POST',
+    headers: getCustomerHeaders(),
+    body: JSON.stringify(body)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to send reply.');
+  return data;
+}
+
+export async function getCustomerNotifications() {
+  try {
+    const r = await fetch(`${API_URL}/api/customer/notifications`, {
+      headers: getCustomerHeaders()
+    });
+    if (!r.ok) throw new Error('Notifications unavailable');
+    return await r.json();
+  } catch {
+    return { success: false, notifications: [] };
+  }
+}
+
+export async function markNotificationRead(id) {
+  const r = await fetch(`${API_URL}/api/customer/notifications/${id}/read`, {
+    method: 'PUT',
+    headers: getCustomerHeaders()
+  });
+  return await r.json();
+}
+
+export async function markAllNotificationsRead() {
+  const r = await fetch(`${API_URL}/api/customer/notifications/mark-all-read`, {
+    method: 'PUT',
+    headers: getCustomerHeaders()
+  });
+  return await r.json();
+}
+
+export async function deleteReadNotifications() {
+  const r = await fetch(`${API_URL}/api/customer/notifications/read`, {
+    method: 'DELETE',
+    headers: getCustomerHeaders()
   });
   return await r.json();
 }
@@ -1259,6 +1373,8 @@ export async function sendTicketReply(id, payload) {
     headers: getAdminHeaders(),
     body: JSON.stringify(payload)
   });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to send reply.');
   return data;
 }
 
@@ -1671,6 +1787,101 @@ export async function getAdminAgentAnalytics() {
       recentEvents: []
     };
   }
+}
+
+// -------------------------------------------------------------
+// MODULE 15: WORKSPACE RESOLUTION & DEMO INQUIRIES API
+// -------------------------------------------------------------
+export async function resolveWorkspace(host, company = '') {
+  try {
+    const qs = new URLSearchParams({
+      host: host || window.location.hostname || '',
+      company: company || ''
+    }).toString();
+    const r = await fetch(`${API_URL}/api/workspace/resolve?${qs}`);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      return { success: false, code: data.code || 'NOT_FOUND', message: data.message || 'Workspace resolution failed' };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+}
+
+export async function submitInquiry(payload) {
+  const r = await fetch(`${API_URL}/api/inquiries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(data.message || 'Failed to submit inquiry. Please check your information and try again.');
+  }
+  return data;
+}
+
+export async function getAdminInquiriesSummary() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/inquiries/summary`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Inquiries summary unavailable');
+    return await r.json();
+  } catch (err) {
+    console.error('Failed to load inquiries summary:', err);
+    return { success: false, summary: { total: 0, new_count: 0 } };
+  }
+}
+
+export async function getAdminInquiries(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`${API_URL}/api/admin/inquiries?${qs}`, { headers: getAdminHeaders() });
+    if (!r.ok) throw new Error('Inquiries data unavailable');
+    return await r.json();
+  } catch (err) {
+    console.error('Failed to load inquiries:', err);
+    return { success: false, inquiries: [], pagination: { total: 0 } };
+  }
+}
+
+export async function getAdminInquiry(id) {
+  const r = await fetch(`${API_URL}/api/admin/inquiries/${encodeURIComponent(id)}`, { headers: getAdminHeaders() });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to load inquiry');
+  return data;
+}
+
+export async function updateAdminInquiry(id, payload) {
+  const r = await fetch(`${API_URL}/api/admin/inquiries/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update inquiry');
+  return data;
+}
+
+export async function addAdminInquiryNote(id, note) {
+  const r = await fetch(`${API_URL}/api/admin/inquiries/${encodeURIComponent(id)}/notes`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ note })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to add note');
+  return data;
+}
+
+export async function deleteAdminInquiry(id) {
+  const r = await fetch(`${API_URL}/api/admin/inquiries/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to delete inquiry');
+  return data;
 }
 
 export { API_URL };

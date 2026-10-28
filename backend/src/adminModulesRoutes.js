@@ -1263,6 +1263,59 @@ router.post('/tickets/:id/reply', async (req, res, next) => {
       [JSON.stringify(existingReplies), tId]
     );
 
+    // If customer-facing reply (not internal note), trigger customer notification and email
+    if (!is_internal) {
+      const updatedTicket = updateRes.rows[0];
+      const targetEmail = updatedTicket?.user_email || updatedTicket?.contact_email;
+      const targetCompany = updatedTicket?.company_name;
+
+      if (targetCompany || targetEmail) {
+        try {
+          const emailVal = targetEmail || 'customer@oxoo.ai';
+          await query(
+            `INSERT INTO customer_notifications (company_name, user_email, customer_email, title, message, type, link)
+             VALUES ($1, $2, $2, $3, $4, 'support', '/customer?tab=support')`,
+            [
+              targetCompany || 'My Organization',
+              emailVal,
+              `Support Replied: Ticket ${updatedTicket.ticket_number || tId}`,
+              `Our support team replied to "${updatedTicket.subject}": "${message.trim().slice(0, 100)}..."`
+            ]
+          );
+        } catch (e) {
+          console.error('Failed to insert customer notification on staff ticket reply:', e.message);
+        }
+
+        if (targetEmail) {
+          try {
+            const origin = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173';
+            await sendMailWithFallback({
+              to: targetEmail,
+              subject: `Support Update: Ticket ${updatedTicket.ticket_number || tId} - ${updatedTicket.subject}`,
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                  <h2 style="color: #0284c7; margin-top: 0;">OXOO Support Team Update</h2>
+                  <p>Hello,</p>
+                  <p>Our support team has posted a reply regarding ticket <strong>#${updatedTicket.ticket_number || tId}</strong> (<em>${updatedTicket.subject}</em>):</p>
+                  <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #1e293b; font-size: 15px; white-space: pre-wrap;">${message.trim()}</p>
+                    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px;">Sent by ${sender}</p>
+                  </div>
+                  <p style="margin-top: 24px;">
+                    <a href="${origin}/customer?tab=support" style="background-color: #0284c7; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Conversation in Support Center</a>
+                  </p>
+                  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+                  <p style="font-size: 12px; color: #94a3b8; margin: 0;">OXOO Technologies Inc. • Enterprise Cloud Platform</p>
+                </div>
+              `
+            });
+          } catch (mailErr) {
+            console.error('Failed to send email to customer on staff reply:', mailErr.message);
+          }
+        }
+      }
+    }
+
     await logAuditAction(
       is_internal ? 'Ticket Internal Note Added' : 'Ticket Reply Sent',
       tId,
@@ -2256,6 +2309,258 @@ router.put('/settings/:category', async (req, res, next) => {
       category,
       settings: updateRes.rows[0].settings
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================================
+// MODULE 15: DEMO & WEBSITE INQUIRIES (Website & Apps, Marketplace, WhatsApp AI)
+// ============================================================================
+
+// 15.1 Inquiries Summary
+router.get('/inquiries/summary', async (_req, res, next) => {
+  try {
+    const q = await query(`
+      SELECT 
+        COUNT(*)::int as total,
+        COUNT(*) FILTER (WHERE status = 'New')::int as new_count,
+        COUNT(*) FILTER (WHERE status = 'Contacted')::int as contacted_count,
+        COUNT(*) FILTER (WHERE status = 'Qualified')::int as qualified_count,
+        COUNT(*) FILTER (WHERE status = 'Proposal Sent')::int as proposal_count,
+        COUNT(*) FILTER (WHERE status = 'Converted')::int as converted_count,
+        COUNT(*) FILTER (WHERE status = 'Closed')::int as closed_count,
+        COUNT(*) FILTER (WHERE category ILIKE '%Website%')::int as website_apps_count,
+        COUNT(*) FILTER (WHERE category ILIKE '%Marketplace%')::int as marketplace_count,
+        COUNT(*) FILTER (WHERE category ILIKE '%WhatsApp%')::int as whatsapp_count
+      FROM demo_inquiries
+    `);
+    const summary = q.rows[0] || {};
+    res.json({
+      success: true,
+      summary,
+      total: summary.total || 0,
+      new_count: summary.new_count || 0,
+      contacted_count: summary.contacted_count || 0,
+      qualified_count: summary.qualified_count || 0
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 15.2 Inquiries List with search, filtering, pagination
+router.get('/inquiries', async (req, res, next) => {
+  try {
+    const { search = '', category = '', status = '', sortBy = 'created_at', sortDir = 'DESC', page = 1, limit = 25 } = req.query;
+
+    let whereClauses = [];
+    let params = [];
+    let pIdx = 1;
+
+    if (search && search.trim()) {
+      const term = `%${search.trim().toLowerCase()}%`;
+      whereClauses.push(`(
+        LOWER(inquiry_ref) LIKE $${pIdx} OR 
+        LOWER(contact_person) LIKE $${pIdx} OR 
+        LOWER(company_name) LIKE $${pIdx} OR 
+        LOWER(email) LIKE $${pIdx} OR 
+        LOWER(phone) LIKE $${pIdx} OR 
+        LOWER(product_name) LIKE $${pIdx}
+      )`);
+      params.push(term);
+      pIdx++;
+    }
+
+    if (category && category.trim() && category !== 'all') {
+      whereClauses.push(`LOWER(category) = LOWER($${pIdx})`);
+      params.push(category.trim());
+      pIdx++;
+    }
+
+    if (status && status.trim() && status !== 'all') {
+      whereClauses.push(`LOWER(status) = LOWER($${pIdx})`);
+      params.push(status.trim());
+      pIdx++;
+    }
+
+    const whereStr = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const validSortCols = ['created_at', 'inquiry_ref', 'company_name', 'status', 'category'];
+    const safeSortCol = validSortCols.includes(sortBy) ? sortBy : 'created_at';
+    const safeSortDir = sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    const countRes = await query(`SELECT COUNT(*)::int as count FROM demo_inquiries ${whereStr}`, params);
+    const totalRecords = countRes.rows[0]?.count || 0;
+
+    const offset = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
+    params.push(parseInt(limit, 10), offset);
+
+    const listRes = await query(
+      `SELECT * FROM demo_inquiries ${whereStr} ORDER BY ${safeSortCol} ${safeSortDir} LIMIT $${pIdx} OFFSET $${pIdx + 1}`,
+      params
+    );
+
+    res.json({
+      success: true,
+      inquiries: listRes.rows,
+      pagination: {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        total: totalRecords,
+        pages: Math.ceil(totalRecords / parseInt(limit, 10))
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 15.3 Single Inquiry Detail
+router.get('/inquiries/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const q = await query(
+      `SELECT * FROM demo_inquiries WHERE id::text = $1 OR inquiry_ref = $1 LIMIT 1`,
+      [id]
+    );
+    if (q.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Inquiry not found.' });
+    }
+    res.json({ success: true, inquiry: q.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 15.4 Update Inquiry Status, Assigned Owner, or Notes
+router.patch('/inquiries/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, assigned_to, internal_notes, note } = req.body;
+
+    const existRes = await query(
+      `SELECT * FROM demo_inquiries WHERE id::text = $1 OR inquiry_ref = $1 LIMIT 1`,
+      [id]
+    );
+    if (existRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Inquiry not found.' });
+    }
+    const current = existRes.rows[0];
+
+    let auditTrail = Array.isArray(current.audit_trail) ? current.audit_trail : [];
+    let followupHistory = Array.isArray(current.followup_history) ? current.followup_history : [];
+
+    const actor = req.user?.name || 'Super Administrator';
+    const nowIso = new Date().toISOString();
+
+    let newStatus = current.status;
+    if (status && status !== current.status) {
+      newStatus = status;
+      auditTrail.push({
+        action: `Status changed from "${current.status}" to "${status}"`,
+        timestamp: nowIso,
+        actor
+      });
+      followupHistory.push({
+        date: nowIso,
+        note: `Status updated to ${status}.`
+      });
+    }
+
+    let newAssigned = current.assigned_to;
+    if (assigned_to !== undefined && assigned_to !== current.assigned_to) {
+      newAssigned = assigned_to;
+      auditTrail.push({
+        action: `Assigned to "${assigned_to}"`,
+        timestamp: nowIso,
+        actor
+      });
+    }
+
+    let newNotes = current.internal_notes || '';
+    if (internal_notes !== undefined) {
+      newNotes = internal_notes;
+    }
+    if (note && note.trim()) {
+      followupHistory.push({
+        date: nowIso,
+        author: actor,
+        note: note.trim()
+      });
+    }
+
+    const updRes = await query(
+      `UPDATE demo_inquiries
+       SET status = $1, assigned_to = $2, internal_notes = $3,
+           followup_history = $4, audit_trail = $5, updated_at = NOW()
+       WHERE id = $6 RETURNING *`,
+      [newStatus, newAssigned, newNotes, JSON.stringify(followupHistory), JSON.stringify(auditTrail), current.id]
+    );
+
+    await logAuditAction(
+      `Inquiry Updated: ${current.inquiry_ref}`,
+      current.inquiry_ref,
+      actor,
+      req.ip,
+      { oldStatus: current.status, newStatus, assigned_to: newAssigned }
+    );
+
+    res.json({
+      success: true,
+      message: 'Inquiry updated successfully.',
+      inquiry: updRes.rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 15.5 Add Internal Note to Inquiry
+router.post('/inquiries/:id/notes', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { note, author = 'Super Administrator' } = req.body;
+    if (!note || !note.trim()) {
+      return res.status(400).json({ success: false, message: 'Note text is required.' });
+    }
+
+    const existRes = await query(
+      `SELECT * FROM demo_inquiries WHERE id::text = $1 OR inquiry_ref = $1 LIMIT 1`,
+      [id]
+    );
+    if (existRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Inquiry not found.' });
+    }
+    const current = existRes.rows[0];
+
+    let followupHistory = Array.isArray(current.followup_history) ? current.followup_history : [];
+    followupHistory.push({
+      date: new Date().toISOString(),
+      author,
+      note: note.trim()
+    });
+
+    const updRes = await query(
+      `UPDATE demo_inquiries SET followup_history = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [JSON.stringify(followupHistory), current.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Internal note added.',
+      inquiry: updRes.rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 15.6 Delete Inquiry
+router.delete('/inquiries/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await query(`DELETE FROM demo_inquiries WHERE id::text = $1 OR inquiry_ref = $1`, [id]);
+    res.json({ success: true, message: 'Inquiry deleted successfully.' });
   } catch (err) {
     next(err);
   }

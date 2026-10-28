@@ -38,6 +38,7 @@ import AuditLogsModule from './components/admin/AuditLogsModule';
 import IntegrationsModule from './components/admin/IntegrationsModule';
 import SettingsModule from './components/admin/SettingsModule';
 import NeedsContactModule from './components/admin/NeedsContactModule';
+import DemoInquiriesModule from './components/admin/DemoInquiriesModule';
 
 // Hook for smooth numerical count-up animation on KPI cards
 function useCountUp(target, duration = 1200) {
@@ -1419,6 +1420,15 @@ export default function AdminDashboard() {
             >
               <Monitor className="oxoo-nav-v2-icon" />
               <span>Demo Center</span>
+            </button>
+
+            <button
+              type="button"
+              className={`oxoo-nav-v2-btn ${activeTab === 'inquiries' ? 'active' : ''}`}
+              onClick={() => setActiveTab('inquiries')}
+            >
+              <Inbox className="oxoo-nav-v2-icon" />
+              <span>Demo & Website Inquiries</span>
             </button>
 
             <button
@@ -7795,6 +7805,13 @@ export default function AdminDashboard() {
               ------------------------------------------------------- */}
           {activeTab === 'needs' && (
             <NeedsContactModule onToast={showToast} showToast={showToast} logAuditEvent={logAuditEvent} />
+          )}
+
+          {/* -------------------------------------------------------
+              15. DEMO & WEBSITE INQUIRIES (PHASE 4 DEDICATED PIPELINE)
+              ------------------------------------------------------- */}
+          {activeTab === 'inquiries' && (
+            <DemoInquiriesModule showToast={showToast} logAuditEvent={logAuditEvent} />
           )}
 
         </main>

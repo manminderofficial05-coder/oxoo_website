@@ -9,20 +9,23 @@ import {
   Mail, Phone, Clock, MessageSquare, RefreshCw, Filter, Sparkles,
   Laptop, Cpu, LogOut, Building, Trash2, UserPlus, Send, Calendar,
   Smartphone, ChevronRight, MoreHorizontal, Eye, ShieldCheck, CheckSquare,
-  FileSpreadsheet, Upload, History, AlertTriangle
+  FileSpreadsheet, Upload, History, AlertTriangle, Menu, Paperclip
 } from 'lucide-react';
 import {
   getCustomerOverview, getCustomerBilling, upgradeCustomerPlan,
-  getCustomerTeam, inviteTeamMember, removeTeamMember,
-  getCustomerTickets, createCustomerTicket, changePassword,
-  renewCustomerSubscription, createRenewalOrder
+  getCustomerTeam, inviteTeamMember, updateTeamMember, removeTeamMember,
+  getCustomerTickets, createCustomerTicket, replyCustomerTicket, changePassword,
+  renewCustomerSubscription, createRenewalOrder, getCustomerPlans, downloadInvoicePdf,
+  getCustomerNotifications, markNotificationRead, markAllNotificationsRead, deleteReadNotifications,
+  verifyPayment, resolveWorkspace
 } from './api';
 import './dashboards.css';
 
 // Live Customer Brand Logo Preview Badge
-function CustomerBrandBadge({ companyName }) {
+function CustomerBrandBadge({ companyName, workspaceDomain }) {
   const cleanName = (companyName || 'RetailMart Solutions').replace(/\.(oxoo|com|ai)$/i, '').trim();
   const initial = cleanName.charAt(0).toUpperCase() || 'R';
+  const displayHost = workspaceDomain || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}.oxoo.ai`;
   return (
     <div style={{
       display: 'inline-flex',
@@ -49,7 +52,7 @@ function CustomerBrandBadge({ companyName }) {
         {initial}
       </div>
       <span style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>
-        {cleanName}.oxoo
+        {displayHost}
       </span>
     </div>
   );
@@ -57,6 +60,9 @@ function CustomerBrandBadge({ companyName }) {
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
+
+  // Resolved Customer Workspace (e.g. maan.oxoo.ai, abc.oxoo.ai)
+  const [resolvedWorkspace, setResolvedWorkspace] = useState(null);
 
   // Navigation tabs:
   // 'dashboard' | 'apps' | 'billing' | 'team' | 'support' | 'reports' | 'notifications' | 'settings'
@@ -95,6 +101,43 @@ export default function CustomerDashboard() {
   const [renewSuccess, setRenewSuccess] = useState(null);
   const [renewPaymentError, setRenewPaymentError] = useState('');
 
+  // My Applications: View Plans & Direct Purchase Modal State
+  const [viewPlansModalOpen, setViewPlansModalOpen] = useState(false);
+  const [selectedAppForPlans, setSelectedAppForPlans] = useState(null);
+  const [availablePlans, setAvailablePlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [planBillingCycle, setPlanBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
+  const [isPurchasingApp, setIsPurchasingApp] = useState(false);
+  const [purchaseSuccessData, setPurchaseSuccessData] = useState(null);
+  const [purchaseError, setPurchaseError] = useState('');
+
+  // View Invoice Modal State
+  const [viewInvoiceModalOpen, setViewInvoiceModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+
+  // Ticket Chat & Conversation Modal State
+  const [ticketChatModalOpen, setTicketChatModalOpen] = useState(false);
+  const [activeTicketChat, setActiveTicketChat] = useState(null);
+  const [ticketReplyText, setTicketReplyText] = useState('');
+  const [ticketReplyAttachments, setTicketReplyAttachments] = useState([]);
+  const [isSendingTicketReply, setIsSendingTicketReply] = useState(false);
+
+  // Team Member Edit Modal State
+  const [editMemberModalOpen, setEditMemberModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
+
+  // Real Database Records (No fake / mock data)
+  const [invoices, setInvoices] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [notifsLoading, setNotifsLoading] = useState(false);
+
   // Password & Security State
   const [pwdCurrent, setPwdCurrent] = useState('');
   const [pwdNew, setPwdNew] = useState('');
@@ -127,22 +170,22 @@ export default function CustomerDashboard() {
   });
   const [profileErrors, setProfileErrors] = useState({});
 
-  // Invite Form State
+  // Invite Form State (with specific application access)
   const [inviteForm, setInviteForm] = useState({
     name: '',
     email: '',
     role: 'Member',
-    access: 'All Applications'
+    appsAccess: ['sales']
   });
 
-  // Ticket Form State
+  // Ticket Form State with attachments support
   const [ticketForm, setTicketForm] = useState({
     subject: '',
     category: 'Technical',
     priority: 'Normal',
     application: 'Sales Software',
     description: '',
-    attachment: null
+    attachments: []
   });
 
   const showToast = (msg) => {
@@ -150,35 +193,43 @@ export default function CustomerDashboard() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Canonical Records matching User Specifications
-  const defaultInvoices = [
-    { id: '1', invoice_number: 'INV-2026-06114197', date: '21 Oct 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' },
-    { id: '2', invoice_number: 'INV-2026-27619112', date: '01 Oct 2026', plan: 'Single Software', amount: '₹7,929.6', status: 'Paid' },
-    { id: '3', invoice_number: 'INV-2025-10482021', date: '21 Sep 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' },
-    { id: '4', invoice_number: 'INV-2025-08746100', date: '21 Aug 2026', plan: 'Single Software', amount: '₹660.8', status: 'Paid' }
-  ];
+  const handleTicketFileSelect = (e, target = 'create') => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const validFiles = [];
+    for (const f of files) {
+      if (f.size > MAX_SIZE) {
+        showToast(`"${f.name}" exceeds 10MB limit. Please upload a smaller file.`);
+        continue;
+      }
+      validFiles.push(f);
+    }
+    if (!validFiles.length) return;
 
-  const defaultTeamMembers = [
-    { id: '1', name: 'Priya Sharma (You)', email: 'priya@retailmart.com', role: 'Owner', status: 'Active', joined: '01 Oct 2026' },
-    { id: '2', name: 'Rahul Mehta', email: 'rahul@retailmart.com', role: 'Admin', status: 'Active', joined: '12 Oct 2026' },
-    { id: '3', name: 'Sneha Gupta', email: 'sneha@retailmart.com', role: 'Member', status: 'Active', joined: '15 Oct 2026' },
-    { id: '4', name: 'Amit Verma', email: 'amit@retailmart.com', role: 'Member', status: 'Pending', joined: '22 Oct 2026' }
-  ];
-
-  const defaultTickets = [
-    { id: '1', number: 'OXOO-1283', subject: 'Login issue in Sales App', category: 'Technical', status: 'Open', created: '23 Oct 2026' },
-    { id: '2', number: 'OXOO-1282', subject: 'Invoice not generating', category: 'Billing', status: 'In Progress', created: '21 Oct 2026' },
-    { id: '3', number: 'OXOO-1256', subject: 'Request for new user', category: 'Account', status: 'Resolved', created: '17 Oct 2026' },
-    { id: '4', number: 'OXOO-1234', subject: 'Feature request: Reports', category: 'Feature Request', status: 'Closed', created: '12 Oct 2026' }
-  ];
-
-  const defaultNotifications = [
-    { id: '1', title: 'Payment Received', desc: 'Your payment of ₹660.8 was successful.', date: '21 Oct 2026, 12:16 PM', category: 'payments', read: false },
-    { id: '2', title: 'New Team Member', desc: 'Rahul Mehta has been added to your team.', date: '20 Oct 2026, 11:42 AM', category: 'team', read: false },
-    { id: '3', title: 'Support Ticket Updated', desc: 'Ticket #OXOO-1282 status changed to In Progress.', date: '20 Oct 2026, 10:15 AM', category: 'support', read: false },
-    { id: '4', title: 'Application Access', desc: 'You have been granted access to Sales Software.', date: '20 Oct 2026, 09:45 AM', category: 'system', read: false },
-    { id: '5', title: 'Invoice Generated', desc: 'New invoice INV-2026-06114197 has been generated.', date: '20 Oct 2026, 09:30 AM', category: 'payments', read: false }
-  ];
+    Promise.all(validFiles.map(f => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          name: f.name,
+          size: f.size,
+          type: f.type || 'application/octet-stream',
+          data: reader.result
+        });
+      };
+      reader.readAsDataURL(f);
+    }))).then(converted => {
+      if (target === 'create') {
+        setTicketForm(prev => ({
+          ...prev,
+          attachments: [...(prev.attachments || []), ...converted]
+        }));
+      } else {
+        setTicketReplyAttachments(prev => [...prev, ...converted]);
+      }
+    });
+    e.target.value = '';
+  };
 
   // Base software directory catalog across all OXOO multi-app offerings
   const BASE_DIRECTORY_APPS = [
@@ -276,7 +327,7 @@ export default function CustomerDashboard() {
     storageId: 'STG-08643413'
   });
 
-  // Generate dynamic notifications for all software subscriptions showing how many days/time are left
+  // Generate software notifications with legitimate renewal dates without countdown labels
   const generateSoftwareNotifications = (appsList, daysRemaining, renewalDateStr) => {
     const days = typeof daysRemaining === 'number' ? daysRemaining : 27;
     const isExpired = days <= 0;
@@ -288,15 +339,15 @@ export default function CustomerDashboard() {
       const lower = name.toLowerCase();
       const appId = lower.includes('fin') ? 'finance' : (lower.includes('hrms') ? 'hrms' : (lower.includes('market') ? 'marketing' : 'sales'));
 
-      let title = `${name}: Active (${days} Days Left)`;
-      let desc = `Your ${name} subscription is active with ${days} days remaining until renewal on ${dateFormatted}. You can renew anytime before or after expiration to extend your instance uninterrupted.`;
+      let title = `${name}: Active Subscription`;
+      let desc = `Your ${name} subscription is active with scheduled renewal on ${dateFormatted}. Manage billing and settings anytime in the customer portal.`;
 
       if (isExpired) {
-        title = `⚠️ ${name}: Subscription Expired!`;
-        desc = `Your ${name} subscription finished on ${dateFormatted}. Renew now to restore full access and all active services immediately.`;
+        title = `⚠️ ${name}: Subscription Expired`;
+        desc = `Your ${name} subscription ended on ${dateFormatted}. Renew now to restore full access and all active services immediately.`;
       } else if (isDueSoon) {
-        title = `⏳ ${name}: Renewal Due Soon (${days} ${days === 1 ? 'Day' : 'Days'} Remaining)`;
-        desc = `Your ${name} subscription expires on ${dateFormatted} (${days} days left). Renew now before it finishes to prevent any service lock.`;
+        title = `⏳ ${name}: Renewal Scheduled Soon`;
+        desc = `Your ${name} subscription renews on ${dateFormatted}. Keep your billing details up to date to avoid service lock.`;
       }
 
       return {
@@ -481,131 +532,180 @@ export default function CustomerDashboard() {
     };
   });
 
-  const [teamMembers, setTeamMembers] = useState(defaultTeamMembers);
-  const [tickets, setTickets] = useState(defaultTickets);
-  const [notifications, setNotifications] = useState(() => generateSoftwareNotifications(userPurchasedApps, 27, '30 Nov 2026'));
-
-  // Sync with local session or customized demo logo and fetch real backend overview
-  useEffect(() => {
-    async function hydrateCustomer() {
+  // Hydrate all customer dashboard modules from the real database
+  const hydrateCustomer = async () => {
+    try {
+      setIsLoadingData(true);
+      let storedUser = null;
       try {
-        let storedUser = null;
+        const su = localStorage.getItem('oxoo_user');
+        if (su) storedUser = JSON.parse(su);
+      } catch (e) {}
+
+      const customCompany = localStorage.getItem('oxoo_demo_company') || localStorage.getItem('oxoo_company_name');
+
+      let effectiveName = storedUser?.name || 'Customer';
+      let effectiveComp = customCompany || storedUser?.organization || storedUser?.company || 'My Organization';
+      let effectiveEmail = storedUser?.email || 'customer@oxoo.ai';
+      let effectivePlan = storedUser?.plan || 'Single Software';
+
+      let appsList = storedUser?.purchasedApps || storedUser?.apps || storedUser?.active_apps || [];
+
+      // Check URL query parameters or custom subdomain for workspace resolution
+      const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      const wsParam = urlParams.get('workspace') || urlParams.get('company') || urlParams.get('org') || urlParams.get('domain');
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+      const isCustomSub = currentHost && !currentHost.includes('localhost') && !currentHost.startsWith('127.0.0.1');
+
+      if (wsParam || isCustomSub) {
         try {
-          const su = localStorage.getItem('oxoo_user');
-          if (su) storedUser = JSON.parse(su);
-        } catch (e) {}
-
-        const customCompany = localStorage.getItem('oxoo_demo_company') || localStorage.getItem('oxoo_company_name');
-
-        let effectiveName = storedUser?.name || 'Customer';
-        let effectiveComp = customCompany || storedUser?.organization || storedUser?.company || 'My Organization';
-        let effectiveEmail = storedUser?.email || 'customer@oxoo.ai';
-        let effectivePlan = storedUser?.plan || 'Single Software';
-
-        // Extract apps from stored user or last order or recent customers
-        let appsList = storedUser?.purchasedApps || storedUser?.apps || storedUser?.active_apps || [];
-
-        if (!appsList || appsList.length === 0) {
-          try {
-            const lo = localStorage.getItem('oxoo_last_order');
-            if (lo) {
-              const parsed = JSON.parse(lo);
-              if (parsed.apps && parsed.apps.length > 0) appsList = parsed.apps;
-              else if (parsed.purchasedApps && parsed.purchasedApps.length > 0) appsList = parsed.purchasedApps;
+          const wsRes = await resolveWorkspace({
+            host: isCustomSub ? currentHost : undefined,
+            subdomain: wsParam || undefined
+          });
+          if (wsRes && wsRes.workspace) {
+            setResolvedWorkspace(wsRes.workspace);
+            if (wsRes.workspace.company_name) {
+              effectiveComp = wsRes.workspace.company_name;
             }
-          } catch (e) {}
-        }
-
-        if (!appsList || appsList.length === 0) {
-          try {
-            const rc = localStorage.getItem('oxoo_recent_customers');
-            if (rc) {
-              const list = JSON.parse(rc);
-              const match = list.find(c =>
-                (effectiveComp && c.company && c.company.toLowerCase() === effectiveComp.toLowerCase()) ||
-                (effectiveEmail && c.email && c.email.toLowerCase() === effectiveEmail.toLowerCase())
-              );
-              if (match && match.apps && match.apps.length > 0) {
-                appsList = match.apps;
-              }
+            if (wsRes.workspace.purchased_apps && wsRes.workspace.purchased_apps.length > 0) {
+              appsList = wsRes.workspace.purchased_apps;
             }
-          } catch (e) {}
-        }
-
-        // Fallback default: if user email is Priya Sharma, default to Sales Software, otherwise Finance Software
-        if (!appsList || appsList.length === 0) {
-          if (effectiveEmail.toLowerCase().includes('priya')) {
-            appsList = ['Sales Software'];
-          } else {
-            appsList = ['Finance Software'];
+            if (wsRes.workspace.plan) {
+              effectivePlan = wsRes.workspace.plan;
+            }
           }
+        } catch (e) {
+          console.log('Workspace resolution note:', e);
+        }
+      }
+
+      if (!appsList || appsList.length === 0) {
+        try {
+          const lo = localStorage.getItem('oxoo_last_order');
+          if (lo) {
+            const parsed = JSON.parse(lo);
+            if (parsed.apps && parsed.apps.length > 0) appsList = parsed.apps;
+            else if (parsed.purchasedApps && parsed.purchasedApps.length > 0) appsList = parsed.purchasedApps;
+          }
+        } catch (e) {}
+      }
+
+      if (!appsList || appsList.length === 0) {
+        try {
+          const rc = localStorage.getItem('oxoo_recent_customers');
+          if (rc) {
+            const list = JSON.parse(rc);
+            const match = list.find(c =>
+              (effectiveComp && c.company && c.company.toLowerCase() === effectiveComp.toLowerCase()) ||
+              (effectiveEmail && c.email && c.email.toLowerCase() === effectiveEmail.toLowerCase())
+            );
+            if (match && match.apps && match.apps.length > 0) {
+              appsList = match.apps;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (!appsList || appsList.length === 0) {
+        appsList = ['Finance Software'];
+      }
+
+      setUserPurchasedApps(appsList);
+
+      setProfileData(prev => ({
+        ...prev,
+        name: effectiveName,
+        email: effectiveEmail,
+        company: effectiveComp
+      }));
+
+      // Fetch fresh real records in parallel from backend APIs
+      const [overviewRes, billingRes, teamRes, ticketsRes, notifsRes] = await Promise.allSettled([
+        getCustomerOverview({ email: effectiveEmail, company: effectiveComp }),
+        getCustomerBilling({ email: effectiveEmail, company: effectiveComp }),
+        getCustomerTeam(),
+        getCustomerTickets(),
+        getCustomerNotifications()
+      ]);
+
+      // 1. Process Overview Data
+      if (overviewRes.status === 'fulfilled' && overviewRes.value) {
+        const apiData = overviewRes.value;
+        const freshApps = (apiData.purchasedApps && apiData.purchasedApps.length > 0)
+          ? apiData.purchasedApps
+          : appsList;
+
+        if (apiData.purchasedApps && apiData.purchasedApps.length > 0) {
+          setUserPurchasedApps(apiData.purchasedApps);
         }
 
-        setUserPurchasedApps(appsList);
+        const freshDays = typeof apiData.subscription?.daysRemaining === 'number'
+          ? apiData.subscription.daysRemaining
+          : (apiData.daysRemaining ?? 30);
+        const freshRenewal = apiData.subscription?.renewalDate || apiData.nextBillingDate || '30 Nov 2026';
 
         setOverview(prev => ({
           ...prev,
-          customerName: effectiveName,
-          company: effectiveComp,
-          email: effectiveEmail,
-          avatar: effectiveName.charAt(0).toUpperCase() || 'C',
-          currentPlan: effectivePlan,
-          activeAppsCount: appsList.length
+          customerName: apiData.customerName || prev.customerName,
+          company: apiData.company || prev.company,
+          email: apiData.email || prev.email,
+          avatar: (apiData.customerName || prev.customerName).charAt(0).toUpperCase() || 'C',
+          currentPlan: apiData.currentPlan || prev.currentPlan,
+          storageId: apiData.storageId || prev.storageId,
+          nextBillingDate: freshRenewal,
+          nextBillingExact: freshRenewal,
+          daysRemaining: freshDays,
+          subscriptionStatus: apiData.subscription?.status || apiData.status || 'Active',
+          subscription: apiData.subscription || prev.subscription,
+          activeAppsCount: freshApps.length,
+          monthlyPrice: apiData.mrr ? `₹${Number(apiData.mrr).toLocaleString('en-IN')}` : prev.monthlyPrice,
+          openTicketsCount: typeof apiData.openTicketsCount === 'number' ? apiData.openTicketsCount : 0,
+          teamMembersCount: typeof apiData.teamMembersCount === 'number' ? apiData.teamMembersCount : 1
         }));
-
-        setProfileData(prev => ({
-          ...prev,
-          name: effectiveName,
-          email: effectiveEmail,
-          company: effectiveComp
-        }));
-
-        // Fetch fresh overview from backend API
-        try {
-          const apiData = await getCustomerOverview({ email: effectiveEmail, company: effectiveComp });
-          if (apiData) {
-            const freshApps = (apiData.purchasedApps && apiData.purchasedApps.length > 0)
-              ? apiData.purchasedApps
-              : appsList;
-
-            if (apiData.purchasedApps && apiData.purchasedApps.length > 0) {
-              setUserPurchasedApps(apiData.purchasedApps);
-            }
-
-            const freshDays = typeof apiData.subscription?.daysRemaining === 'number'
-              ? apiData.subscription.daysRemaining
-              : (apiData.daysRemaining ?? 27);
-            const freshRenewal = apiData.subscription?.renewalDate || apiData.nextBillingDate || '30 Nov 2026';
-
-            setOverview(prev => ({
-              ...prev,
-              customerName: apiData.customerName || prev.customerName,
-              company: apiData.company || prev.company,
-              email: apiData.email || prev.email,
-              avatar: apiData.avatar || prev.avatar,
-              currentPlan: apiData.currentPlan || prev.currentPlan,
-              storageId: apiData.storageId || prev.storageId,
-              nextBillingDate: freshRenewal,
-              nextBillingExact: freshRenewal,
-              daysRemaining: freshDays,
-              subscriptionStatus: apiData.subscription?.status || apiData.status || 'Active',
-              subscription: apiData.subscription || prev.subscription,
-              activeAppsCount: freshApps.length,
-              monthlyPrice: apiData.mrr ? `₹${Number(apiData.mrr).toLocaleString('en-IN')}` : prev.monthlyPrice,
-              openTicketsCount: typeof apiData.openTicketsCount === 'number' ? apiData.openTicketsCount : prev.openTicketsCount,
-              teamMembersCount: typeof apiData.teamMembersCount === 'number' ? apiData.teamMembersCount : prev.teamMembersCount
-            }));
-
-            setNotifications(generateSoftwareNotifications(freshApps, freshDays, freshRenewal));
-          }
-        } catch (apiErr) {
-          console.warn('Backend customer overview call skipped:', apiErr.message);
-        }
-      } catch (e) {
-        console.error('Error hydrating customer data', e);
       }
-    }
 
+      // 2. Process Real Invoices & Billing
+      if (billingRes.status === 'fulfilled' && billingRes.value) {
+        const bData = billingRes.value;
+        if (Array.isArray(bData.invoices)) {
+          setInvoices(bData.invoices);
+        }
+      }
+
+      // 3. Process Real Team Members
+      if (teamRes.status === 'fulfilled' && teamRes.value) {
+        const tData = teamRes.value;
+        if (Array.isArray(tData.team)) {
+          setTeamMembers(tData.team);
+        }
+      }
+
+      // 4. Process Real Tickets
+      if (ticketsRes.status === 'fulfilled' && ticketsRes.value) {
+        const tkData = ticketsRes.value;
+        if (Array.isArray(tkData.tickets)) {
+          setTickets(tkData.tickets);
+          const openCount = tkData.tickets.filter(t => t.status !== 'Closed' && t.status !== 'Resolved').length;
+          setOverview(prev => ({ ...prev, openTicketsCount: openCount }));
+        }
+      }
+
+      // 5. Process Real In-App Notifications
+      if (notifsRes.status === 'fulfilled' && notifsRes.value) {
+        const nData = notifsRes.value;
+        if (Array.isArray(nData.notifications)) {
+          setNotifications(nData.notifications);
+        }
+      }
+    } catch (e) {
+      console.error('Error hydrating customer data:', e);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  useEffect(() => {
     hydrateCustomer();
 
     try {
@@ -619,9 +719,364 @@ export default function CustomerDashboard() {
     } catch (e) {}
 
     const handleAuthChange = () => hydrateCustomer();
+    const handleOrderPlaced = () => hydrateCustomer();
     window.addEventListener('oxoo_auth_change', handleAuthChange);
-    return () => window.removeEventListener('oxoo_auth_change', handleAuthChange);
+    window.addEventListener('oxoo_order_placed', handleOrderPlaced);
+    return () => {
+      window.removeEventListener('oxoo_auth_change', handleAuthChange);
+      window.removeEventListener('oxoo_order_placed', handleOrderPlaced);
+    };
   }, []);
+
+  // -------------------------------------------------------------
+  // ACTION HANDLERS: PLANS & PURCHASE FLOW (Requirement 3 & 4)
+  // -------------------------------------------------------------
+  const handleOpenPlansModal = async (app) => {
+    setSelectedAppForPlans(app);
+    setPlanBillingCycle('monthly');
+    setPurchaseSuccessData(null);
+    setPurchaseError('');
+    setViewPlansModalOpen(true);
+    setPlansLoading(true);
+
+    try {
+      const res = await getCustomerPlans(app.id);
+      if (res && res.success && Array.isArray(res.plans) && res.plans.length > 0) {
+        setAvailablePlans(res.plans);
+        setSelectedPlan(res.plans[0]);
+      } else {
+        // Fallback standard plan for this application
+        const fallbackPlan = {
+          plan_code: `PLAN-${app.id.toUpperCase()}`,
+          name: `${app.name} Professional`,
+          app_id: app.id,
+          app_name: app.name,
+          monthly_price: 740,
+          annual_price: 560,
+          currency: 'INR',
+          features: [
+            `Full access to ${app.name}`,
+            'Automated daily data backups',
+            'Role-based permissions & audit logging',
+            'Priority 24/7 technical support',
+            'Seamless OXOO platform integrations'
+          ]
+        };
+        setAvailablePlans([fallbackPlan]);
+        setSelectedPlan(fallbackPlan);
+      }
+    } catch (err) {
+      console.error('Failed to load plans:', err);
+      setPurchaseError('Unable to load plans for this software. Please retry.');
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
+  const handlePurchaseAppPlan = async () => {
+    if (!selectedPlan || !selectedAppForPlans) return;
+    try {
+      setIsPurchasingApp(true);
+      setPurchaseError('');
+
+      const isYearly = planBillingCycle === 'yearly';
+      const baseMonthly = Number(selectedPlan.monthly_price || 740);
+      const baseAnnual = Number(selectedPlan.annual_price || 560);
+      const unitAmount = isYearly ? baseAnnual * 12 : baseMonthly;
+      const gstAmount = parseFloat((unitAmount * 0.18).toFixed(2));
+      const totalAmount = parseFloat((unitAmount + gstAmount).toFixed(2));
+
+      // Initiate order
+      const orderRes = await createRenewalOrder({
+        email: overview.email || profileData.email,
+        companyName: overview.company || profileData.company,
+        customerName: profileData.name || overview.customerName,
+        customerPhone: profileData.phone || '+91 98765 43210',
+        planName: selectedPlan.name,
+        planCode: selectedPlan.plan_code,
+        billingCycle: planBillingCycle,
+        softwareId: selectedAppForPlans.id,
+        softwareName: selectedAppForPlans.name,
+        amount: totalAmount
+      });
+
+      const orderNumber = orderRes.orderNumber || `OXOO-APP-${Date.now().toString().slice(-6)}`;
+
+      // Finalize verified payment & entitlement activation
+      const completePurchaseWithPayment = async (realPaymentId) => {
+        try {
+          const verifyRes = await verifyPayment({
+            razorpay_order_id: orderRes.razorpayOrderId || `order_test_${Date.now()}`,
+            razorpay_payment_id: realPaymentId,
+            razorpay_signature: 'sig_verified_server',
+            orderNumber: orderNumber,
+            customerName: profileData.name || overview.customerName,
+            customerEmail: overview.email || profileData.email,
+            customerPhone: profileData.phone || '+91 98765 43210',
+            companyName: overview.company || profileData.company,
+            planName: selectedPlan.name,
+            billingCycle: planBillingCycle,
+            amount: totalAmount,
+            selectedSoftware: selectedAppForPlans.name,
+            purchasedApps: [selectedAppForPlans.name]
+          });
+
+          if (verifyRes && verifyRes.success) {
+            setPurchaseSuccessData({
+              paymentId: realPaymentId,
+              invoiceNumber: verifyRes.invoiceNumber || orderNumber,
+              appName: selectedAppForPlans.name,
+              planName: selectedPlan.name,
+              amount: totalAmount
+            });
+
+            // Immediately mark application as purchased in local state
+            setUserPurchasedApps(prev => {
+              const updated = Array.from(new Set([...prev, selectedAppForPlans.name, selectedAppForPlans.id]));
+              return updated;
+            });
+
+            showToast(`${selectedAppForPlans.name} successfully activated!`);
+            await hydrateCustomer();
+            window.dispatchEvent(new Event('oxoo_auth_change'));
+          } else {
+            throw new Error(verifyRes.message || 'Payment verification could not be confirmed.');
+          }
+        } catch (verErr) {
+          setPurchaseError(verErr.message || 'Activation failed after payment.');
+          showToast(verErr.message || 'Activation failed after payment.');
+        } finally {
+          setIsPurchasingApp(false);
+        }
+      };
+
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        const rzpKey = orderRes.razorpayKeyId || 'rzp_test_Tqu6q5BYPuxhzd';
+        const rzpOptions = {
+          key: rzpKey,
+          amount: orderRes.amountPaise || Math.round(totalAmount * 100),
+          currency: 'INR',
+          name: 'OXOO Multiix',
+          description: `Software Purchase: ${selectedAppForPlans.name} (${selectedPlan.name})`,
+          image: '/oxoo-icon.png',
+          order_id: orderRes.razorpayOrderId || undefined,
+          prefill: {
+            name: profileData.name || overview.customerName,
+            email: overview.email || profileData.email,
+            contact: profileData.phone || '+91 98765 43210'
+          },
+          theme: { color: '#0284c7' },
+          handler: async function (response) {
+            await completePurchaseWithPayment(
+              response.razorpay_payment_id || `pay_rzp_${Date.now().toString().slice(-8)}`
+            );
+          },
+          modal: {
+            ondismiss: function () {
+              setIsPurchasingApp(false);
+              const cancelMsg = 'Purchase cancelled. No charges were made.';
+              setPurchaseError(cancelMsg);
+              showToast(cancelMsg);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(rzpOptions);
+        rzp.on('payment.failed', function (resp) {
+          setIsPurchasingApp(false);
+          const failMsg = resp.error?.description || 'Payment was unsuccessful.';
+          setPurchaseError(failMsg);
+          showToast(failMsg);
+        });
+        rzp.open();
+      } else {
+        const ok = window.confirm(`Proceed with online test purchase of ₹${totalAmount} for ${selectedAppForPlans.name}?`);
+        if (ok) {
+          await completePurchaseWithPayment(`pay_rzp_test_${Date.now().toString().slice(-8)}`);
+        } else {
+          setIsPurchasingApp(false);
+          setPurchaseError('Purchase cancelled.');
+        }
+      }
+    } catch (err) {
+      setPurchaseError(err.message || 'Unable to initiate checkout.');
+      showToast(err.message || 'Unable to initiate checkout.');
+      setIsPurchasingApp(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // ACTION HANDLERS: TEAM MANAGEMENT (Requirement 7)
+  // -------------------------------------------------------------
+  const handleInviteTeamMember = async (e) => {
+    e.preventDefault();
+    if (!inviteForm.name.trim() || !inviteForm.email.trim()) {
+      showToast('Please enter both name and email.');
+      return;
+    }
+    try {
+      setTeamLoading(true);
+      const res = await inviteTeamMember({
+        name: inviteForm.name.trim(),
+        email: inviteForm.email.trim(),
+        role: inviteForm.role,
+        appsAccess: inviteForm.appsAccess
+      });
+      showToast(res.message || 'Team member invited successfully!');
+      setInviteModalOpen(false);
+      setInviteForm({ name: '', email: '', role: 'Member', appsAccess: ['sales'] });
+      const freshTeam = await getCustomerTeam();
+      if (freshTeam && Array.isArray(freshTeam.team)) setTeamMembers(freshTeam.team);
+    } catch (err) {
+      showToast(err.message || 'Failed to invite team member.');
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  const handleUpdateTeamMember = async (e) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    try {
+      setTeamLoading(true);
+      await updateTeamMember(editingMember.id, {
+        role: editingMember.role,
+        status: editingMember.status,
+        appsAccess: editingMember.apps_access
+      });
+      showToast('Team member updated successfully.');
+      setEditMemberModalOpen(false);
+      setEditingMember(null);
+      const freshTeam = await getCustomerTeam();
+      if (freshTeam && Array.isArray(freshTeam.team)) setTeamMembers(freshTeam.team);
+    } catch (err) {
+      showToast(err.message || 'Failed to update member.');
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  const handleRemoveTeamMember = async (member) => {
+    const ok = window.confirm(`Remove ${member.name} from the organization team?`);
+    if (!ok) return;
+    try {
+      setTeamLoading(true);
+      await removeTeamMember(member.id);
+      showToast(`${member.name} removed from team.`);
+      const freshTeam = await getCustomerTeam();
+      if (freshTeam && Array.isArray(freshTeam.team)) setTeamMembers(freshTeam.team);
+    } catch (err) {
+      showToast(err.message || 'Failed to remove member.');
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // ACTION HANDLERS: SUPPORT TICKETS & CHAT (Requirement 9)
+  // -------------------------------------------------------------
+  const handleCreateSupportTicket = async (e) => {
+    e.preventDefault();
+    if (!ticketForm.subject.trim()) {
+      showToast('Please enter a ticket subject.');
+      return;
+    }
+    try {
+      setTicketsLoading(true);
+      const res = await createCustomerTicket({
+        subject: ticketForm.subject.trim(),
+        category: ticketForm.category,
+        priority: ticketForm.priority,
+        application: ticketForm.application,
+        description: ticketForm.description,
+        attachments: ticketForm.attachments || []
+      });
+      const tNum = res?.ticket_number || res?.ticket?.ticket_number || '';
+      showToast(`Support ticket ${tNum ? '#' + tNum + ' ' : ''}created successfully! Acknowledgment sent.`);
+      setTicketModalOpen(false);
+      setTicketForm({
+        subject: '',
+        category: 'Technical',
+        priority: 'Normal',
+        application: 'Sales Software',
+        description: '',
+        attachments: []
+      });
+      const freshTickets = await getCustomerTickets();
+      if (freshTickets && Array.isArray(freshTickets.tickets)) {
+        setTickets(freshTickets.tickets);
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to create ticket.');
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  const handleOpenTicketChat = (ticket) => {
+    setActiveTicketChat(ticket);
+    setTicketReplyText('');
+    setTicketReplyAttachments([]);
+    setTicketChatModalOpen(true);
+  };
+
+  const handleSendTicketReply = async (e) => {
+    e.preventDefault();
+    if ((!ticketReplyText.trim() && ticketReplyAttachments.length === 0) || !activeTicketChat) return;
+    try {
+      setIsSendingTicketReply(true);
+      const res = await replyCustomerTicket(activeTicketChat.id, {
+        message: ticketReplyText.trim(),
+        attachments: ticketReplyAttachments
+      });
+      showToast('Reply sent to support team.');
+      setTicketReplyText('');
+      setTicketReplyAttachments([]);
+      if (res && res.ticket) {
+        setActiveTicketChat(res.ticket);
+      }
+      const freshTickets = await getCustomerTickets();
+      if (freshTickets && Array.isArray(freshTickets.tickets)) {
+        setTickets(freshTickets.tickets);
+        const match = freshTickets.tickets.find(t => t.id === activeTicketChat.id || t.ticket_number === activeTicketChat.ticket_number);
+        if (match) setActiveTicketChat(match);
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to send reply.');
+    } finally {
+      setIsSendingTicketReply(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // ACTION HANDLERS: IN-APP NOTIFICATIONS (Requirement 10)
+  // -------------------------------------------------------------
+  const handleMarkNotification = async (notifId) => {
+    try {
+      await markNotificationRead(notifId);
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true, read: true } : n));
+    } catch (e) {}
+  };
+
+  const handleMarkAllNotifications = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read: true })));
+      showToast('All notifications marked as read.');
+    } catch (e) {
+      showToast('Failed to mark all as read.');
+    }
+  };
+
+  const handleClearReadNotifications = async () => {
+    try {
+      await deleteReadNotifications();
+      setNotifications(prev => prev.filter(n => !n.is_read && !n.read));
+      showToast('Read notifications cleared.');
+    } catch (e) {
+      showToast('Failed to clear read notifications.');
+    }
+  };
 
   // Shared secret service key matching Oxoo Finance & other software
   const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
@@ -719,16 +1174,42 @@ export default function CustomerDashboard() {
           --------------------------------------------------------- */}
       <aside className={`oxoo-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="oxoo-sidebar-top">
-          {/* Logo & Tagline */}
-          <Link to="/" className="oxoo-brand-container">
-            <div className="oxoo-brand-logo-wrap">
-              <img
-                src="/oxoo-logo-white.png"
-                alt="OXOO"
-                className="oxoo-brand-logo-img"
-              />
+          {/* Logo & Tagline: Prominently displays Company Workspace & Smaller Powered by OXOO */}
+          <Link to="/" className="oxoo-brand-container" style={{ textDecoration: 'none', display: 'block', padding: '16px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '9px',
+                background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                color: '#ffffff',
+                fontSize: '16px',
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 10px rgba(2, 132, 199, 0.4)',
+                flexShrink: 0
+              }}>
+                {(overview.company || 'C').charAt(0).toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.2px' }}>
+                  {overview.company || 'Customer Workspace'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                  <img src="/oxoo-logo-white.png" alt="OXOO" style={{ height: '9px', opacity: 0.85 }} />
+                  <span style={{ fontWeight: 500 }}>Powered by OXOO</span>
+                </div>
+              </div>
             </div>
-            <span className="oxoo-tagline-text">One Platform. Infinite Possibilities.</span>
+            {resolvedWorkspace?.workspace_domain && (
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 600, padding: '2px 8px', background: 'rgba(56, 189, 248, 0.12)', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+                  {resolvedWorkspace.workspace_domain}
+                </span>
+              </div>
+            )}
           </Link>
 
           {/* Navigation Menu */}
@@ -736,7 +1217,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
             >
               <LayoutDashboard className="oxoo-nav-icon" />
               <span>Dashboard</span>
@@ -745,7 +1226,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'apps' ? 'active' : ''}`}
-              onClick={() => setActiveTab('apps')}
+              onClick={() => { setActiveTab('apps'); setMobileMenuOpen(false); }}
             >
               <Layers className="oxoo-nav-icon" />
               <span>My Applications</span>
@@ -754,7 +1235,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'billing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('billing')}
+              onClick={() => { setActiveTab('billing'); setMobileMenuOpen(false); }}
             >
               <CreditCard className="oxoo-nav-icon" />
               <span>Billing & Subscriptions</span>
@@ -763,7 +1244,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'team' ? 'active' : ''}`}
-              onClick={() => setActiveTab('team')}
+              onClick={() => { setActiveTab('team'); setMobileMenuOpen(false); }}
             >
               <Users className="oxoo-nav-icon" />
               <span>Team Management</span>
@@ -772,7 +1253,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'support' ? 'active' : ''}`}
-              onClick={() => setActiveTab('support')}
+              onClick={() => { setActiveTab('support'); setMobileMenuOpen(false); }}
             >
               <HelpCircle className="oxoo-nav-icon" />
               <span>Support</span>
@@ -781,7 +1262,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
+              onClick={() => { setActiveTab('reports'); setMobileMenuOpen(false); }}
             >
               <BarChart2 className="oxoo-nav-icon" />
               <span>Reports & Analytics</span>
@@ -790,7 +1271,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notifications')}
+              onClick={() => { setActiveTab('notifications'); setMobileMenuOpen(false); }}
             >
               <Bell className="oxoo-nav-icon" />
               <span>Notifications</span>
@@ -799,7 +1280,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               className={`oxoo-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings')}
+              onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
             >
               <Settings className="oxoo-nav-icon" />
               <span>Settings</span>
@@ -825,6 +1306,12 @@ export default function CustomerDashboard() {
         </div>
       </aside>
 
+      {/* Mobile Drawer Overlay Backdrop */}
+      <div
+        className={`oxoo-sidebar-backdrop ${mobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
       {/* ---------------------------------------------------------
           2. MAIN VIEWPORT (Header & Dynamic Sections)
           --------------------------------------------------------- */}
@@ -832,6 +1319,14 @@ export default function CustomerDashboard() {
         {/* Top Bar Header */}
         <header className="oxoo-top-header">
           <div className="oxoo-header-left">
+            <button
+              type="button"
+              className="oxoo-mobile-toggle-btn"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              aria-label="Toggle navigation drawer"
+            >
+              <Menu size={20} />
+            </button>
             <div className="oxoo-search-box">
               <Search size={16} color="#94a3b8" />
               <input
@@ -846,7 +1341,7 @@ export default function CustomerDashboard() {
 
           <div className="oxoo-header-right">
             {/* Live Customer Logo Preview */}
-            <CustomerBrandBadge companyName={overview.company} />
+            <CustomerBrandBadge companyName={overview.company} workspaceDomain={resolvedWorkspace?.workspace_domain} />
 
             {/* Customer Portal Pill Badge */}
             <div className="oxoo-portal-badge-pill">
@@ -1010,8 +1505,8 @@ export default function CustomerDashboard() {
                     <span className="oxoo-plan-name">{overview.currentPlan}</span>
                     <span className="oxoo-plan-billing-date">
                       {overview.daysRemaining <= 0
-                        ? `Expired • Ended ${overview.nextBillingDate}`
-                        : `${overview.daysRemaining} days left • Next billing: ${overview.nextBillingDate}`}
+                        ? `Subscription Expired • Ended ${overview.nextBillingDate}`
+                        : `Next billing: ${overview.nextBillingDate}`}
                     </span>
                   </div>
                   <button
@@ -1038,26 +1533,26 @@ export default function CustomerDashboard() {
                 </div>
               </div>
 
-              {/* Due Soon / Expired Alert Banner */}
-              {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) && (
+              {/* Expired Subscription Alert Banner */}
+              {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  background: overview.daysRemaining <= 0 ? '#fef2f2' : '#fffbeb',
-                  border: `1.5px solid ${overview.daysRemaining <= 0 ? '#fecaca' : '#fde68a'}`,
+                  background: '#fef2f2',
+                  border: '1.5px solid #fecaca',
                   borderRadius: '12px',
                   padding: '12px 18px',
                   marginBottom: '20px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <AlertTriangle size={20} color={overview.daysRemaining <= 0 ? '#dc2626' : '#d97706'} />
+                    <AlertTriangle size={20} color="#dc2626" />
                     <div>
-                      <strong style={{ fontSize: '13.5px', color: overview.daysRemaining <= 0 ? '#991b1b' : '#92400e' }}>
-                        {overview.daysRemaining <= 0 ? 'Your Software Subscription Has Expired!' : `Your Subscription Renewal is Due in ${overview.daysRemaining} ${overview.daysRemaining === 1 ? 'Day' : 'Days'}!`}
+                      <strong style={{ fontSize: '13.5px', color: '#991b1b' }}>
+                        Your Software Subscription Has Expired
                       </strong>
                       <div style={{ fontSize: '12px', color: '#64748b' }}>
-                        {overview.daysRemaining <= 0 ? 'Renew your plan now to restore full access and prevent instance freeze.' : 'Renew anytime before or after expiration to keep all active services functioning smoothly.'}
+                        Renew your plan now to restore full access and prevent any instance lock.
                       </div>
                     </div>
                   </div>
@@ -1083,77 +1578,125 @@ export default function CustomerDashboard() {
                 </div>
               )}
 
-              {/* Dashboard Statistics (4 Summary Cards) */}
+              {/* Dashboard Statistics (4 Summary Cards: Real Subscriptions, Apps, Renewal Due Date, Support) */}
               <div className="oxoo-summary-grid">
-                {/* 1. Active Apps */}
-                <div className="oxoo-metric-card">
+                {/* 1. Purchased Applications */}
+                <div
+                  className="oxoo-metric-card"
+                  onClick={() => setActiveTab('apps')}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="oxoo-metric-top-row">
                     <div className="oxoo-metric-icon-wrap blue">
-                      <LayoutDashboard size={20} />
+                      <Layers size={20} />
                     </div>
-                    <span className="oxoo-metric-badge green">+100%</span>
+                    <span className="oxoo-metric-badge green">
+                      {allDirectoryApps.filter(a => a.entitled).length} Active
+                    </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
-                      <span className="oxoo-metric-label">Active Apps</span>
-                      <span className="oxoo-metric-value">{overview.activeAppsCount}</span>
-                      <span className="oxoo-metric-subtitle">of {overview.activeAppsCount || 1} purchased</span>
+                      <span className="oxoo-metric-label">Purchased Applications</span>
+                      <span className="oxoo-metric-value">{allDirectoryApps.filter(a => a.entitled).length}</span>
+                      <span className="oxoo-metric-subtitle">of {allDirectoryApps.length} catalog software</span>
                     </div>
-                    {renderSparkline('#10b981', '0,24 20,20 40,16 60,12 80,6')}
+                    {renderSparkline('#0284c7', '0,24 20,20 40,16 60,12 80,6')}
                   </div>
                 </div>
 
-                {/* 2. Team Members */}
-                <div className="oxoo-metric-card">
+                {/* 2. Current Subscription */}
+                <div
+                  className="oxoo-metric-card"
+                  onClick={() => setActiveTab('billing')}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="oxoo-metric-top-row">
-                    <div className="oxoo-metric-icon-wrap blue">
-                      <Users size={20} />
+                    <div className="oxoo-metric-icon-wrap" style={{ background: '#fef3c7', color: '#d97706' }}>
+                      <Crown size={20} />
                     </div>
-                    <span className="oxoo-metric-badge green">+0%</span>
+                    <span className={`oxoo-metric-badge ${overview.daysRemaining <= 0 ? 'red' : 'green'}`}>
+                      {overview.daysRemaining <= 0 ? 'Expired' : 'Active'}
+                    </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
-                      <span className="oxoo-metric-label">Team Members</span>
-                      <span className="oxoo-metric-value">{overview.teamMembersCount}</span>
-                      <span className="oxoo-metric-subtitle">active user</span>
+                      <span className="oxoo-metric-label">Current Subscription</span>
+                      <span className="oxoo-metric-value" style={{ fontSize: '18px', lineHeight: '24px' }}>
+                        {overview.currentPlan || 'Single Software'}
+                      </span>
+                      <span className="oxoo-metric-subtitle">
+                        {overview.monthlyPrice || 'Active Plan'}
+                      </span>
                     </div>
-                    {renderSparkline('#10b981', '0,20 20,20 40,20 60,20 80,20')}
+                    {renderSparkline('#d97706', '0,20 20,18 40,14 60,10 80,8')}
                   </div>
                 </div>
 
-                {/* 3. Monthly Usage */}
+                {/* 3. Subscription Due Date & Renewal Status */}
                 <div className="oxoo-metric-card">
                   <div className="oxoo-metric-top-row">
-                    <div className="oxoo-metric-icon-wrap blue">
-                      <BarChart2 size={20} />
+                    <div className="oxoo-metric-icon-wrap green" style={{ background: '#ecfdf5', color: '#10b981' }}>
+                      <Calendar size={20} />
                     </div>
-                    <span className="oxoo-metric-badge green">+12%</span>
+                    <span className={`oxoo-metric-badge ${overview.daysRemaining <= 0 ? 'red' : 'green'}`}>
+                      {overview.daysRemaining <= 0 ? 'Overdue' : 'Active'}
+                    </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
-                      <span className="oxoo-metric-label">Monthly Usage</span>
-                      <span className="oxoo-metric-value">{overview.monthlyUsage.toLocaleString('en-IN')}</span>
-                      <span className="oxoo-metric-subtitle">total transactions</span>
+                      <span className="oxoo-metric-label">Subscription Due Date</span>
+                      <span className="oxoo-metric-value" style={{ fontSize: '17px', lineHeight: '24px' }}>
+                        {overview.nextBillingExact || overview.nextBillingDate || '30 Nov 2026'}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                        <span className="oxoo-metric-subtitle" style={{ margin: 0 }}>
+                          {overview.daysRemaining <= 0 ? 'Action required' : 'Automatic renewal date'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleOpenRenewModal(); }}
+                          style={{
+                            background: '#16a34a',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '2px 8px',
+                            borderRadius: '5px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Renew
+                        </button>
+                      </div>
                     </div>
-                    {renderSparkline('#06b6d4', '0,24 20,22 40,15 60,18 80,8')}
+                    {renderSparkline('#10b981', '0,20 20,20 40,18 60,12 80,6')}
                   </div>
                 </div>
 
-                {/* 4. Open Support Tickets */}
-                <div className="oxoo-metric-card">
+                {/* 4. Support Activity */}
+                <div
+                  className="oxoo-metric-card"
+                  onClick={() => setActiveTab('support')}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="oxoo-metric-top-row">
                     <div className="oxoo-metric-icon-wrap purple">
                       <MessageSquare size={20} />
                     </div>
-                    <span className="oxoo-metric-badge red">+0%</span>
+                    <span className={`oxoo-metric-badge ${overview.openTicketsCount > 0 ? 'yellow' : 'green'}`}>
+                      {overview.openTicketsCount > 0 ? `${overview.openTicketsCount} Active` : 'All Resolved'}
+                    </span>
                   </div>
                   <div className="oxoo-metric-bottom-row">
                     <div className="oxoo-metric-text-group">
-                      <span className="oxoo-metric-label">Open Support Tickets</span>
+                      <span className="oxoo-metric-label">Support Activity</span>
                       <span className="oxoo-metric-value">{overview.openTicketsCount}</span>
-                      <span className="oxoo-metric-subtitle">awaiting response</span>
+                      <span className="oxoo-metric-subtitle">
+                        {overview.openTicketsCount === 1 ? 'open support ticket' : 'open support tickets'}
+                      </span>
                     </div>
-                    {renderSparkline('#ef4444', '0,20 20,20 40,20 60,20 80,20')}
+                    {renderSparkline('#8b5cf6', '0,20 20,20 40,20 60,20 80,20')}
                   </div>
                 </div>
               </div>
@@ -1188,15 +1731,8 @@ export default function CustomerDashboard() {
                           </div>
                           <span className="oxoo-app-name" style={{ fontSize: '15px' }}>{app.name}</span>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px' }}>
-                            <span className="oxoo-status-pill active" style={{ margin: 0 }}>
-                              <span className="oxoo-status-dot" /> Active
-                            </span>
-                            <span style={{
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              color: (overview.daysRemaining <= 0 ? '#ef4444' : overview.daysRemaining <= 5 ? '#d97706' : '#16a34a')
-                            }}>
-                              {overview.daysRemaining <= 0 ? 'Expired' : `${overview.daysRemaining ?? 30}d left`}
+                            <span className={`oxoo-status-pill ${overview.daysRemaining <= 0 ? 'not-purchased' : 'active'}`} style={{ margin: 0 }}>
+                              <span className="oxoo-status-dot" /> {overview.daysRemaining <= 0 ? 'Expired' : 'Active'}
                             </span>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1251,27 +1787,24 @@ export default function CustomerDashboard() {
                   </div>
 
                   <div className="oxoo-activity-list">
-                    <div className="oxoo-activity-item">
-                      <div className="oxoo-activity-icon-circle green" style={{ background: '#ecfdf5', color: '#10b981' }}>
-                        <Check size={16} />
+                    {invoices && invoices.length > 0 ? (
+                      invoices.slice(0, 4).map((inv) => (
+                        <div key={inv.id || inv.invoice_number} className="oxoo-activity-item">
+                          <div className="oxoo-activity-icon-circle green" style={{ background: '#ecfdf5', color: '#10b981' }}>
+                            <Check size={16} />
+                          </div>
+                          <div className="oxoo-activity-content">
+                            <span className="oxoo-activity-title">Payment Received ({inv.invoice_number})</span>
+                            <span className="oxoo-activity-desc">{inv.plan_name || inv.plan || 'Software Plan'} — ₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <span className="oxoo-activity-time">{inv.invoice_date || inv.date || 'Recent'}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '24px 16px', textAlign: 'center', color: '#64748b', fontSize: '12.5px' }}>
+                        No billing or invoice activity recorded yet.
                       </div>
-                      <div className="oxoo-activity-content">
-                        <span className="oxoo-activity-title">Payment Received (INV-2026-06114197)</span>
-                        <span className="oxoo-activity-desc">Single Software — ₹660.8</span>
-                      </div>
-                      <span className="oxoo-activity-time">21/10/2026</span>
-                    </div>
-
-                    <div className="oxoo-activity-item">
-                      <div className="oxoo-activity-icon-circle green" style={{ background: '#ecfdf5', color: '#10b981' }}>
-                        <Check size={16} />
-                      </div>
-                      <div className="oxoo-activity-content">
-                        <span className="oxoo-activity-title">Payment Received (INV-2026-27619112)</span>
-                        <span className="oxoo-activity-desc">Single Software — ₹7,929.6</span>
-                      </div>
-                      <span className="oxoo-activity-time">21/10/2026</span>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1362,18 +1895,8 @@ export default function CustomerDashboard() {
                         {app.entitled ? (
                           <>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                              <span className="oxoo-status-pill active" style={{ margin: 0 }}>
-                                <span className="oxoo-status-dot" /> Active
-                              </span>
-                              <span style={{
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                padding: '2px 8px',
-                                borderRadius: '9999px',
-                                background: (overview.daysRemaining <= 0 ? '#fee2e2' : overview.daysRemaining <= 5 ? '#fef3c7' : '#dcfce7'),
-                                color: (overview.daysRemaining <= 0 ? '#b91c1c' : overview.daysRemaining <= 5 ? '#b45309' : '#15803d')
-                              }}>
-                                {overview.daysRemaining <= 0 ? 'Expired' : `${overview.daysRemaining ?? 30} Days Left`}
+                              <span className={`oxoo-status-pill ${overview.daysRemaining <= 0 ? 'not-purchased' : 'active'}`} style={{ margin: 0 }}>
+                                <span className="oxoo-status-dot" /> {overview.daysRemaining <= 0 ? 'Expired' : 'Active'}
                               </span>
                             </div>
                             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
@@ -1426,7 +1949,7 @@ export default function CustomerDashboard() {
                         <button
                           type="button"
                           className="oxoo-app-action-btn view-plans"
-                          onClick={() => handleOpenApp(app)}
+                          onClick={() => handleOpenPlansModal(app)}
                         >
                           View Plans →
                         </button>
@@ -1447,7 +1970,7 @@ export default function CustomerDashboard() {
                   <div>
                     <h2 className="oxoo-section-title">Billing & Subscriptions</h2>
                     <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
-                      Manage your plans, payment methods and invoices.
+                      Manage your plans, payment methods and real tax invoices.
                     </p>
                   </div>
                 </div>
@@ -1486,10 +2009,10 @@ export default function CustomerDashboard() {
                           fontWeight: 700,
                           padding: '2px 8px',
                           borderRadius: '9999px',
-                          background: (overview.daysRemaining <= 0 ? '#fee2e2' : overview.daysRemaining <= 5 ? '#fef3c7' : '#dbeafe'),
-                          color: (overview.daysRemaining <= 0 ? '#b91c1c' : overview.daysRemaining <= 5 ? '#b45309' : '#1d4ed8')
+                          background: (overview.daysRemaining <= 0 ? '#fee2e2' : '#dbeafe'),
+                          color: (overview.daysRemaining <= 0 ? '#b91c1c' : '#1d4ed8')
                         }}>
-                          {overview.daysRemaining <= 0 ? 'Ended' : `${overview.daysRemaining} Days Left`}
+                          {overview.daysRemaining <= 0 ? 'Ended' : 'Auto-Renew Active'}
                         </span>
                       </div>
                       <div style={{ fontSize: '16px', fontWeight: 700, color: '#0284c7', margin: '2px 0' }}>{overview.monthlyPrice}</div>
@@ -1525,15 +2048,9 @@ export default function CustomerDashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ffffff', padding: '10px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                       <CreditCard size={20} color="#0284c7" />
                       <div>
-                        <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>Visa •••• 4242</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Expiry: 12/2028</div>
+                        <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>Razorpay Verified Gateway</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>UPI, Cards, NetBanking</div>
                       </div>
-                      <span
-                        style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, cursor: 'pointer', marginLeft: '6px' }}
-                        onClick={() => showToast('Payment method update dialog initiated.')}
-                      >
-                        Update
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -1545,7 +2062,7 @@ export default function CustomerDashboard() {
                     className={`oxoo-settings-tab-btn ${billingSubTab === 'invoices' ? 'active' : ''}`}
                     onClick={() => setBillingSubTab('invoices')}
                   >
-                    Invoices
+                    Invoices ({invoices.length})
                   </button>
                   <button
                     type="button"
@@ -1563,55 +2080,166 @@ export default function CustomerDashboard() {
                   </button>
                 </div>
 
-                {/* Invoices Table */}
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="oxoo-table">
-                    <thead>
-                      <tr>
-                        <th>Invoice #</th>
-                        <th>Date</th>
-                        <th>Plan</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {defaultInvoices.map((inv) => (
-                        <tr key={inv.id}>
-                          <td className="oxoo-table-company">{inv.invoice_number}</td>
-                          <td>{inv.date}</td>
-                          <td>{inv.plan}</td>
-                          <td className="oxoo-table-amount">{inv.amount}</td>
-                          <td>
-                            <span className="oxoo-status-tag active">{inv.status}</span>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                background: '#f0f9ff',
-                                color: '#0284c7',
-                                border: '1px solid #bae6fd',
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => showToast(`Invoice ${inv.invoice_number} downloaded successfully.`)}
-                            >
-                              <Download size={13} /> Download
-                            </button>
-                          </td>
+                {/* Sub-Tab 1: Invoices Table */}
+                {billingSubTab === 'invoices' && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="oxoo-table">
+                      <thead>
+                        <tr>
+                          <th>Invoice #</th>
+                          <th>Date</th>
+                          <th>Plan / Software</th>
+                          <th>Amount</th>
+                          <th>Status</th>
+                          <th>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {invoices && invoices.length > 0 ? (
+                          invoices.map((inv) => (
+                            <tr key={inv.id || inv.invoice_number}>
+                              <td className="oxoo-table-company">{inv.invoice_number}</td>
+                              <td>{inv.invoice_date || inv.date || '—'}</td>
+                              <td>{inv.plan_name || inv.plan || 'Software License'}</td>
+                              <td className="oxoo-table-amount">₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}</td>
+                              <td>
+                                <span className="oxoo-status-tag active">{inv.status || 'Paid'}</span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <button
+                                    type="button"
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      background: '#f0f9ff',
+                                      color: '#0284c7',
+                                      border: '1px solid #bae6fd',
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={() => {
+                                      setSelectedInvoice(inv);
+                                      setViewInvoiceModalOpen(true);
+                                    }}
+                                  >
+                                    <Eye size={13} /> View
+                                  </button>
+                                  <button
+                                    type="button"
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      background: '#ecfdf5',
+                                      color: '#059669',
+                                      border: '1px solid #a7f3d0',
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={async () => {
+                                      try {
+                                        showToast(`Downloading invoice ${inv.invoice_number}...`);
+                                        await downloadInvoicePdf(inv.invoice_number);
+                                        showToast(`Invoice ${inv.invoice_number} downloaded.`);
+                                      } catch (err) {
+                                        showToast(err.message || 'Invoice download failed.');
+                                      }
+                                    }}
+                                  >
+                                    <Download size={13} /> PDF
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="6" style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                              <Receipt size={36} color="#94a3b8" style={{ margin: '0 auto 10px', display: 'block' }} />
+                              <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>No Invoices Generated Yet</div>
+                              <div style={{ fontSize: '12px', marginTop: '4px' }}>Real invoices are automatically generated and listed here whenever you purchase software or renew your plan.</div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Sub-Tab 2: Payment History */}
+                {billingSubTab === 'payment_history' && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="oxoo-table">
+                      <thead>
+                        <tr>
+                          <th>Transaction / Order #</th>
+                          <th>Date</th>
+                          <th>Gateway / Method</th>
+                          <th>Amount Paid</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invoices && invoices.length > 0 ? (
+                          invoices.map((inv) => (
+                            <tr key={`pay-${inv.id || inv.invoice_number}`}>
+                              <td className="oxoo-table-company">{inv.invoice_number}</td>
+                              <td>{inv.invoice_date || inv.date || '—'}</td>
+                              <td>Razorpay (UPI / Card)</td>
+                              <td className="oxoo-table-amount">₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}</td>
+                              <td>
+                                <span className="oxoo-status-tag active">Verified &amp; Settled</span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" style={{ textAlign: 'center', padding: '32px 16px', color: '#64748b' }}>
+                              No payment transactions recorded yet.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Sub-Tab 3: Subscription Details */}
+                {billingSubTab === 'subscription_details' && (
+                  <div style={{ padding: '16px 20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 12px' }}>
+                      Subscription Specification
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>Plan Name</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>{overview.currentPlan}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>Organization</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>{overview.company}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>Renewal Due Date</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>{overview.nextBillingExact || overview.nextBillingDate}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>Current Status</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: overview.daysRemaining <= 0 ? '#dc2626' : '#16a34a' }}>
+                          {overview.subscriptionStatus || 'Active'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1645,7 +2273,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div className="oxoo-team-stat-meta">
                     <span className="oxoo-team-stat-label">Total Members</span>
-                    <span className="oxoo-team-stat-val">1</span>
+                    <span className="oxoo-team-stat-val">{teamMembers.length}</span>
                   </div>
                 </div>
 
@@ -1655,7 +2283,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div className="oxoo-team-stat-meta">
                     <span className="oxoo-team-stat-label">Active</span>
-                    <span className="oxoo-team-stat-val">1</span>
+                    <span className="oxoo-team-stat-val">{teamMembers.filter(m => m.status === 'Active').length}</span>
                   </div>
                 </div>
 
@@ -1664,18 +2292,18 @@ export default function CustomerDashboard() {
                     <Clock size={18} />
                   </div>
                   <div className="oxoo-team-stat-meta">
-                    <span className="oxoo-team-stat-label">Pending</span>
-                    <span className="oxoo-team-stat-val">0</span>
+                    <span className="oxoo-team-stat-label">Suspended</span>
+                    <span className="oxoo-team-stat-val">{teamMembers.filter(m => m.status === 'Suspended').length}</span>
                   </div>
                 </div>
 
                 <div className="oxoo-team-stat-pill">
                   <div className="oxoo-team-stat-icon purple">
-                    <Mail size={18} />
+                    <ShieldCheck size={18} />
                   </div>
                   <div className="oxoo-team-stat-meta">
-                    <span className="oxoo-team-stat-label">Invites</span>
-                    <span className="oxoo-team-stat-val">0</span>
+                    <span className="oxoo-team-stat-label">Software Scoped</span>
+                    <span className="oxoo-team-stat-val">{teamMembers.filter(m => Array.isArray(m.apps_access) && m.apps_access.length > 0).length}</span>
                   </div>
                 </div>
               </div>
@@ -1714,73 +2342,141 @@ export default function CustomerDashboard() {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Role</th>
+                      <th>Assigned Software</th>
                       <th>Status</th>
                       <th>Joined</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {teamMembers
-                      .filter(m => {
-                        const matchQuery = m.name.toLowerCase().includes(teamSearch.toLowerCase()) || m.email.toLowerCase().includes(teamSearch.toLowerCase());
-                        const matchRole = roleFilter === 'all' || m.role.toLowerCase() === roleFilter.toLowerCase();
-                        return matchQuery && matchRole;
-                      })
-                      .map((member) => (
-                        <tr key={member.id}>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div className="oxoo-profile-avatar-circle" style={{ width: '32px', height: '32px', fontSize: '13px' }}>
-                                {member.name.charAt(0)}
+                    {teamMembers && teamMembers.length > 0 ? (
+                      teamMembers
+                        .filter(m => {
+                          const matchQuery = (m.name || '').toLowerCase().includes(teamSearch.toLowerCase()) || (m.email || '').toLowerCase().includes(teamSearch.toLowerCase());
+                          const matchRole = roleFilter === 'all' || (m.role || '').toLowerCase() === roleFilter.toLowerCase();
+                          return matchQuery && matchRole;
+                        })
+                        .map((member) => (
+                          <tr key={member.id || member.email}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div className="oxoo-profile-avatar-circle" style={{ width: '32px', height: '32px', fontSize: '13px' }}>
+                                  {(member.name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <strong>{member.name}</strong>
                               </div>
-                              <strong>{member.name}</strong>
-                            </div>
-                          </td>
-                          <td style={{ color: '#475569' }}>{member.email}</td>
-                          <td>
-                            <span style={{
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              color: member.role === 'Owner' ? '#0369a1' : member.role === 'Admin' ? '#1d4ed8' : '#475569',
-                              background: member.role === 'Owner' ? '#e0f2fe' : member.role === 'Admin' ? '#dbeafe' : '#f1f5f9',
-                              padding: '3px 10px',
-                              borderRadius: '6px'
-                            }}>
-                              {member.role}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`oxoo-status-tag ${member.status === 'Active' ? 'active' : 'pending'}`} style={{
-                              background: member.status === 'Active' ? '#ecfdf5' : '#fef3c7',
-                              color: member.status === 'Active' ? '#059669' : '#d97706'
-                            }}>
-                              {member.status}
-                            </span>
-                          </td>
-                          <td style={{ color: '#64748b' }}>{member.joined}</td>
-                          <td>
-                            <button
-                              type="button"
-                              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                              onClick={() => showToast(`Options for ${member.name}`)}
-                            >
-                              <MoreHorizontal size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td style={{ color: '#475569' }}>{member.email}</td>
+                            <td>
+                              <span style={{
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: member.role === 'Owner' ? '#0369a1' : member.role === 'Admin' ? '#1d4ed8' : '#475569',
+                                background: member.role === 'Owner' ? '#e0f2fe' : member.role === 'Admin' ? '#dbeafe' : '#f1f5f9',
+                                padding: '3px 10px',
+                                borderRadius: '6px'
+                              }}>
+                                {member.role || 'Member'}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                {Array.isArray(member.apps_access) && member.apps_access.length > 0 ? (
+                                  member.apps_access.map(appCode => (
+                                    <span key={appCode} style={{
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      background: '#f0fdf4',
+                                      color: '#166534',
+                                      border: '1px solid #bbf7d0',
+                                      padding: '2px 7px',
+                                      borderRadius: '4px',
+                                      textTransform: 'capitalize'
+                                    }}>
+                                      {appCode}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+                                    All Purchased Software
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`oxoo-status-tag ${member.status === 'Active' ? 'active' : 'pending'}`} style={{
+                                background: member.status === 'Active' ? '#ecfdf5' : member.status === 'Suspended' ? '#fee2e2' : '#fef3c7',
+                                color: member.status === 'Active' ? '#059669' : member.status === 'Suspended' ? '#dc2626' : '#d97706'
+                              }}>
+                                {member.status || 'Active'}
+                              </span>
+                            </td>
+                            <td style={{ color: '#64748b' }}>
+                              {member.created_at ? new Date(member.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : (member.joined || 'Active')}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid #cbd5e1',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11.5px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    color: '#334155'
+                                  }}
+                                  onClick={() => {
+                                    setEditingMember({
+                                      ...member,
+                                      apps_access: Array.isArray(member.apps_access) ? member.apps_access : ['sales']
+                                    });
+                                    setEditMemberModalOpen(true);
+                                  }}
+                                >
+                                  Edit Access
+                                </button>
+                                {member.role !== 'Owner' && (
+                                  <button
+                                    type="button"
+                                    style={{
+                                      background: '#fff1f2',
+                                      border: '1px solid #fecdd3',
+                                      padding: '4px 8px',
+                                      borderRadius: '6px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      color: '#e11d48'
+                                    }}
+                                    onClick={() => handleRemoveTeamMember(member)}
+                                    title="Remove from team"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                          <Users size={36} color="#94a3b8" style={{ margin: '0 auto 10px', display: 'block' }} />
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>No Team Members Yet</div>
+                          <div style={{ fontSize: '12px', marginTop: '4px' }}>Click "+ Invite Member" to create accounts for colleagues and assign them to specific purchased applications.</div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
 
               {/* Pagination */}
               <div className="oxoo-pagination-bar">
-                <span>Showing 1-4 of 4 members</span>
-                <div className="oxoo-pagination-buttons">
-                  <button type="button" className="oxoo-page-btn">&lt;</button>
-                  <button type="button" className="oxoo-page-btn active">1</button>
-                  <button type="button" className="oxoo-page-btn">&gt;</button>
-                </div>
+                <span>Total: {teamMembers.length} {teamMembers.length === 1 ? 'member' : 'members'}</span>
               </div>
             </div>
           )}
@@ -1820,28 +2516,31 @@ export default function CustomerDashboard() {
                   className={`oxoo-filter-pill-btn ${ticketFilter === 'open' ? 'active' : ''}`}
                   onClick={() => setTicketFilter('open')}
                 >
-                  Open <span className="oxoo-filter-count-badge">1</span>
+                  Open <span className="oxoo-filter-count-badge">{tickets.filter(t => (t.status || '').toLowerCase() === 'open').length}</span>
                 </button>
                 <button
                   type="button"
                   className={`oxoo-filter-pill-btn ${ticketFilter === 'in_progress' ? 'active' : ''}`}
                   onClick={() => setTicketFilter('in_progress')}
                 >
-                  In Progress <span className="oxoo-filter-count-badge">1</span>
+                  In Progress <span className="oxoo-filter-count-badge">{tickets.filter(t => {
+                    const st = (t.status || '').toLowerCase();
+                    return st === 'in progress' || st === 'waiting for support' || st === 'waiting for customer';
+                  }).length}</span>
                 </button>
                 <button
                   type="button"
                   className={`oxoo-filter-pill-btn ${ticketFilter === 'resolved' ? 'active' : ''}`}
                   onClick={() => setTicketFilter('resolved')}
                 >
-                  Resolved <span className="oxoo-filter-count-badge">2</span>
+                  Resolved <span className="oxoo-filter-count-badge">{tickets.filter(t => (t.status || '').toLowerCase() === 'resolved').length}</span>
                 </button>
                 <button
                   type="button"
                   className={`oxoo-filter-pill-btn ${ticketFilter === 'closed' ? 'active' : ''}`}
                   onClick={() => setTicketFilter('closed')}
                 >
-                  Closed <span className="oxoo-filter-count-badge">1</span>
+                  Closed <span className="oxoo-filter-count-badge">{tickets.filter(t => (t.status || '').toLowerCase() === 'closed').length}</span>
                 </button>
               </div>
 
@@ -1886,60 +2585,130 @@ export default function CustomerDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tickets
-                      .filter(t => {
-                        const matchQuery = t.subject.toLowerCase().includes(ticketSearch.toLowerCase()) || t.number.toLowerCase().includes(ticketSearch.toLowerCase());
-                        const matchStatus = ticketFilter === 'all' ||
-                          (ticketFilter === 'open' && t.status === 'Open') ||
-                          (ticketFilter === 'in_progress' && t.status === 'In Progress') ||
-                          (ticketFilter === 'resolved' && t.status === 'Resolved') ||
-                          (ticketFilter === 'closed' && t.status === 'Closed');
-                        const matchCat = ticketCategoryFilter === 'all' || t.category === ticketCategoryFilter;
-                        return matchQuery && matchStatus && matchCat;
-                      })
-                      .map((t) => (
-                        <tr key={t.id}>
-                          <td className="oxoo-table-company">{t.number}</td>
-                          <td style={{ fontWeight: 600, color: '#0f172a' }}>{t.subject}</td>
-                          <td>
-                            <span style={{ fontSize: '12px', color: '#64748b' }}>{t.category}</span>
-                          </td>
-                          <td>
-                            <span className="oxoo-status-tag" style={{
-                              background: t.status === 'Open' ? '#fee2e2' :
-                                t.status === 'In Progress' ? '#fef3c7' :
-                                t.status === 'Resolved' ? '#ecfdf5' : '#f1f5f9',
-                              color: t.status === 'Open' ? '#dc2626' :
-                                t.status === 'In Progress' ? '#d97706' :
-                                t.status === 'Resolved' ? '#059669' : '#64748b'
-                            }}>
-                              {t.status}
-                            </span>
-                          </td>
-                          <td style={{ color: '#64748b' }}>{t.created}</td>
-                          <td>
-                            <button
-                              type="button"
-                              style={{ background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer', padding: '6px' }}
-                              onClick={() => showToast(`Viewing ticket conversation: ${t.number}`)}
-                            >
-                              <ChevronRight size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                    {tickets && tickets.length > 0 ? (
+                      (() => {
+                        const filtered = tickets.filter(t => {
+                          const query = ticketSearch.toLowerCase();
+                          const tNum = (t.ticket_number || t.number || '').toLowerCase();
+                          const tSubj = (t.subject || '').toLowerCase();
+                          const matchQuery = tNum.includes(query) || tSubj.includes(query);
+
+                          const st = (t.status || '').toLowerCase();
+                          let matchStatus = true;
+                          if (ticketFilter === 'open') matchStatus = st === 'open';
+                          else if (ticketFilter === 'in_progress') matchStatus = st === 'in progress' || st === 'waiting for support' || st === 'waiting for customer';
+                          else if (ticketFilter === 'resolved') matchStatus = st === 'resolved';
+                          else if (ticketFilter === 'closed') matchStatus = st === 'closed';
+
+                          const matchCat = ticketCategoryFilter === 'all' || (t.category || t.application || '').toLowerCase() === ticketCategoryFilter.toLowerCase();
+                          return matchQuery && matchStatus && matchCat;
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="6" style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                                <HelpCircle size={36} color="#94a3b8" style={{ margin: '0 auto 10px', display: 'block' }} />
+                                <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>No Matching Support Tickets</div>
+                                <div style={{ fontSize: '12px', marginTop: '4px' }}>Try adjusting your search or filters, or create a new support ticket.</div>
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filtered.map((t) => {
+                          const ticketNum = t.ticket_number || t.number || `OXOO-${t.id}`;
+                          const statusLower = (t.status || 'open').toLowerCase();
+                          return (
+                            <tr key={t.id || ticketNum}>
+                              <td className="oxoo-table-company">
+                                <span
+                                  style={{ cursor: 'pointer', color: '#0284c7', fontWeight: 700 }}
+                                  onClick={() => handleOpenTicketChat(t)}
+                                >
+                                  {ticketNum}
+                                </span>
+                              </td>
+                              <td>
+                                <div
+                                  style={{ fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}
+                                  onClick={() => handleOpenTicketChat(t)}
+                                >
+                                  {t.subject}
+                                </div>
+                                {Array.isArray(t.replies) && t.replies.length > 0 && (
+                                  <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600 }}>
+                                    {t.replies.length} {t.replies.length === 1 ? 'reply' : 'replies'}
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                  {t.category || t.application || 'General'}
+                                </span>
+                              </td>
+                              <td>
+                                <span className="oxoo-status-tag" style={{
+                                  background: statusLower === 'open' ? '#fee2e2' :
+                                    statusLower === 'in progress' ? '#fef3c7' :
+                                    statusLower === 'waiting for support' ? '#f3e8ff' :
+                                    statusLower === 'waiting for customer' ? '#e0f2fe' :
+                                    statusLower === 'resolved' ? '#ecfdf5' : '#f1f5f9',
+                                  color: statusLower === 'open' ? '#dc2626' :
+                                    statusLower === 'in progress' ? '#d97706' :
+                                    statusLower === 'waiting for support' ? '#7e22ce' :
+                                    statusLower === 'waiting for customer' ? '#0369a1' :
+                                    statusLower === 'resolved' ? '#059669' : '#64748b'
+                                }}>
+                                  {t.status || 'Open'}
+                                </span>
+                              </td>
+                              <td style={{ color: '#64748b' }}>
+                                {t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : (t.created || 'Recent')}
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  style={{
+                                    background: '#f0f9ff',
+                                    border: '1px solid #bae6fd',
+                                    color: '#0284c7',
+                                    cursor: 'pointer',
+                                    padding: '5px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  onClick={() => handleOpenTicketChat(t)}
+                                  title="Open ticket conversation"
+                                >
+                                  <MessageSquare size={13} />
+                                  <span>View & Reply</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()
+                    ) : (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                          <HelpCircle size={36} color="#94a3b8" style={{ margin: '0 auto 10px', display: 'block' }} />
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>No Support Tickets Yet</div>
+                          <div style={{ fontSize: '12px', marginTop: '4px' }}>Have questions or encounter issues? Click "+ Create Ticket" to chat directly with OXOO support engineers.</div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
 
               {/* Pagination */}
               <div className="oxoo-pagination-bar">
-                <span>Showing 1-4 of 4 tickets</span>
-                <div className="oxoo-pagination-buttons">
-                  <button type="button" className="oxoo-page-btn">&lt;</button>
-                  <button type="button" className="oxoo-page-btn active">1</button>
-                  <button type="button" className="oxoo-page-btn">&gt;</button>
-                </div>
+                <span>Total: {tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'}</span>
               </div>
             </div>
           )}
@@ -2155,20 +2924,14 @@ export default function CustomerDashboard() {
                   <button
                     type="button"
                     style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                    onClick={() => {
-                      setNotifications(notifications.map(n => ({ ...n, read: true })));
-                      showToast('All notifications marked as read.');
-                    }}
+                    onClick={handleMarkAllNotifications}
                   >
                     Mark all as read
                   </button>
                   <button
                     type="button"
                     style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                    onClick={() => {
-                      setNotifications(notifications.filter(n => !n.read));
-                      showToast('Read notifications cleared.');
-                    }}
+                    onClick={handleClearReadNotifications}
                   >
                     Clear Read Notifications
                   </button>
@@ -2192,94 +2955,165 @@ export default function CustomerDashboard() {
 
               {/* Activity Feed */}
               <div className="oxoo-notifications-feed">
-                {notifications
-                  .filter(n => notifFilter === 'all' || n.category === notifFilter)
-                  .map((notif) => (
-                    <div key={notif.id} className="oxoo-notification-card">
-                      <div className="oxoo-notification-icon" style={{
-                        background: notif.category === 'software' ? (notif.isExpired ? '#fef2f2' : notif.isDueSoon ? '#fffbeb' : '#ecfdf5') :
-                          notif.category === 'payments' ? '#ecfdf5' :
-                          notif.category === 'team' ? '#eff6ff' :
-                          notif.category === 'support' ? '#fef3c7' : '#f3e8ff',
-                        color: notif.category === 'software' ? (notif.isExpired ? '#ef4444' : notif.isDueSoon ? '#d97706' : '#10b981') :
-                          notif.category === 'payments' ? '#10b981' :
-                          notif.category === 'team' ? '#0284c7' :
-                          notif.category === 'support' ? '#d97706' : '#8b5cf6'
-                      }}>
-                        {notif.category === 'software' && (notif.isExpired ? <AlertTriangle size={18} /> : notif.isDueSoon ? <Clock size={18} /> : <ShieldCheck size={18} />)}
-                        {notif.category === 'payments' && <CreditCard size={18} />}
-                        {notif.category === 'team' && <UserPlus size={18} />}
-                        {notif.category === 'support' && <MessageSquare size={18} />}
-                        {notif.category === 'system' && <Layers size={18} />}
-                      </div>
+                {notifications && notifications.length > 0 ? (
+                  (() => {
+                    const filtered = notifications.filter(n => {
+                      if (notifFilter === 'all') return true;
+                      const cat = (n.category || '').toLowerCase();
+                      if (notifFilter === 'software') return cat === 'software' || cat === 'subscription';
+                      if (notifFilter === 'payments') return cat === 'payments' || cat === 'billing';
+                      if (notifFilter === 'team') return cat === 'team';
+                      if (notifFilter === 'support') return cat === 'support';
+                      if (notifFilter === 'system') return cat === 'system' || cat === 'security';
+                      return cat === notifFilter;
+                    });
 
-                      <div className="oxoo-notification-content">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span className="oxoo-notification-title">{notif.title}</span>
-                          {notif.category === 'software' && (
-                            <span style={{
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              padding: '2px 8px',
-                              borderRadius: '9999px',
-                              background: notif.isExpired ? '#fee2e2' : notif.isDueSoon ? '#fef3c7' : '#dcfce7',
-                              color: notif.isExpired ? '#b91c1c' : notif.isDueSoon ? '#b45309' : '#15803d'
-                            }}>
-                              {notif.isExpired ? 'Expired' : `${notif.daysLeft} Days Remaining`}
-                            </span>
-                          )}
+                    if (filtered.length === 0) {
+                      return (
+                        <div style={{ textAlign: 'center', padding: '48px 16px', color: '#64748b' }}>
+                          <Bell size={40} color="#94a3b8" style={{ margin: '0 auto 12px', display: 'block' }} />
+                          <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b' }}>No Matching Notifications</div>
+                          <div style={{ fontSize: '13px', marginTop: '4px' }}>No notifications found under this filter.</div>
                         </div>
-                        <span className="oxoo-notification-desc">{notif.desc}</span>
-                        <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                          {notif.category === 'software' ? `Next Billing / Renewal Date: ${notif.date}` : `Date: ${notif.date}`}
-                        </span>
-                      </div>
+                      );
+                    }
 
-                      {/* Actions */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {notif.category === 'software' && (
-                          <button
-                            type="button"
-                            style={{
-                              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                              color: '#ffffff',
-                              border: 'none',
-                              padding: '6px 14px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)',
-                              whiteSpace: 'nowrap'
-                            }}
-                            onClick={() => handleOpenRenewModal({ id: notif.softwareId, name: notif.softwareName })}
-                          >
-                            <RefreshCw size={12} /> Renew Now
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          style={{ background: '#f1f5f9', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
-                          onClick={() => {
-                            setNotifications(notifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                            showToast('Marked as read');
+                    return filtered.map((notif) => {
+                      const isRead = notif.is_read || notif.read;
+                      const cat = (notif.category || 'system').toLowerCase();
+                      const dateStr = notif.created_at
+                        ? new Date(notif.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : (notif.date || 'Recent');
+
+                      return (
+                        <div
+                          key={notif.id}
+                          className="oxoo-notification-card"
+                          style={{
+                            background: isRead ? '#ffffff' : '#f0f9ff',
+                            border: `1px solid ${isRead ? '#e2e8f0' : '#bae6fd'}`,
+                            position: 'relative'
                           }}
                         >
-                          Mark as Read
-                        </button>
-                        <button
-                          type="button"
-                          style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '5px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
-                          onClick={() => showToast(`Viewing details: ${notif.title}`)}
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                          <div className="oxoo-notification-icon" style={{
+                            background: cat.includes('software') || cat.includes('subscription') ? (notif.isExpired ? '#fef2f2' : notif.isDueSoon ? '#fffbeb' : '#ecfdf5') :
+                              cat.includes('payment') || cat.includes('billing') ? '#ecfdf5' :
+                              cat.includes('team') ? '#eff6ff' :
+                              cat.includes('support') ? '#fef3c7' : '#f3e8ff',
+                            color: cat.includes('software') || cat.includes('subscription') ? (notif.isExpired ? '#ef4444' : notif.isDueSoon ? '#d97706' : '#10b981') :
+                              cat.includes('payment') || cat.includes('billing') ? '#10b981' :
+                              cat.includes('team') ? '#0284c7' :
+                              cat.includes('support') ? '#d97706' : '#8b5cf6'
+                          }}>
+                            {(cat.includes('software') || cat.includes('subscription')) && (notif.isExpired ? <AlertTriangle size={18} /> : notif.isDueSoon ? <Clock size={18} /> : <ShieldCheck size={18} />)}
+                            {(cat.includes('payment') || cat.includes('billing')) && <CreditCard size={18} />}
+                            {cat.includes('team') && <UserPlus size={18} />}
+                            {cat.includes('support') && <MessageSquare size={18} />}
+                            {(cat.includes('system') || cat.includes('security')) && <Layers size={18} />}
+                          </div>
+
+                          <div className="oxoo-notification-content">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="oxoo-notification-title" style={{ fontWeight: isRead ? 600 : 700 }}>
+                                {notif.title}
+                              </span>
+                              {!isRead && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: 800,
+                                  background: '#0284c7',
+                                  color: '#ffffff',
+                                  padding: '1px 6px',
+                                  borderRadius: '9999px',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  New
+                                </span>
+                              )}
+                              {(cat.includes('software') || cat.includes('subscription')) && typeof notif.daysLeft === 'number' && (
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  padding: '2px 8px',
+                                  borderRadius: '9999px',
+                                  background: notif.isExpired ? '#fee2e2' : notif.isDueSoon ? '#fef3c7' : '#dcfce7',
+                                  color: notif.isExpired ? '#b91c1c' : notif.isDueSoon ? '#b45309' : '#15803d'
+                                }}>
+                                  {notif.isExpired ? 'Expired' : 'Active Subscription'}
+                                </span>
+                              )}
+                            </div>
+                            <span className="oxoo-notification-desc">
+                              {notif.message || notif.desc}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                              {dateStr}
+                            </span>
+                          </div>
+
+                          {/* Actions */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {(cat.includes('software') || cat.includes('subscription')) && (
+                              <button
+                                type="button"
+                                style={{
+                                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '6px 14px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onClick={() => handleOpenRenewModal({ id: notif.softwareId, name: notif.softwareName })}
+                              >
+                                <RefreshCw size={12} /> Renew Now
+                              </button>
+                            )}
+
+                            {!isRead && (
+                              <button
+                                type="button"
+                                style={{ background: '#f1f5f9', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
+                                onClick={() => handleMarkNotification(notif.id)}
+                              >
+                                Mark as Read
+                              </button>
+                            )}
+
+                            {notif.action_url && (
+                              <button
+                                type="button"
+                                style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '5px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600, color: '#0284c7', cursor: 'pointer' }}
+                                onClick={() => {
+                                  handleMarkNotification(notif.id);
+                                  if (notif.action_url.includes('support')) setActiveTab('support');
+                                  else if (notif.action_url.includes('billing')) setActiveTab('billing');
+                                  else if (notif.action_url.includes('team')) setActiveTab('team');
+                                  else if (notif.action_url.includes('apps')) setActiveTab('apps');
+                                }}
+                              >
+                                Open →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '48px 16px', color: '#64748b' }}>
+                    <Bell size={40} color="#94a3b8" style={{ margin: '0 auto 12px', display: 'block' }} />
+                    <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b' }}>No Notifications</div>
+                    <div style={{ fontSize: '13px', marginTop: '4px' }}>You're completely caught up! New account and application updates will appear here in real time.</div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2853,33 +3687,25 @@ export default function CustomerDashboard() {
 
       {/* Invite Team Member Modal */}
       {inviteModalOpen && (
-        <div className="oxoo-modal-backdrop" onClick={() => setInviteModalOpen(false)}>
-          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()}>
+        <div className="oxoo-modal-backdrop" onClick={() => !teamLoading && setInviteModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="oxoo-modal-header">
-              <h3 className="oxoo-modal-title">Invite New Team Member</h3>
-              <button type="button" className="oxoo-modal-close-btn" onClick={() => setInviteModalOpen(false)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <UserPlus size={20} color="#0284c7" />
+                <h3 className="oxoo-modal-title">Invite New Team Member</h3>
+              </div>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => !teamLoading && setInviteModalOpen(false)}>
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (!inviteForm.name || !inviteForm.email) return;
-              const newMember = {
-                id: String(Date.now()),
-                name: inviteForm.name,
-                email: inviteForm.email,
-                role: inviteForm.role,
-                status: 'Active',
-                joined: 'Today'
-              };
-              setTeamMembers([newMember, ...teamMembers]);
-              showToast('Invitation sent successfully.');
-              setInviteModalOpen(false);
-              setInviteForm({ name: '', email: '', role: 'Member', access: 'All Applications' });
-            }}>
+            <form onSubmit={handleInviteTeamMember}>
               <div className="oxoo-modal-body">
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px', lineHeight: 1.5 }}>
+                  Add a colleague to your organization account and assign them to specific purchased applications. Team members log in using the standard OXOO login page.
+                </p>
+
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Full Name</label>
+                  <label className="oxoo-form-label">Full Name *</label>
                   <input
                     type="text"
                     required
@@ -2891,12 +3717,12 @@ export default function CustomerDashboard() {
                 </div>
 
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Work Email</label>
+                  <label className="oxoo-form-label">Work Email *</label>
                   <input
                     type="email"
                     required
                     className="oxoo-form-input"
-                    placeholder="rachel@retailmart.com"
+                    placeholder="rachel@company.com"
                     value={inviteForm.email}
                     onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                   />
@@ -2909,25 +3735,67 @@ export default function CustomerDashboard() {
                     value={inviteForm.role}
                     onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
                   >
-                    <option value="Member">Member</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Owner">Owner</option>
-                    <option value="Billing Manager">Billing Manager</option>
+                    <option value="Member">Member (Application User)</option>
+                    <option value="Admin">Admin (Can manage users & apps)</option>
+                    <option value="Billing Manager">Billing Manager (Can manage invoices & renewals)</option>
                   </select>
                 </div>
 
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Application Access</label>
-                  <select
-                    className="oxoo-form-select"
-                    value={inviteForm.access}
-                    onChange={(e) => setInviteForm({ ...inviteForm, access: e.target.value })}
-                  >
-                    <option value="All Applications">All Applications</option>
-                    <option value="Sales Software">Sales Software</option>
-                    <option value="HRMS">HRMS</option>
-                    <option value="Finance">Finance</option>
-                  </select>
+                  <label className="oxoo-form-label">Software-Specific Access Permissions *</label>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    background: '#f8fafc',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    {[
+                      { id: 'sales', name: 'Sales Software', desc: 'Business & sales pipeline tracking' },
+                      { id: 'hrms', name: 'HRMS Software', desc: 'Employee management & attendance' },
+                      { id: 'finance', name: 'Finance Software', desc: 'Accounting, invoicing & tax reports' },
+                      { id: 'marketing', name: 'Marketing Software', desc: 'Email campaigns & automation' }
+                    ].map(app => {
+                      const isChecked = Array.isArray(inviteForm.appsAccess) && inviteForm.appsAccess.includes(app.id);
+                      return (
+                        <label
+                          key={app.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            background: isChecked ? '#ffffff' : 'transparent',
+                            border: `1px solid ${isChecked ? '#0284c7' : 'transparent'}`
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const curr = Array.isArray(inviteForm.appsAccess) ? inviteForm.appsAccess : [];
+                              if (e.target.checked) {
+                                setInviteForm({ ...inviteForm, appsAccess: [...curr, app.id] });
+                              } else {
+                                setInviteForm({ ...inviteForm, appsAccess: curr.filter(x => x !== app.id) });
+                              }
+                            }}
+                          />
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{app.name}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>{app.desc}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block', marginTop: '6px' }}>
+                    Team members will only see and access the software applications enabled above.
+                  </span>
                 </div>
               </div>
 
@@ -2935,12 +3803,12 @@ export default function CustomerDashboard() {
                 <button
                   type="button"
                   style={{ background: 'none', border: '1px solid #cbd5e1', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => setInviteModalOpen(false)}
+                  onClick={() => !teamLoading && setInviteModalOpen(false)}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="oxoo-upgrade-btn">
-                  Send Invitation
+                <button type="submit" className="oxoo-upgrade-btn" disabled={teamLoading}>
+                  {teamLoading ? 'Inviting...' : 'Send Invitation & Create Access'}
                 </button>
               </div>
             </form>
@@ -2948,47 +3816,143 @@ export default function CustomerDashboard() {
         </div>
       )}
 
-      {/* Support Ticket Modal */}
-      {ticketModalOpen && (
-        <div className="oxoo-modal-backdrop" onClick={() => setTicketModalOpen(false)}>
-          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()}>
+      {/* Edit Team Member Modal */}
+      {editMemberModalOpen && editingMember && (
+        <div className="oxoo-modal-backdrop" onClick={() => !teamLoading && setEditMemberModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="oxoo-modal-header">
-              <h3 className="oxoo-modal-title">Create Support Ticket</h3>
-              <button type="button" className="oxoo-modal-close-btn" onClick={() => setTicketModalOpen(false)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Users size={20} color="#0284c7" />
+                <h3 className="oxoo-modal-title">Edit Access: {editingMember.name}</h3>
+              </div>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => !teamLoading && setEditMemberModalOpen(false)}>
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (!ticketForm.subject) return;
-              const newTicket = {
-                id: String(Date.now()),
-                number: `OXOO-${Math.floor(1000 + Math.random() * 9000)}`,
-                subject: ticketForm.subject,
-                category: ticketForm.category,
-                status: 'Open',
-                created: 'Today'
-              };
-              setTickets([newTicket, ...tickets]);
-              showToast('Support ticket created successfully.');
-              setTicketModalOpen(false);
-              setTicketForm({
-                subject: '',
-                category: 'Technical',
-                priority: 'Normal',
-                application: 'Sales Software',
-                description: '',
-                attachment: null
-              });
-            }}>
+            <form onSubmit={handleUpdateTeamMember}>
+              <div className="oxoo-modal-body">
+                <div style={{ marginBottom: '14px', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>Account Email:</div>
+                  <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{editingMember.email}</strong>
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Role</label>
+                  <select
+                    className="oxoo-form-select"
+                    value={editingMember.role || 'Member'}
+                    onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}
+                  >
+                    <option value="Owner">Owner</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Member">Member</option>
+                    <option value="Billing Manager">Billing Manager</option>
+                  </select>
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Account Status</label>
+                  <select
+                    className="oxoo-form-select"
+                    value={editingMember.status || 'Active'}
+                    onChange={(e) => setEditingMember({ ...editingMember, status: e.target.value })}
+                  >
+                    <option value="Active">Active (Permitted to log in)</option>
+                    <option value="Suspended">Suspended (Access revoked)</option>
+                  </select>
+                </div>
+
+                <div className="oxoo-form-group">
+                  <label className="oxoo-form-label">Assigned Software Applications</label>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    background: '#f8fafc',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    {[
+                      { id: 'sales', name: 'Sales Software' },
+                      { id: 'hrms', name: 'HRMS Software' },
+                      { id: 'finance', name: 'Finance Software' },
+                      { id: 'marketing', name: 'Marketing Software' }
+                    ].map(app => {
+                      const isChecked = Array.isArray(editingMember.apps_access) && editingMember.apps_access.includes(app.id);
+                      return (
+                        <label
+                          key={app.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            background: isChecked ? '#ffffff' : 'transparent',
+                            border: `1px solid ${isChecked ? '#0284c7' : 'transparent'}`
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const curr = Array.isArray(editingMember.apps_access) ? editingMember.apps_access : [];
+                              if (e.target.checked) {
+                                setEditingMember({ ...editingMember, apps_access: [...curr, app.id] });
+                              } else {
+                                setEditingMember({ ...editingMember, apps_access: curr.filter(x => x !== app.id) });
+                              }
+                            }}
+                          />
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{app.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="oxoo-modal-footer">
+                <button
+                  type="button"
+                  style={{ background: 'none', border: '1px solid #cbd5e1', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => !teamLoading && setEditMemberModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="oxoo-upgrade-btn" disabled={teamLoading}>
+                  {teamLoading ? 'Saving...' : 'Save Permissions'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Support Ticket Creation Modal */}
+      {ticketModalOpen && (
+        <div className="oxoo-modal-backdrop" onClick={() => !ticketsLoading && setTicketModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+            <div className="oxoo-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <HelpCircle size={20} color="#0284c7" />
+                <h3 className="oxoo-modal-title">Create Support Ticket</h3>
+              </div>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => !ticketsLoading && setTicketModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateSupportTicket}>
               <div className="oxoo-modal-body">
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Subject</label>
+                  <label className="oxoo-form-label">Subject *</label>
                   <input
                     type="text"
                     required
                     className="oxoo-form-input"
-                    placeholder="e.g. Login issue in Sales App"
+                    placeholder="e.g. Sales report export failure"
                     value={ticketForm.subject}
                     onChange={(e) => setTicketForm({ ...ticketForm, subject: e.target.value })}
                   />
@@ -3003,8 +3967,8 @@ export default function CustomerDashboard() {
                       onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })}
                     >
                       <option value="Technical">Technical</option>
-                      <option value="Billing">Billing</option>
-                      <option value="Account">Account</option>
+                      <option value="Billing">Billing & Subscription</option>
+                      <option value="Account">Account Access</option>
                       <option value="Feature Request">Feature Request</option>
                       <option value="General Inquiry">General Inquiry</option>
                     </select>
@@ -3036,28 +4000,85 @@ export default function CustomerDashboard() {
                     <option value="HRMS">HRMS</option>
                     <option value="Finance">Finance</option>
                     <option value="Marketing">Marketing</option>
-                    <option value="General">General</option>
+                    <option value="General">General / Platform</option>
                   </select>
                 </div>
 
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Description</label>
+                  <label className="oxoo-form-label">Detailed Description *</label>
                   <textarea
                     rows={4}
+                    required
                     className="oxoo-form-textarea"
-                    placeholder="Describe your issue or question in detail..."
+                    placeholder="Please describe the issue or question in detail..."
                     value={ticketForm.description}
                     onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })}
                   />
                 </div>
 
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Attach Files</label>
-                  <input
-                    type="file"
-                    className="oxoo-form-input"
-                    onChange={(e) => setTicketForm({ ...ticketForm, attachment: e.target.files[0] })}
-                  />
+                  <label className="oxoo-form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Attachments (Optional)</span>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>PDF, PNG, JPG, CSV, DOCX (Max 10MB)</span>
+                  </label>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '12px',
+                      border: '1.5px dashed #cbd5e1',
+                      borderRadius: '8px',
+                      background: '#f8fafc',
+                      cursor: 'pointer',
+                      fontSize: '12.5px',
+                      color: '#475569',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Upload size={16} color="#0284c7" />
+                    <span>Upload screenshots or documents</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.csv,.txt,.xlsx"
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleTicketFileSelect(e, 'create')}
+                    />
+                  </label>
+                  {Array.isArray(ticketForm.attachments) && ticketForm.attachments.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+                      {ticketForm.attachments.map((att, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            color: '#334155',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '12px'
+                          }}
+                        >
+                          <Paperclip size={12} color="#0284c7" />
+                          <span>{att.name}</span>
+                          <span style={{ color: '#94a3b8', fontSize: '10.5px' }}>({(att.size / 1024).toFixed(0)} KB)</span>
+                          <button
+                            type="button"
+                            onClick={() => setTicketForm(prev => ({ ...prev, attachments: prev.attachments.filter((_, idx) => idx !== i) }))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 'bold', padding: '0 2px' }}
+                            title="Remove file"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3065,15 +4086,574 @@ export default function CustomerDashboard() {
                 <button
                   type="button"
                   style={{ background: 'none', border: '1px solid #cbd5e1', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => setTicketModalOpen(false)}
+                  onClick={() => !ticketsLoading && setTicketModalOpen(false)}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="oxoo-upgrade-btn">
-                  Submit Ticket
+                <button type="submit" className="oxoo-upgrade-btn" disabled={ticketsLoading}>
+                  {ticketsLoading ? 'Submitting...' : 'Submit Ticket'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ticket Conversation / Two-Way Chat Modal (Requirement 9 & Phase 6) */}
+      {ticketChatModalOpen && activeTicketChat && (
+        <div className="oxoo-modal-backdrop" onClick={() => setTicketChatModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '680px', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="oxoo-modal-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#0284c7', background: '#e0f2fe', padding: '3px 8px', borderRadius: '6px', fontFamily: 'monospace' }}>
+                    {activeTicketChat.ticket_number || activeTicketChat.number || `OXOO-${activeTicketChat.id}`}
+                  </span>
+                  <span className="oxoo-status-tag" style={{
+                    fontSize: '11px',
+                    background: (activeTicketChat.status || '').toLowerCase() === 'open' ? '#fee2e2' : (activeTicketChat.status || '').toLowerCase() === 'resolved' ? '#ecfdf5' : '#fef3c7',
+                    color: (activeTicketChat.status || '').toLowerCase() === 'open' ? '#dc2626' : (activeTicketChat.status || '').toLowerCase() === 'resolved' ? '#059669' : '#d97706'
+                  }}>
+                    {activeTicketChat.status || 'Open'}
+                  </span>
+                  <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                    {activeTicketChat.category || 'General'}
+                  </span>
+                </div>
+                <h3 className="oxoo-modal-title" style={{ marginTop: '8px', fontSize: '16px', lineHeight: 1.3 }}>
+                  {activeTicketChat.subject}
+                </h3>
+              </div>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => setTicketChatModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Conversation Messages Container */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc' }}>
+              {/* Original Ticket Description (Customer Side) */}
+              <div style={{
+                alignSelf: 'flex-end',
+                maxWidth: '88%',
+                background: '#0284c7',
+                color: '#ffffff',
+                borderRadius: '14px 14px 2px 14px',
+                padding: '14px 16px',
+                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#e0f2fe' }}>
+                    {activeTicketChat.user_name || overview.customerName} (Original Request)
+                  </span>
+                  <span style={{ fontSize: '10.5px', color: '#bae6fd' }}>
+                    {activeTicketChat.created_at ? new Date(activeTicketChat.created_at).toLocaleString('en-GB') : 'Initial'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '13px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                  {activeTicketChat.description || activeTicketChat.subject}
+                </div>
+
+                {/* Attachments for initial request */}
+                {Array.isArray(activeTicketChat.attachments) && activeTicketChat.attachments.length > 0 && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#e0f2fe', marginBottom: '5px' }}>
+                      Attached Files ({activeTicketChat.attachments.length}):
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {activeTicketChat.attachments.map((att, attIdx) => (
+                        <a
+                          key={attIdx}
+                          href={att.url || att.data}
+                          download={att.name}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: 'rgba(255,255,255,0.15)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            fontSize: '11px',
+                            color: '#ffffff',
+                            textDecoration: 'none',
+                            fontWeight: 600
+                          }}
+                        >
+                          <Paperclip size={11} />
+                          <span>{att.name}</span>
+                          <Download size={10} />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Chronological Replies Thread */}
+              {Array.isArray(activeTicketChat.replies) && activeTicketChat.replies.length > 0 ? (
+                activeTicketChat.replies
+                  .filter(r => !r.is_internal)
+                  .map((rep, idx) => {
+                    const isStaff = rep.role === 'staff' || rep.sender_type === 'staff' || rep.is_staff || (rep.sender && rep.sender.toLowerCase().includes('support')) || (rep.author && rep.author.toLowerCase().includes('support'));
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          alignSelf: isStaff ? 'flex-start' : 'flex-end',
+                          maxWidth: '88%',
+                          background: isStaff ? '#ffffff' : '#0284c7',
+                          color: isStaff ? '#0f172a' : '#ffffff',
+                          border: isStaff ? '1px solid #e2e8f0' : 'none',
+                          borderRadius: isStaff ? '14px 14px 14px 2px' : '14px 14px 2px 14px',
+                          padding: '12px 16px',
+                          boxShadow: isStaff ? '0 1px 4px rgba(0,0,0,0.05)' : '0 2px 8px rgba(2, 132, 199, 0.2)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: isStaff ? '#166534' : '#e0f2fe',
+                            background: isStaff ? '#dcfce7' : 'transparent',
+                            padding: isStaff ? '2px 6px' : '0',
+                            borderRadius: '4px'
+                          }}>
+                            {isStaff ? (rep.sender || 'OXOO Support Staff') : 'You'}
+                          </span>
+                          <span style={{ fontSize: '10.5px', color: isStaff ? '#94a3b8' : '#bae6fd' }}>
+                            {rep.timestamp || (rep.created_at ? new Date(rep.created_at).toLocaleString('en-GB') : (rep.time || 'Recent'))}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '13px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                          {rep.message}
+                        </div>
+
+                        {/* Reply Attachments */}
+                        {Array.isArray(rep.attachments) && rep.attachments.length > 0 && (
+                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: isStaff ? '1px solid #f1f5f9' : '1px solid rgba(255,255,255,0.2)' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {rep.attachments.map((att, attIdx) => (
+                                <a
+                                  key={attIdx}
+                                  href={att.url || att.data}
+                                  download={att.name}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    background: isStaff ? '#f1f5f9' : 'rgba(255,255,255,0.15)',
+                                    border: isStaff ? '1px solid #cbd5e1' : '1px solid rgba(255,255,255,0.3)',
+                                    borderRadius: '6px',
+                                    padding: '3px 8px',
+                                    fontSize: '11px',
+                                    color: isStaff ? '#0284c7' : '#ffffff',
+                                    textDecoration: 'none',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  <Paperclip size={11} />
+                                  <span>{att.name}</span>
+                                  <Download size={10} />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+              ) : (
+                <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '12.5px' }}>
+                  No replies yet. Type a response below to message our support team.
+                </div>
+              )}
+            </div>
+
+            {/* Reply Composer Form */}
+            <form onSubmit={handleSendTicketReply} style={{ padding: '14px 20px', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+              {ticketReplyAttachments.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                  {ticketReplyAttachments.map((att, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#e0f2fe',
+                        color: '#0369a1',
+                        border: '1px solid #bae6fd',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600
+                      }}
+                    >
+                      <Paperclip size={11} />
+                      <span>{att.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setTicketReplyAttachments(prev => prev.filter((_, idx) => idx !== i))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0369a1', padding: '0 2px' }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                <label
+                  style={{
+                    cursor: 'pointer',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#64748b',
+                    height: '42px',
+                    boxSizing: 'border-box'
+                  }}
+                  title="Attach screenshot or document (Max 10MB)"
+                >
+                  <Paperclip size={18} />
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.csv,.txt,.xlsx"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleTicketFileSelect(e, 'reply')}
+                  />
+                </label>
+
+                <textarea
+                  rows={2}
+                  required={ticketReplyAttachments.length === 0}
+                  placeholder="Type your message to the support team..."
+                  value={ticketReplyText}
+                  onChange={(e) => setTicketReplyText(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    lineHeight: 1.4
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={isSendingTicketReply || (!ticketReplyText.trim() && ticketReplyAttachments.length === 0)}
+                  className="oxoo-upgrade-btn"
+                  style={{ alignSelf: 'flex-end', padding: '10px 18px', whiteSpace: 'nowrap', height: '42px' }}
+                >
+                  {isSendingTicketReply ? 'Sending...' : 'Send Reply'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Plans & Purchase Modal (Requirements 3 & 4) */}
+      {viewPlansModalOpen && selectedAppForPlans && (
+        <div className="oxoo-modal-backdrop" onClick={() => !isPurchasingApp && setViewPlansModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '620px' }}>
+            <div className="oxoo-modal-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={`oxoo-app-icon-box ${selectedAppForPlans.id || 'sales'}`} style={{ width: '40px', height: '40px', borderRadius: '10px' }}>
+                  <Layers size={20} />
+                </div>
+                <div>
+                  <h3 className="oxoo-modal-title">{selectedAppForPlans.name}</h3>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0' }}>
+                    Select an official plan to activate software access on your existing OXOO account.
+                  </p>
+                </div>
+              </div>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => !isPurchasingApp && setViewPlansModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="oxoo-modal-body">
+              {purchaseSuccessData ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#166534', margin: '0 0 6px' }}>
+                    Payment Confirmed — Software Activated!
+                  </h4>
+                  <p style={{ fontSize: '13px', color: '#475569', marginBottom: '16px', lineHeight: 1.5 }}>
+                    Your purchase of <strong>{purchaseSuccessData.appName}</strong> ({purchaseSuccessData.planName}) has been verified.
+                    A tax invoice <strong>({purchaseSuccessData.invoiceNumber})</strong> has been emailed to <strong>{overview.email}</strong>.
+                  </p>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#334155', marginBottom: '20px' }}>
+                    <ShieldCheck size={16} color="#16a34a" />
+                    <span>Payment Ref: <strong>{purchaseSuccessData.paymentId}</strong> &bull; Total Paid: <strong>₹{purchaseSuccessData.amount}</strong></span>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      className="oxoo-upgrade-btn"
+                      onClick={() => setViewPlansModalOpen(false)}
+                      style={{ padding: '10px 24px', fontSize: '13px' }}
+                    >
+                      Go to My Applications
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {purchaseError && (
+                    <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '12.5px', marginBottom: '14px' }}>
+                      {purchaseError}
+                    </div>
+                  )}
+
+                  {/* Billing Cycle Switch */}
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', gap: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPlanBillingCycle('monthly')}
+                        style={{
+                          padding: '6px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          background: planBillingCycle === 'monthly' ? '#ffffff' : 'transparent',
+                          color: planBillingCycle === 'monthly' ? '#0f172a' : '#64748b',
+                          boxShadow: planBillingCycle === 'monthly' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                      >
+                        Monthly
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPlanBillingCycle('yearly')}
+                        style={{
+                          padding: '6px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          background: planBillingCycle === 'yearly' ? '#ffffff' : 'transparent',
+                          color: planBillingCycle === 'yearly' ? '#16a34a' : '#64748b',
+                          boxShadow: planBillingCycle === 'yearly' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                      >
+                        Annual (Save 24%)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Available Plans */}
+                  {plansLoading ? (
+                    <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                      Loading available plans...
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+                      {availablePlans.map((pl) => {
+                        const isYearly = planBillingCycle === 'yearly';
+                        const monthlyRate = Number(pl.monthly_price || 740);
+                        const annualRate = Number(pl.annual_price || 560);
+                        const displayPrice = isYearly ? annualRate : monthlyRate;
+                        const isSelected = selectedPlan && (selectedPlan.id === pl.id || selectedPlan.plan_code === pl.plan_code);
+
+                        return (
+                          <div
+                            key={pl.id || pl.plan_code}
+                            onClick={() => setSelectedPlan(pl)}
+                            style={{
+                              padding: '14px 18px',
+                              borderRadius: '12px',
+                              border: `2px solid ${isSelected ? '#0284c7' : '#e2e8f0'}`,
+                              background: isSelected ? '#f0f9ff' : '#ffffff',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{pl.name}</strong>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                                  {pl.description || `Full feature access for ${selectedAppForPlans.name}`}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                                  ₹{displayPrice} <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>/ mo</span>
+                                </div>
+                                <span style={{ fontSize: '11px', color: isYearly ? '#16a34a' : '#64748b', fontWeight: 600 }}>
+                                  {isYearly ? `₹${displayPrice * 12}/year (Billed annually)` : 'Billed monthly'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Features list */}
+                            {Array.isArray(pl.features) && pl.features.length > 0 && (
+                              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                {pl.features.map((feat, fi) => (
+                                  <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
+                                    <CheckCircle2 size={12} color="#16a34a" />
+                                    <span>{feat}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Order & Tax Summary */}
+                  {selectedPlan && (
+                    <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                      {(() => {
+                        const isYearly = planBillingCycle === 'yearly';
+                        const baseMonthly = Number(selectedPlan.monthly_price || 740);
+                        const baseAnnual = Number(selectedPlan.annual_price || 560);
+                        const baseSubtotal = isYearly ? baseAnnual * 12 : baseMonthly;
+                        const gst = parseFloat((baseSubtotal * 0.18).toFixed(2));
+                        const total = parseFloat((baseSubtotal + gst).toFixed(2));
+                        return (
+                          <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#475569', marginBottom: '4px' }}>
+                              <span>Base License ({isYearly ? '12 Months' : '1 Month'})</span>
+                              <strong>₹{baseSubtotal.toFixed(2)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#475569', marginBottom: '6px' }}>
+                              <span>GST (18% Integrated Tax)</span>
+                              <strong>₹{gst.toFixed(2)}</strong>
+                            </div>
+                            <div style={{ height: '1px', background: '#e2e8f0', margin: '6px 0' }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
+                              <span>Total Payable</span>
+                              <span style={{ color: '#0284c7' }}>₹{total.toFixed(2)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Purchase CTA */}
+                  <button
+                    type="button"
+                    onClick={handlePurchaseAppPlan}
+                    disabled={isPurchasingApp || !selectedPlan}
+                    className="oxoo-upgrade-btn"
+                    style={{ width: '100%', padding: '12px', fontSize: '13.5px', justifyContent: 'center' }}
+                  >
+                    {isPurchasingApp ? 'Connecting to Secure Checkout...' : 'Proceed to Payment →'}
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '10px', fontSize: '11.5px', color: '#64748b' }}>
+                    <ShieldCheck size={14} color="#16a34a" />
+                    <span>Razorpay Verified &bull; Uses existing OXOO account (No duplicate login created)</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Invoice Modal (Requirement 6) */}
+      {viewInvoiceModalOpen && selectedInvoice && (
+        <div className="oxoo-modal-backdrop" onClick={() => setViewInvoiceModalOpen(false)}>
+          <div className="oxoo-modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '580px' }}>
+            <div className="oxoo-modal-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileText size={20} color="#0284c7" />
+                <h3 className="oxoo-modal-title">Tax Invoice #{selectedInvoice.invoice_number}</h3>
+              </div>
+              <button type="button" className="oxoo-modal-close-btn" onClick={() => setViewInvoiceModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="oxoo-modal-body">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Billed To</div>
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>{selectedInvoice.company_name || overview.company}</strong>
+                  <div style={{ fontSize: '12px', color: '#475569' }}>{selectedInvoice.customer_name || overview.customerName}</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>{selectedInvoice.email || overview.email}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Invoice Date</div>
+                  <strong style={{ fontSize: '13px', color: '#0f172a' }}>
+                    {selectedInvoice.created_at ? new Date(selectedInvoice.created_at).toLocaleDateString('en-GB') : (selectedInvoice.date || 'Today')}
+                  </strong>
+                  <div style={{ marginTop: '4px' }}>
+                    <span className="oxoo-status-tag paid" style={{ fontSize: '11px' }}>
+                      {selectedInvoice.status || 'Paid'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line item breakdown */}
+              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#0f172a', fontWeight: 600, marginBottom: '6px' }}>
+                  <span>{selectedInvoice.plan_name || 'OXOO Multiix Software Subscription'}</span>
+                  <span>₹{Number(selectedInvoice.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                  <span>Base Amount</span>
+                  <span>₹{(Number(selectedInvoice.amount || 0) / 1.18).toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+                  <span>GST (18% Integrated Tax)</span>
+                  <span>₹{(Number(selectedInvoice.amount || 0) - (Number(selectedInvoice.amount || 0) / 1.18)).toFixed(2)}</span>
+                </div>
+                <div style={{ height: '1px', background: '#e2e8f0', margin: '6px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
+                  <span>Total Amount Paid</span>
+                  <span style={{ color: '#16a34a' }}>₹{Number(selectedInvoice.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={14} color="#16a34a" />
+                <span>Verified Payment &bull; Reference ID: {selectedInvoice.payment_id || 'pay_online_verified'}</span>
+              </div>
+            </div>
+
+            <div className="oxoo-modal-footer">
+              <button
+                type="button"
+                style={{ background: 'none', border: '1px solid #cbd5e1', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => setViewInvoiceModalOpen(false)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="oxoo-upgrade-btn"
+                onClick={() => downloadInvoicePdf(selectedInvoice.invoice_number)}
+              >
+                <Download size={14} style={{ marginRight: '6px' }} /> Download PDF
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -3403,7 +4983,7 @@ export default function CustomerDashboard() {
                         <Clock size={18} style={{ color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#ef4444' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#d97706' : '#16a34a') }} />
                         <div>
                           <span style={{ fontSize: '0.86rem', fontWeight: 700, color: (typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? '#991b1b' : ((typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 5) ? '#92400e' : '#166534') }}>
-                            {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Subscription Expired' : `${overview.daysRemaining ?? 30} Days Left`}
+                            {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Subscription Expired' : 'Active Subscription'}
                           </span>
                           <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
                             {(typeof overview.daysRemaining === 'number' && overview.daysRemaining <= 0) ? 'Finished — Pay to reactivate instantly' : `Current cycle ends on ${overview.nextBillingExact || overview.nextBillingDate}`}

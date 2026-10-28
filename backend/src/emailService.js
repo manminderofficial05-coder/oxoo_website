@@ -459,7 +459,8 @@ async function sendInvoiceAndCredentialsEmail({
   selectedApps = [],
   password = 'oxoo123',
   loginUrl = 'http://localhost:5173/login',
-  customerPhone = ''
+  customerPhone = '',
+  includeCredentials = false
 }) {
   if (!toEmail) throw new Error('Recipient email is required.');
   const normEmail = toEmail.trim().toLowerCase();
@@ -504,43 +505,11 @@ async function sendInvoiceAndCredentialsEmail({
       }).join('')
     : '<li style="padding: 4px 0; font-weight: 600; color: #0f172a;">Business Application Suite</li>';
 
-  const subject = `Order Confirmed: ${invoiceNumber} & Your OXOO Customer Login Credentials`;
+  const subject = includeCredentials
+    ? `Order Confirmed: ${invoiceNumber} & Your OXOO Customer Login Credentials`
+    : `Tax Invoice Confirmed: ${invoiceNumber} - ${companyName}`;
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 15px;">
-    <tr>
-      <td align="center">
-        <table width="100%" max-width="640px" style="max-width: 640px; background-color: #ffffff; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 14px 35px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
-          
-          <!-- Top Navy Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 34px 32px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">
-                OXOO
-              </h1>
-              <span style="font-size: 13px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">
-                Payment Confirmed · Subscription Active
-              </span>
-            </td>
-          </tr>
-
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 36px 32px;">
-              <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
-                Welcome to OXOO, ${customerName}!
-              </h2>
-              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-                Thank you for subscribing to <strong>OXOO</strong> for <strong>${companyName}</strong>. Your payment was verified and processed successfully. Below you will find your Customer Dashboard login credentials. Your official Tax Invoice is also attached as a PDF document at the bottom of this email.
-              </p>
-
+  const credentialsBlock = includeCredentials ? `
               <!-- Credentials Card (Highlighted Box) -->
               <div style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border: 2px solid #38bdf8; border-radius: 14px; padding: 24px; margin-bottom: 28px;">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
@@ -593,7 +562,59 @@ async function sendInvoiceAndCredentialsEmail({
                     Open Customer Dashboard →
                   </a>
                 </div>
-              </div>
+              </div>` : `
+              <!-- Existing Account Portal Access Box (No passwords sent) -->
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 24px;">
+                <span style="font-size: 15px; font-weight: 800; color: #0f172a; display: block; margin-bottom: 6px;">
+                  Access Your Software & Subscriptions
+                </span>
+                <p style="font-size: 13px; color: #475569; margin: 0 0 16px; line-height: 1.5;">
+                  Your purchased software and entitlements are now active on your organization account. You can log in to your OXOO Customer Dashboard using your existing OXOO login credentials:
+                </p>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                  <a href="${loginUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);">
+                    Open Customer Dashboard →
+                  </a>
+                  <span style="font-size: 12px; color: #64748b;">(Registered Email: <strong>${normEmail}</strong>)</span>
+                </div>
+              </div>`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 15px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="640px" style="max-width: 640px; background-color: #ffffff; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 14px 35px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
+          
+          <!-- Top Navy Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 34px 32px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">
+                OXOO
+              </h1>
+              <span style="font-size: 13px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">
+                Payment Confirmed · Subscription Active
+              </span>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 36px 32px;">
+              <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
+                Thank you, ${customerName}!
+              </h2>
+              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
+                Thank you for subscribing to <strong>OXOO</strong> for <strong>${companyName}</strong>. Your payment was verified and processed successfully. Your official Tax Invoice is attached as a PDF document to this email.
+              </p>
+
+              ${credentialsBlock}
 
               <!-- Attached PDF Notice -->
               <div style="background: #f8fafc; border: 2px dashed #0284c7; border-radius: 12px; padding: 18px 22px; margin-bottom: 26px; text-align: center;">
@@ -1047,6 +1068,146 @@ async function sendAdminSubscriptionDueEmail({
   }
 }
 
+// -------------------------------------------------------------
+// Official First-Ticket Acknowledgement Email (Phase 6 Specification)
+// -------------------------------------------------------------
+async function sendTicketAcknowledgementEmail({ to, customerName, ticketNumber, ticketSubject, origin = 'http://localhost:5173' }) {
+  const normEmail = (to || '').trim().toLowerCase();
+  if (!normEmail) return { success: false, error: 'Recipient email required' };
+
+  const safeName = (customerName || 'Valued Customer').trim();
+  const safeTicketNum = (ticketNumber || '').trim();
+  const safeSubject = (ticketSubject || 'Support Inquiry').trim();
+
+  const subject = "We’ve Received Your OXOO Support Request";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <tr>
+      <td style="padding: 28px 32px; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">OXOO Support Team</h1>
+        <p style="color: #e0f2fe; margin: 4px 0 0 0; font-size: 13px;">Official Ticket Confirmation · #${safeTicketNum}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 32px; font-size: 15px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">Hello ${safeName},</p>
+        <p>Thank you for contacting the OXOO Support Team and creating support ticket <strong>${safeTicketNum}</strong>.</p>
+        <p>We have received your request regarding "<strong>${safeSubject}</strong>". Our team is here to help, and we will review your message and follow up as soon as possible.</p>
+        <p>You can view your ticket status, reply to the conversation, and share relevant documents through your OXOO Customer Portal.</p>
+        <div style="margin: 28px 0; text-align: center;">
+          <a href="${origin}/customer?tab=support" style="background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">Open Ticket in Customer Portal</a>
+        </div>
+        <p>Thank you for choosing OXOO. Our team is always here to support you.</p>
+        <p style="margin-bottom: 0;">Best regards,<br><strong>OXOO Support Team</strong></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 16px 32px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
+        OXOO Technologies Inc. · All-in-One Intelligent Cloud Platform · This is an automated notification.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    const info = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: normEmail,
+      subject,
+      html
+    });
+    console.log(`[EmailService] Ticket acknowledgement email sent to ${normEmail} for ticket ${safeTicketNum}`);
+    return { success: true, messageId: info?.messageId };
+  } catch (err) {
+    console.error(`[EmailService] Failed to send ticket acknowledgement email:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+// -------------------------------------------------------------
+// Inquiry Confirmation Email (Phase 3 & 4 Specification)
+// -------------------------------------------------------------
+async function sendInquiryConfirmationEmail({ to, contactPerson, companyName, inquiryRef, category, productName, selectedPlan }) {
+  const normEmail = (to || '').trim().toLowerCase();
+  if (!normEmail) return { success: false, error: 'Recipient email required' };
+
+  const safePerson = (contactPerson || 'Customer').trim();
+  const safeCompany = (companyName || '').trim();
+  const safeRef = (inquiryRef || '').trim();
+  const safeCat = (category || 'Demo & Website Services').trim();
+  const safeProduct = (productName || safeCat).trim();
+  const safePlan = (selectedPlan || 'Custom Solution').trim();
+
+  const subject = `We’ve Received Your OXOO Inquiry [${safeRef}]`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <tr>
+      <td style="padding: 28px 32px; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">OXOO Enterprise Solutions</h1>
+        <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 13px;">Inquiry Reference: ${safeRef}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 32px; font-size: 15px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">Hello ${safePerson},</p>
+        <p>Thank you for your interest in OXOO. We have received your inquiry for <strong>${safeProduct}</strong> (${safeCat}) under the <strong>${safePlan}</strong>.</p>
+        <div style="background-color: #f1f5f9; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <table width="100%" style="font-size: 13px; color: #475569;">
+            <tr><td style="padding: 4px 0; font-weight: 600; width: 140px;">Inquiry Reference:</td><td>${safeRef}</td></tr>
+            ${safeCompany ? `<tr><td style="padding: 4px 0; font-weight: 600;">Company:</td><td>${safeCompany}</td></tr>` : ''}
+            <tr><td style="padding: 4px 0; font-weight: 600;">Category:</td><td>${safeCat}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: 600;">Interested Service:</td><td>${safeProduct}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: 600;">Selected Plan:</td><td>${safePlan}</td></tr>
+          </table>
+        </div>
+        <p>Our solutions architecture team has received your details and an assigned specialist will follow up with you within one business day with customized specifications, timeline, and next steps.</p>
+        <p>If you have urgent questions, you can reply directly to this email.</p>
+        <p style="margin-bottom: 0;">Warm regards,<br><strong>OXOO Enterprise Solutions Team</strong></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 16px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
+        OXOO Technologies Inc. · All-in-One Business Platform · oxoo.ai
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    const info = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: normEmail,
+      subject,
+      html
+    });
+    console.log(`[EmailService] Inquiry confirmation email sent to ${normEmail} [Ref: ${safeRef}]`);
+    return { success: true, messageId: info?.messageId };
+  } catch (err) {
+    console.error(`[EmailService] Failed to send inquiry confirmation email:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendOtpEmail,
   verifyOtp,
@@ -1054,5 +1215,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendAdminStaffCredentialsEmail,
   sendAdminSubscriptionDueEmail,
+  sendTicketAcknowledgementEmail,
+  sendInquiryConfirmationEmail,
   sendMailWithFallback
 };

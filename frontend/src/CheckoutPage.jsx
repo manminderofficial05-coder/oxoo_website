@@ -1784,9 +1784,72 @@ export default function CheckoutPage() {
           {currentStep === 5 && (
             <div>
               {/* =============================================================== */}
-              {/* Account Password Setup Card (10+ Digits, Eye Toggle, PDF Invoice) */}
+              {/* Account Password Setup Card (Only for NEW customers) */}
               {/* =============================================================== */}
-              {!passwordSavedSuccess ? (
+              {(loggedInUser || paymentSuccessData?.alreadyRegistered) ? (
+                <div
+                  className="no-print"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '16px',
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)',
+                    border: '1.5px solid #86efac',
+                    borderRadius: '14px',
+                    padding: '20px 24px',
+                    marginBottom: '20px',
+                    boxShadow: '0 4px 18px rgba(22, 163, 74, 0.12)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '12px',
+                        background: '#16a34a',
+                        color: '#ffffff',
+                        display: 'grid',
+                        placeItems: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <CheckCircle2 size={26} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#15803d' }}>
+                        Payment Verified — Software Activated!
+                      </h3>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#334155' }}>
+                        Your purchase has been associated with your existing OXOO account (<strong>{formData.email}</strong>). Your tax invoice has been emailed to you.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/customer?tab=apps')}
+                    style={{
+                      padding: '12px 22px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Go to My Applications →
+                  </button>
+                </div>
+              ) : !passwordSavedSuccess ? (
                 <div
                   className="no-print"
                   style={{

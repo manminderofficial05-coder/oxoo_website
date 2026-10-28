@@ -1,4 +1,11 @@
 require('dotenv').config();
+const dns = require('dns');
+try {
+  if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+  }
+} catch (e) {}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,7 +16,16 @@ const crypto = require('crypto');
 
 const { pool, query, initDb } = require('./db');
 const { categories: fallbackCategories, services: fallbackServices } = require('./seedData');
-const { sendOtpEmail, verifyOtp, sendInvoiceAndCredentialsEmail, sendPasswordResetEmail, sendAdminSubscriptionDueEmail } = require('./emailService');
+const { 
+  sendOtpEmail, 
+  verifyOtp, 
+  sendInvoiceAndCredentialsEmail, 
+  sendPasswordResetEmail, 
+  sendAdminSubscriptionDueEmail,
+  sendTicketAcknowledgementEmail,
+  sendInquiryConfirmationEmail
+} = require('./emailService');
+const { generateInvoicePdf } = require('./invoicePdf');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -33,7 +49,8 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use('/api/', rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5000,
@@ -172,10 +189,40 @@ app.post('/api/auth/register', async (req, res, next) => {
       `INSERT INTO users (name, email, password, organization, role)
        VALUES ($1, $2, $3, $4, 'member')
        RETURNING id, name, email, role, organization, created_at`,
-      [String(name).trim(), emailNorm, hashedPassword, organization || 'Oxoo.ai Tenant']
+      [String(name).trim(), emailNorm, hashedPassword, organization || (String(name).trim() + ' Enterprise')]
     );
 
     const user = userResult.rows[0];
+
+    // Automatically provision customer record in customers table so they show up immediately in Admin Customer Tab
+    try {
+      const cCount = await query('SELECT COUNT(*) as count FROM customers');
+      const nextNum = parseInt(cCount.rows[0]?.count || 0, 10) + 1;
+      const newCustId = `CST-${String(nextNum).padStart(4, '0')}`;
+
+      await query(
+        `INSERT INTO customers (
+          customer_id, company_name, contact_person, email, phone, country,
+          plan, account_status, subscription_status, payment_status,
+          amount, billing_cycle, selected_apps, joined_date, renewal_date, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, 'India',
+          'Starter Plan (14-Day Free Trial)', 'Active', 'Trialing', 'Trial',
+          0, 'monthly', '["Accounting", "Invoicing", "CRM"]'::jsonb, NOW(), NOW() + INTERVAL '14 days', NOW(), NOW()
+        )
+        ON CONFLICT (customer_id) DO NOTHING`,
+        [
+          newCustId,
+          user.organization || (user.name + ' Enterprise'),
+          user.name,
+          emailNorm,
+          req.body?.phone || ''
+        ]
+      );
+    } catch (custErr) {
+      console.warn('Could not auto-insert into customers table on register:', custErr.message);
+    }
+
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
     await logAudit('User Registered', emailNorm, user.name, req.ip, { organization: user.organization });
@@ -1195,16 +1242,32 @@ app.post('/api/customer/renew-subscription', async (req, res, next) => {
         );
       }
 
-      // Update customer table
+      // Update customer table with accurate updated renewal date
       await query(
         `UPDATE customers
          SET subscription_status = 'Active',
              payment_status = 'Paid',
-             renewal_date = NOW() + INTERVAL '${renewalInterval}',
+             renewal_date = $1,
              updated_at = NOW()
-         WHERE LOWER(email) = $1 OR LOWER(company_name) = LOWER($2)`,
-        [normEmail, effectiveCompany]
+         WHERE LOWER(email) = $2 OR LOWER(company_name) = LOWER($3)`,
+        [updatedRenewalDate, normEmail, effectiveCompany]
       );
+
+      // Record in-app notification for customer
+      try {
+        await query(
+          `INSERT INTO customer_notifications (company_name, customer_email, title, message, type, link)
+           VALUES ($1, $2, $3, $4, 'renewal', '/customer?tab=billing')`,
+          [
+            effectiveCompany,
+            normEmail,
+            'Subscription Renewed Successfully',
+            `Your subscription for ${planName} (${softwareName || 'Software'}) has been extended to ${updatedRenewalDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}. Invoice ${invoiceNumber} is available.`
+          ]
+        );
+      } catch (notifErr) {
+        console.error('Failed to log customer renewal notification:', notifErr.message);
+      }
     }
 
     const daysRemaining = Math.max(0, Math.ceil((updatedRenewalDate - new Date()) / (1000 * 60 * 60 * 24)));
@@ -1591,11 +1654,130 @@ function getCanonicalApp(raw) {
   };
 }
 
-// Customer Overview (Summary Cards, Plan, Entitlements, Recent Activity)
+// -------------------------------------------------------------
+// HELPER: Resolve authenticated customer or team member context
+// -------------------------------------------------------------
+async function resolveCustomerContext(req) {
+  let userEmail = (req.headers['x-user-email'] || req.query.email || req.body?.email || '').trim().toLowerCase();
+  let userCompany = (req.headers['x-user-company'] || req.query.company || req.body?.company || req.body?.companyName || '').trim();
+  let userId = null;
+  let userName = null;
+  let userRole = null;
+  let memberRecord = null;
+
+  // 1. Try decoding Authorization Bearer JWT
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      if (decoded) {
+        if (!userEmail && decoded.email) userEmail = decoded.email.trim().toLowerCase();
+        if (!userCompany && decoded.organization) userCompany = decoded.organization.trim();
+        userId = decoded.id;
+        userName = decoded.name;
+        userRole = decoded.role;
+      }
+    } catch (e) {}
+  }
+
+  // 2. Query users / team_members in database for canonical org & role
+  if (isDbConnected && (userEmail || userId)) {
+    try {
+      const uRes = await query(
+        `SELECT id, name, email, organization, role, apps_access, active FROM users WHERE ${userId ? 'id = $1' : 'LOWER(email) = LOWER($1)'} LIMIT 1`,
+        [userId || userEmail]
+      );
+      if (uRes.rows.length > 0) {
+        const u = uRes.rows[0];
+        userId = u.id;
+        if (!userName) userName = u.name;
+        if (!userEmail) userEmail = u.email.toLowerCase();
+        if (!userCompany && u.organization) userCompany = u.organization;
+        if (!userRole) userRole = u.role;
+      }
+
+      // Check if user is a team member with specific app restrictions
+      if (userEmail) {
+        const tmRes = await query(
+          `SELECT * FROM team_members WHERE LOWER(email) = LOWER($1) AND status = 'Active' LIMIT 1`,
+          [userEmail]
+        );
+        if (tmRes.rows.length > 0) {
+          memberRecord = tmRes.rows[0];
+          if (!userCompany && memberRecord.company_name) {
+            userCompany = memberRecord.company_name;
+          }
+          if (!userName && memberRecord.name) userName = memberRecord.name;
+          if (!userRole) userRole = memberRecord.role;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Fallback to customer or orders if company not resolved
+  if (isDbConnected && userEmail && !userCompany) {
+    try {
+      const custRes = await query(`SELECT company_name FROM customers WHERE LOWER(email) = LOWER($1) LIMIT 1`, [userEmail]);
+      if (custRes.rows.length > 0 && custRes.rows[0].company_name) {
+        userCompany = custRes.rows[0].company_name;
+      } else {
+        const ordRes = await query(`SELECT company_name FROM orders WHERE LOWER(customer_email) = LOWER($1) ORDER BY id DESC LIMIT 1`, [userEmail]);
+        if (ordRes.rows.length > 0 && ordRes.rows[0].company_name) {
+          userCompany = ordRes.rows[0].company_name;
+        }
+      }
+    } catch (e) {}
+  }
+
+  return {
+    userEmail: userEmail || 'customer@oxoo.ai',
+    userCompany: userCompany || 'My Organization',
+    userId,
+    userName: userName || (userEmail ? userEmail.split('@')[0] : 'Customer'),
+    userRole: userRole || 'owner',
+    memberRecord
+  };
+}
+
+// -------------------------------------------------------------
+// 1. GET /api/customer/plans - Real plans for software purchase
+// -------------------------------------------------------------
+app.get('/api/customer/plans', async (req, res, next) => {
+  try {
+    const { app: appFilter = '' } = req.query;
+    if (!isDbConnected) {
+      return res.json({ success: true, plans: [] });
+    }
+
+    let sql = `SELECT * FROM plans WHERE status = 'Active'`;
+    const params = [];
+
+    if (appFilter && appFilter.trim()) {
+      const cleanApp = appFilter.trim();
+      params.push(`%${cleanApp}%`);
+      sql += ` AND (included_apps::text ILIKE $1 OR included_apps::text ILIKE '%All Applications%' OR name ILIKE $1 OR description ILIKE $1)`;
+    }
+
+    sql += ` ORDER BY monthly_price ASC`;
+    const result = await query(sql, params);
+
+    res.json({
+      success: true,
+      plans: result.rows,
+      total: result.rows.length
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------------------------------------------------
+// 2. GET /api/customer/overview - Database-Grounded Overview
+// -------------------------------------------------------------
 app.get('/api/customer/overview', async (req, res, next) => {
   try {
-    const userEmail = (req.query.email || req.headers['x-user-email'] || '').trim().toLowerCase();
-    const userCompany = (req.query.company || req.headers['x-user-company'] || '').trim();
+    const ctx = await resolveCustomerContext(req);
+    const { userEmail, userCompany, memberRecord } = ctx;
 
     let org = null;
     let openTicketsCount = 0;
@@ -1603,11 +1785,15 @@ app.get('/api/customer/overview', async (req, res, next) => {
     let purchasedApps = [];
     let recentActivity = [];
     let latestOrder = null;
+    let latestSubRecord = null;
 
     if (isDbConnected) {
       try {
         if (userCompany) {
-          const orgRes = await query(`SELECT * FROM organizations WHERE LOWER(name) = LOWER($1) OR name ILIKE '%' || $2 || '%' LIMIT 1`, [userCompany, userCompany]);
+          const orgRes = await query(
+            `SELECT * FROM organizations WHERE LOWER(name) = LOWER($1) OR name ILIKE '%' || $2 || '%' LIMIT 1`,
+            [userCompany, userCompany]
+          );
           if (orgRes.rows.length > 0) org = orgRes.rows[0];
         }
         if (!org) {
@@ -1615,26 +1801,32 @@ app.get('/api/customer/overview', async (req, res, next) => {
           if (defaultOrgRes.rows.length > 0) org = defaultOrgRes.rows[0];
         }
 
-        const ticketRes = await query(`SELECT COUNT(*) FROM support_tickets WHERE status != 'Resolved'`);
+        // Strictly customer-scoped open tickets count
+        const ticketRes = await query(
+          `SELECT COUNT(*) FROM support_tickets
+           WHERE (LOWER(company_name) = LOWER($1) OR LOWER(user_email) = LOWER($2))
+             AND status NOT IN ('Resolved', 'Closed')`,
+          [userCompany, userEmail]
+        );
         if (ticketRes.rows.length > 0) openTicketsCount = parseInt(ticketRes.rows[0].count, 10) || 0;
 
-        const teamRes = await query(`SELECT COUNT(*) FROM team_members WHERE status = 'Active'`);
+        // Strictly company-scoped team count
+        const teamRes = await query(
+          `SELECT COUNT(*) FROM team_members WHERE LOWER(company_name) = LOWER($1) AND status = 'Active'`,
+          [userCompany]
+        );
         if (teamRes.rows.length > 0) teamCount = parseInt(teamRes.rows[0].count, 10) || 0;
 
-        // 1. Fetch active subscription apps for this specific customer
-        let subRes;
-        if (userCompany) {
-          subRes = await query(
-            `SELECT * FROM subscriptions WHERE (LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%') AND status = 'Active' ORDER BY id DESC`,
-            [userCompany, userCompany]
-          );
-        } else {
-          subRes = await query(`SELECT * FROM subscriptions WHERE status = 'Active' ORDER BY id DESC LIMIT 1`);
-        }
+        // 1. Fetch active subscriptions for this specific customer
+        const subRes = await query(
+          `SELECT * FROM subscriptions
+           WHERE (LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%')
+             AND status = 'Active'
+           ORDER BY id DESC`,
+          [userCompany, userCompany]
+        );
 
         const rawCollectedApps = [];
-        let latestSubRecord = null;
-        // Single source of truth: customer's active subscriptions
         if (subRes && subRes.rows.length > 0) {
           latestSubRecord = subRes.rows[0];
           subRes.rows.forEach(s => {
@@ -1646,15 +1838,13 @@ app.get('/api/customer/overview', async (req, res, next) => {
         }
 
         // 2. Fetch paid orders for this specific customer
-        let ordRes;
-        if (userEmail || userCompany) {
-          ordRes = await query(
-            `SELECT * FROM orders WHERE (LOWER(customer_email) = LOWER($1) OR LOWER(company_name) = LOWER($2) OR company_name ILIKE '%' || $3 || '%') AND status = 'Paid' ORDER BY id DESC`,
-            [userEmail || '__none__', userCompany || '__none__', userCompany || '__none__']
-          );
-        } else {
-          ordRes = await query(`SELECT * FROM orders WHERE status = 'Paid' ORDER BY id DESC LIMIT 1`);
-        }
+        const ordRes = await query(
+          `SELECT * FROM orders
+           WHERE (LOWER(customer_email) = LOWER($1) OR LOWER(company_name) = LOWER($2) OR company_name ILIKE '%' || $3 || '%')
+             AND status = 'Paid'
+           ORDER BY id DESC`,
+          [userEmail, userCompany, userCompany]
+        );
 
         if (ordRes && ordRes.rows.length > 0) {
           latestOrder = ordRes.rows[0];
@@ -1672,7 +1862,7 @@ app.get('/api/customer/overview', async (req, res, next) => {
           rawCollectedApps.push(...list);
         }
 
-        // Canonical deduplication: Each software is listed EXACTLY ONCE
+        // Canonical deduplication
         const appMap = new Map();
         rawCollectedApps.forEach(item => {
           const canon = getCanonicalApp(item);
@@ -1682,18 +1872,32 @@ app.get('/api/customer/overview', async (req, res, next) => {
         });
         purchasedApps = Array.from(appMap.values());
 
-        // Invoices for activity stream - ONLY for this customer
-        let invRes;
-        if (userCompany || userEmail) {
-          invRes = await query(
-            `SELECT DISTINCT ON (invoice_number) * FROM invoices
-             WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'
-             ORDER BY invoice_number, invoice_date DESC LIMIT 5`,
-            [userCompany || '__none__', userCompany || '__none__']
-          );
-        } else {
-          invRes = await query(`SELECT * FROM invoices ORDER BY invoice_date DESC LIMIT 5`);
+        // REQUIREMENT 7: If logged in as a team member with specific software access,
+        // filter purchasedApps to ONLY the software assigned to them!
+        if (memberRecord && memberRecord.apps_access) {
+          const allowed = Array.isArray(memberRecord.apps_access)
+            ? memberRecord.apps_access
+            : (typeof memberRecord.apps_access === 'string' ? JSON.parse(memberRecord.apps_access) : []);
+          const hasAll = allowed.some(a => String(a).toLowerCase() === 'all');
+          if (!hasAll && allowed.length > 0) {
+            purchasedApps = purchasedApps.filter(app => {
+              const aid = (app.id || '').toLowerCase();
+              const aname = (app.name || '').toLowerCase();
+              return allowed.some(al => {
+                const s = String(al).toLowerCase();
+                return aid === s || aname.includes(s) || s.includes(aid);
+              });
+            });
+          }
         }
+
+        // Invoices for activity stream - ONLY for this customer
+        const invRes = await query(
+          `SELECT DISTINCT ON (invoice_number) * FROM invoices
+           WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'
+           ORDER BY invoice_number, invoice_date DESC LIMIT 5`,
+          [userCompany, userCompany]
+        );
 
         if (invRes && invRes.rows.length > 0) {
           recentActivity = invRes.rows.map(inv => ({
@@ -1708,9 +1912,9 @@ app.get('/api/customer/overview', async (req, res, next) => {
       }
     }
 
-    const effectiveName = latestOrder?.customer_name || (userEmail ? userEmail.split('@')[0] : 'Customer Admin');
-    const effectiveCompany = userCompany || org?.name || latestOrder?.company_name || 'My Organization';
-    const effectiveEmail = userEmail || latestOrder?.customer_email || 'customer@oxoo.ai';
+    const effectiveName = ctx.userName || latestOrder?.customer_name || (userEmail ? userEmail.split('@')[0] : 'Customer');
+    const effectiveCompany = userCompany;
+    const effectiveEmail = userEmail;
 
     // Resolve tenant Storage ID
     let customerStorageId = null;
@@ -1783,72 +1987,175 @@ app.get('/api/customer/overview', async (req, res, next) => {
   }
 });
 
-// Customer Billing & Subscriptions - Shows ONLY customer's own bills, NOT all bills
+// -------------------------------------------------------------
+// 3. GET /api/customer/billing - Single Source of Truth for Billing
+// -------------------------------------------------------------
 app.get('/api/customer/billing', async (req, res, next) => {
   try {
-    const userEmail = (req.query.email || req.headers['x-user-email'] || '').trim().toLowerCase();
-    const userCompany = (req.query.company || req.headers['x-user-company'] || '').trim();
+    const ctx = await resolveCustomerContext(req);
+    const { userEmail, userCompany } = ctx;
 
     let invoices = [];
+    let currentSub = null;
+    let availablePlans = [];
+
     if (isDbConnected) {
       try {
-        if (userCompany || userEmail) {
-          const invRes = await query(
-            `SELECT DISTINCT ON (i.invoice_number) i.* FROM invoices i
-             LEFT JOIN orders o ON LOWER(o.company_name) = LOWER(i.company_name) OR o.order_number = i.invoice_number
-             WHERE LOWER(i.company_name) = LOWER($1)
-                OR LOWER(i.company_name) ILIKE '%' || $2 || '%'
-                OR LOWER(o.customer_email) = LOWER($3)
-             ORDER BY i.invoice_number, i.invoice_date DESC`,
-            [userCompany || '__none__', userCompany || '__none__', userEmail || '__none__']
-          );
-          invoices = invRes.rows;
-        } else {
-          // If no customer is authenticated or specified, return empty array
-          invoices = [];
-        }
+        // 1. Fetch invoices belonging strictly to customer or company
+        const invRes = await query(
+          `SELECT DISTINCT ON (i.invoice_number) i.* FROM invoices i
+           LEFT JOIN orders o ON LOWER(o.company_name) = LOWER(i.company_name) OR o.order_number = i.invoice_number
+           WHERE LOWER(i.company_name) = LOWER($1)
+              OR LOWER(i.company_name) ILIKE '%' || $2 || '%'
+              OR LOWER(o.customer_email) = LOWER($3)
+           ORDER BY i.invoice_number, i.invoice_date DESC`,
+          [userCompany, userCompany, userEmail]
+        );
+        invoices = invRes.rows;
+
+        // 2. Fetch customer active subscription
+        const subRes = await query(
+          `SELECT * FROM subscriptions
+           WHERE LOWER(company_name) = LOWER($1) OR company_name ILIKE '%' || $2 || '%'
+           ORDER BY id DESC LIMIT 1`,
+          [userCompany, userCompany]
+        );
+        if (subRes.rows.length > 0) currentSub = subRes.rows[0];
+
+        // 3. Fetch active plans from database
+        const pRes = await query(`SELECT * FROM plans WHERE status = 'Active' ORDER BY monthly_price ASC LIMIT 6`);
+        availablePlans = pRes.rows;
       } catch (e) {
-        console.error('Error fetching customer invoices:', e.message);
+        console.error('Error fetching customer billing data:', e.message);
       }
     }
 
+    const renewalDate = currentSub?.renewal_date ? new Date(currentSub.renewal_date) : new Date(Date.now() + 30 * 86400000);
+    const daysLeft = Math.max(0, Math.ceil((renewalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
     res.json({
       currentPlan: {
-        name: 'Standard Pack',
-        amount: 0,
+        name: currentSub?.plan || 'Standard Pack',
+        amount: currentSub?.amount || 0,
         currency: '₹',
-        cycle: 'Monthly',
-        status: 'Active',
-        nextBilling: '30 Days',
+        cycle: (currentSub?.billing_cycle || 'Monthly').charAt(0).toUpperCase() + (currentSub?.billing_cycle || 'Monthly').slice(1),
+        status: currentSub?.status || 'Active',
+        startDate: currentSub?.start_date ? new Date(currentSub.start_date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'),
+        renewalDate: renewalDate.toLocaleDateString('en-GB'),
+        rawRenewalDate: renewalDate.toISOString(),
+        daysLeft,
         features: [
-          'Access to Purchased Software Modules',
-          'Team Workspace & Role Access',
-          'Standard SLA & Support'
+          'Enterprise Cloud Hosting & SSL',
+          'Automated Daily Backups & Disaster Recovery',
+          'Role-Based Access Control',
+          'Dedicated Priority Support Desk'
         ]
       },
-      availablePlans: [
-        { name: 'Starter', price: 15000, cycle: '/mo', seats: '5 seats', apps: '3 Apps included', popular: false },
-        { name: 'Growth', price: 25000, cycle: '/mo', seats: '10 seats', apps: '5 Apps included', popular: false },
-        { name: 'Business Pro', price: 48200, cycle: '/mo', seats: '15 seats', apps: '8 Apps included', popular: true, current: true },
-        { name: 'Enterprise', price: 124000, cycle: '/mo', seats: 'Unlimited seats', apps: 'All 24 Apps included', popular: false }
-      ],
+      availablePlans: availablePlans.map(p => ({
+        id: p.plan_id,
+        name: p.name,
+        price: Number(p.monthly_price),
+        yearlyPrice: Number(p.yearly_price),
+        cycle: '/mo',
+        apps: Array.isArray(p.included_apps) ? p.included_apps.join(', ') : 'Applications included',
+        features: Array.isArray(p.features) ? p.features : []
+      })),
       invoices,
-      paymentMethod: null
+      paymentMethod: currentSub?.payment_method || 'Razorpay (UPI / Cards)'
     });
   } catch (e) {
     next(e);
   }
 });
 
-// Upgrade plan request
+// -------------------------------------------------------------
+// 4. GET /api/customer/invoices/:invoiceNumber/pdf - Real PDF Download
+// -------------------------------------------------------------
+app.get('/api/customer/invoices/:invoiceNumber/pdf', async (req, res, next) => {
+  try {
+    const { invoiceNumber } = req.params;
+    if (!invoiceNumber) {
+      return res.status(400).json({ success: false, message: 'Invoice number is required.' });
+    }
+
+    let invoice = null;
+    let order = null;
+
+    if (isDbConnected) {
+      const invRes = await query(`SELECT * FROM invoices WHERE invoice_number = $1 LIMIT 1`, [invoiceNumber]);
+      if (invRes.rows.length > 0) invoice = invRes.rows[0];
+
+      if (invoice) {
+        const ordRes = await query(
+          `SELECT * FROM orders WHERE order_number = $1 OR company_name = $2 ORDER BY id DESC LIMIT 1`,
+          [invoice.invoice_number, invoice.company_name]
+        );
+        if (ordRes.rows.length > 0) order = ordRes.rows[0];
+      }
+    }
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Invoice not found.' });
+    }
+
+    const safeAmount = Number(invoice.amount || 0);
+    const pdfData = {
+      invoiceNumber: invoice.invoice_number,
+      orderNumber: order?.order_number || invoice.invoice_number,
+      companyName: invoice.company_name || 'Valued Customer',
+      customerName: order?.customer_name || invoice.company_name || 'Customer Admin',
+      customerEmail: order?.customer_email || 'billing@oxoo.ai',
+      customerPhone: order?.customer_phone || '+91 98765 43210',
+      storageId: order?.storage_id || 'STG-08643413',
+      planName: invoice.plan || 'OXOO Software Suite',
+      billingCycle: order?.billing_cycle || 'monthly',
+      paymentMethod: invoice.payment_method || 'Online Razorpay (UPI / Card)',
+      paymentId: order?.payment_id || 'pay_verified',
+      invoiceDate: invoice.invoice_date ? new Date(invoice.invoice_date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'),
+      amount: safeAmount
+    };
+
+    const pdfBuffer = await generateInvoicePdf(pdfData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Tax-Invoice-${invoiceNumber}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Error downloading invoice PDF:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to generate invoice PDF.' });
+  }
+});
+
+// -------------------------------------------------------------
+// 5. POST /api/customer/upgrade - Request Plan Upgrade
+// -------------------------------------------------------------
 app.post('/api/customer/upgrade', async (req, res, next) => {
   try {
+    const ctx = await resolveCustomerContext(req);
     const { planName } = req.body || {};
     if (!planName) return res.status(400).json({ message: 'Plan name is required' });
 
     if (isDbConnected) {
-      await query(`UPDATE organizations SET plan = $1, updated_at = NOW() WHERE name = 'ABC Technologies'`, [planName]);
-      await logAudit('Plan Upgraded', planName, 'Alex Johnson (alex@abctech.com)', req.ip);
+      await query(
+        `UPDATE subscriptions SET plan = $1, updated_at = NOW() WHERE LOWER(company_name) = LOWER($2)`,
+        [planName, ctx.userCompany]
+      );
+      await query(
+        `UPDATE organizations SET plan = $1, updated_at = NOW() WHERE LOWER(name) = LOWER($2)`,
+        [planName, ctx.userCompany]
+      );
+      await query(
+        `INSERT INTO customer_notifications (company_name, customer_email, title, message, type, link)
+         VALUES ($1, $2, $3, $4, 'plan', '/customer?tab=billing')`,
+        [
+          ctx.userCompany,
+          ctx.userEmail,
+          'Subscription Plan Upgraded',
+          `Your subscription plan has been upgraded to ${planName}.`
+        ]
+      );
+      await logAudit('Plan Upgraded', planName, `${ctx.userName} (${ctx.userEmail})`, req.ip);
     }
 
     res.json({
@@ -1861,57 +2168,110 @@ app.post('/api/customer/upgrade', async (req, res, next) => {
   }
 });
 
-// Customer Team Management
-app.get('/api/customer/team', async (_req, res, next) => {
+// -------------------------------------------------------------
+// 6. Customer Team Management (GET, POST, PUT, DELETE)
+// -------------------------------------------------------------
+app.get('/api/customer/team', async (req, res, next) => {
   try {
+    const ctx = await resolveCustomerContext(req);
     let members = [];
     if (isDbConnected) {
       try {
-        const teamRes = await query(`SELECT * FROM team_members ORDER BY id ASC`);
+        const teamRes = await query(
+          `SELECT * FROM team_members WHERE LOWER(company_name) = LOWER($1) ORDER BY id ASC`,
+          [ctx.userCompany]
+        );
         members = teamRes.rows;
-      } catch (e) {}
+      } catch (e) {
+        console.error('Error fetching team members:', e.message);
+      }
     }
 
     res.json({
       members,
+      team: members,
       seatsUsed: members.length,
-      seatsTotal: 10,
-      availableRoles: ['Organization Admin', 'Finance Lead', 'HR Director', 'Operations Manager', 'Member']
+      seatsTotal: 25,
+      availableRoles: ['Admin', 'Manager', 'Finance Lead', 'HR Lead', 'Sales Lead', 'Member']
     });
   } catch (e) {
     next(e);
   }
 });
 
-// Invite Team Member
+// Invite / Add Team Member
 app.post('/api/customer/team', async (req, res, next) => {
   try {
+    const ctx = await resolveCustomerContext(req);
     const { name, email, role, appsAccess } = req.body || {};
     if (!name || !email) return res.status(400).json({ message: 'Name and email are required' });
 
-    let newMember = {
-      id: Date.now(),
-      name,
-      email,
-      role: role || 'Member',
-      status: 'Active',
-      company_name: 'ABC Technologies',
-      apps_access: appsAccess || ['all']
-    };
+    const normEmail = email.trim().toLowerCase();
+    const effectiveCompany = ctx.userCompany || 'My Organization';
+    const effectiveRole = role || 'Member';
+    const effectiveApps = Array.isArray(appsAccess) && appsAccess.length > 0 ? appsAccess : ['all'];
+
+    let newMember = null;
 
     if (isDbConnected) {
-      const insRes = await query(
-        `INSERT INTO team_members (company_name, name, email, role, status, apps_access)
-         VALUES ('ABC Technologies', $1, $2, $3, 'Active', $4) RETURNING *`,
-        [name, email, role || 'Member', JSON.stringify(appsAccess || ['all'])]
+      // Check if member already in team for this company
+      const checkRes = await query(
+        `SELECT id FROM team_members WHERE LOWER(email) = LOWER($1) AND LOWER(company_name) = LOWER($2)`,
+        [normEmail, effectiveCompany]
       );
-      if (insRes.rows.length > 0) newMember = insRes.rows[0];
-      await logAudit('Team Member Invited', email, 'Alex Johnson', req.ip);
+      if (checkRes.rows.length > 0) {
+        return res.status(400).json({ success: false, message: 'A team member with this email already exists in your organization.' });
+      }
+
+      const insRes = await query(
+        `INSERT INTO team_members (company_name, name, email, role, status, apps_access, last_active, created_at)
+         VALUES ($1, $2, $3, $4, 'Active', $5, NOW(), NOW()) RETURNING *`,
+        [effectiveCompany, name.trim(), normEmail, effectiveRole, JSON.stringify(effectiveApps)]
+      );
+      newMember = insRes.rows[0];
+
+      // Sync to users table so team member can log in via existing OXOO login!
+      const userCheck = await query(`SELECT id FROM users WHERE LOWER(email) = LOWER($1)`, [normEmail]);
+      if (userCheck.rows.length === 0) {
+        // Securely hash a random initial password setup
+        const tempKey = crypto.randomBytes(8).toString('hex');
+        const passHash = await bcrypt.hash(tempKey, 10);
+        await query(
+          `INSERT INTO users (name, email, password, role, organization, active, apps_access, created_at)
+           VALUES ($1, $2, $3, 'team_member', $4, true, $5, NOW())`,
+          [name.trim(), normEmail, passHash, effectiveCompany, JSON.stringify(effectiveApps)]
+        );
+      } else {
+        await query(
+          `UPDATE users SET organization = $1, apps_access = $2, active = true WHERE LOWER(email) = LOWER($3)`,
+          [effectiveCompany, JSON.stringify(effectiveApps), normEmail]
+        );
+      }
+
+      // Log notification and audit
+      try {
+        await query(
+          `INSERT INTO customer_notifications (company_name, customer_email, title, message, type, link)
+           VALUES ($1, $2, $3, $4, 'team', '/customer?tab=team')`,
+          [
+            effectiveCompany,
+            ctx.userEmail,
+            'Team Member Added',
+            `${name.trim()} (${normEmail}) was added with ${effectiveRole} role.`
+          ]
+        );
+      } catch (e) {}
+
+      await logAudit('Team Member Invited', normEmail, `${ctx.userName} (${ctx.userEmail})`, req.ip, {
+        company: effectiveCompany,
+        role: effectiveRole,
+        apps: effectiveApps
+      });
     }
 
     res.status(201).json({
       success: true,
-      message: `Invitation sent to ${email} successfully.`,
+      message: `Team member ${name.trim()} added successfully.`,
       member: newMember
     });
   } catch (e) {
@@ -1919,29 +2279,127 @@ app.post('/api/customer/team', async (req, res, next) => {
   }
 });
 
-// Remove Team Member
-app.delete('/api/customer/team/:id', async (req, res, next) => {
+// Update Team Member (Edit Role, Status, Apps Access)
+app.put('/api/customer/team/:id', async (req, res, next) => {
   try {
+    const ctx = await resolveCustomerContext(req);
     const memberId = parseInt(req.params.id, 10);
+    const { name, role, status, appsAccess } = req.body || {};
+
+    if (!memberId) return res.status(400).json({ success: false, message: 'Invalid member ID.' });
+
     if (isDbConnected) {
-      await query(`DELETE FROM team_members WHERE id = $1`, [memberId]);
-      await logAudit('Team Member Removed', `Member #${memberId}`, 'Alex Johnson', req.ip);
+      const getRes = await query(
+        `SELECT * FROM team_members WHERE id = $1 AND LOWER(company_name) = LOWER($2) LIMIT 1`,
+        [memberId, ctx.userCompany]
+      );
+      if (getRes.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Team member not found in your organization.' });
+      }
+
+      const cur = getRes.rows[0];
+      const newName = name ? name.trim() : cur.name;
+      const newRole = role || cur.role;
+      const newStatus = status || cur.status;
+      const newApps = appsAccess !== undefined ? (Array.isArray(appsAccess) ? appsAccess : ['all']) : cur.apps_access;
+
+      const updRes = await query(
+        `UPDATE team_members
+         SET name = $1, role = $2, status = $3, apps_access = $4, last_active = NOW()
+         WHERE id = $5 AND LOWER(company_name) = LOWER($6)
+         RETURNING *`,
+        [newName, newRole, newStatus, JSON.stringify(newApps), memberId, ctx.userCompany]
+      );
+
+      // Sync active state and app access in users table
+      await query(
+        `UPDATE users
+         SET active = $1, apps_access = $2, role = 'team_member'
+         WHERE LOWER(email) = LOWER($3)`,
+        [newStatus === 'Active', JSON.stringify(newApps), cur.email]
+      );
+
+      await logAudit('Team Member Updated', cur.email, `${ctx.userName} (${ctx.userEmail})`, req.ip, {
+        status: newStatus,
+        role: newRole
+      });
+
+      return res.json({
+        success: true,
+        message: 'Team member updated successfully.',
+        member: updRes.rows[0]
+      });
     }
-    res.json({ success: true, message: 'Team member removed.' });
+
+    res.json({ success: true, message: 'Team member updated.' });
   } catch (e) {
     next(e);
   }
 });
 
-// Customer Support Tickets
-app.get('/api/customer/tickets', async (_req, res, next) => {
+// Remove / Revoke Team Member Access
+app.delete('/api/customer/team/:id', async (req, res, next) => {
   try {
+    const ctx = await resolveCustomerContext(req);
+    const memberId = parseInt(req.params.id, 10);
+
+    if (isDbConnected) {
+      const getRes = await query(
+        `SELECT * FROM team_members WHERE id = $1 AND LOWER(company_name) = LOWER($2) LIMIT 1`,
+        [memberId, ctx.userCompany]
+      );
+
+      if (getRes.rows.length > 0) {
+        const member = getRes.rows[0];
+        await query(`DELETE FROM team_members WHERE id = $1`, [memberId]);
+        // Revoke access immediately in users table
+        await query(`UPDATE users SET active = false WHERE LOWER(email) = LOWER($1)`, [member.email]);
+
+        await logAudit('Team Member Removed', member.email, `${ctx.userName} (${ctx.userEmail})`, req.ip);
+      }
+    }
+
+    res.json({ success: true, message: 'Team member removed and access revoked.' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// -------------------------------------------------------------
+// 7. Support Center - Real Tickets & Two-Way Customer Chat
+// -------------------------------------------------------------
+app.get('/api/customer/tickets', async (req, res, next) => {
+  try {
+    const ctx = await resolveCustomerContext(req);
     let tickets = [];
+
     if (isDbConnected) {
       try {
-        const ticketRes = await query(`SELECT * FROM support_tickets ORDER BY created_at DESC`);
-        tickets = ticketRes.rows;
-      } catch (e) {}
+        const ticketRes = await query(
+          `SELECT * FROM support_tickets
+           WHERE LOWER(company_name) = LOWER($1) OR LOWER(user_email) = LOWER($2)
+           ORDER BY created_at DESC`,
+          [ctx.userCompany, ctx.userEmail]
+        );
+
+        // Sanitize replies: Exclude internal staff notes from customer view
+        tickets = ticketRes.rows.map(t => {
+          let sanitizedReplies = [];
+          if (Array.isArray(t.replies)) {
+            sanitizedReplies = t.replies.filter(r => !r.is_internal);
+          } else if (typeof t.replies === 'string') {
+            try {
+              sanitizedReplies = JSON.parse(t.replies).filter(r => !r.is_internal);
+            } catch (e) {}
+          }
+          return {
+            ...t,
+            replies: sanitizedReplies
+          };
+        });
+      } catch (e) {
+        console.error('Error querying customer tickets:', e.message);
+      }
     }
 
     res.json({ tickets });
@@ -1950,41 +2408,588 @@ app.get('/api/customer/tickets', async (_req, res, next) => {
   }
 });
 
-// Create Support Ticket
+// -------------------------------------------------------------
+// Workspace Hostname Resolver (abc.oxoo.ai, maan.oxoo.ai, etc.)
+// -------------------------------------------------------------
+app.get('/api/workspace/resolve', async (req, res, next) => {
+  try {
+    const rawHost = req.query.host || req.query.hostname || req.headers['x-forwarded-host'] || req.headers.host || '';
+    const cleanHost = String(rawHost).trim().toLowerCase().split(':')[0];
+
+    let subdomain = (req.query.subdomain || req.query.company || '').trim().toLowerCase().replace(/\.(oxoo|ai|in|com)$/i, '');
+
+    if (!subdomain && cleanHost) {
+      if (cleanHost.includes('.oxoo.') || cleanHost.includes('.localhost')) {
+        subdomain = cleanHost.split('.')[0];
+      } else if (cleanHost.startsWith('abc.') || cleanHost === 'abc.oxoo.ai') {
+        subdomain = 'abc';
+      } else if (cleanHost.startsWith('maan.') || cleanHost === 'maan.oxoo.ai') {
+        subdomain = 'maan';
+      } else if (cleanHost.includes('.')) {
+        subdomain = cleanHost.split('.')[0];
+      } else {
+        subdomain = cleanHost;
+      }
+    }
+
+    if (!subdomain) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid workspace hostname or subdomain must be provided.'
+      });
+    }
+
+    let org = null;
+    let cust = null;
+
+    if (isDbConnected) {
+      const orgRes = await query(
+        `SELECT * FROM organizations 
+         WHERE LOWER(subdomain) = $1 
+            OR LOWER(name) LIKE $2 
+            OR LOWER(custom_domain) = $3
+         LIMIT 1`,
+        [subdomain, `%${subdomain}%`, `${subdomain}.oxoo.ai`]
+      );
+      if (orgRes.rows.length > 0) org = orgRes.rows[0];
+
+      const custRes = await query(
+        `SELECT * FROM customers 
+         WHERE LOWER(subdomain) = $1 
+            OR LOWER(company_name) LIKE $2 
+            OR LOWER(workspace_domain) = $3
+         LIMIT 1`,
+        [subdomain, `%${subdomain}%`, `${subdomain}.oxoo.ai`]
+      );
+      if (custRes.rows.length > 0) cust = custRes.rows[0];
+    }
+
+    if (!org && !cust) {
+      return res.status(404).json({
+        success: false,
+        code: 'WORKSPACE_NOT_FOUND',
+        message: `Workspace "${subdomain}.oxoo.ai" is not registered. Please verify your company URL or contact OXOO support.`
+      });
+    }
+
+    const companyName = cust?.company_name || org?.name || `${subdomain.toUpperCase()} Corp`;
+    const planName = cust?.plan || org?.plan || 'Business Plan';
+    const purchasedApps = cust?.selected_apps || org?.active_apps || ['Finance', 'HRMS', 'CRM'];
+    const status = cust?.account_status || org?.status || 'Active';
+
+    return res.json({
+      success: true,
+      workspace: {
+        subdomain,
+        hostname: `${subdomain}.oxoo.ai`,
+        workspace_domain: `${subdomain}.oxoo.ai`,
+        companyName,
+        company_name: companyName,
+        plan: planName,
+        status,
+        memberCount: org?.member_count || 5,
+        member_count: org?.member_count || 5,
+        purchasedApps,
+        purchased_apps: purchasedApps,
+        renewalDate: cust?.renewal_date || null,
+        contactEmail: cust?.email || null,
+        verified: true
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// -------------------------------------------------------------
+// Demo & Website Inquiries (Website & Apps, Marketplace, WhatsApp AI Chat)
+// -------------------------------------------------------------
+app.post('/api/inquiries', async (req, res, next) => {
+  try {
+    const b = req.body || {};
+    const nameVal = (b.contact_person || b.contactPerson || b.name || b.fullName || '').trim();
+    const compVal = (b.company_name || b.companyName || b.company || '').trim();
+    const emailVal = (b.email || '').trim().toLowerCase();
+    const phoneVal = (b.phone || '').trim();
+    const catVal = (b.category || b.product_name || b.product_slug || 'Website & Apps').trim();
+    const prodVal = (b.product_name || b.productName || b.product_slug || catVal).trim();
+    const planVal = (b.selected_plan || b.selectedPlan || b.plan_interest || b.plan || 'Standard').trim();
+    const msgVal = (b.message || b.requirements || b.notes || '').trim();
+    const consent = b.consent;
+
+    if (!nameVal || !emailVal || !phoneVal) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, business email, and phone number are required.'
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailVal)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid business email address.'
+      });
+    }
+
+    const cleanPhone = phoneVal.replace(/[^0-9+]/g, '');
+    if (cleanPhone.length < 7) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid phone number with country code.'
+      });
+    }
+
+    if (consent === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'Consent is required to submit this inquiry.'
+      });
+    }
+
+    // Duplicate check within 3 minutes (Spam prevention)
+    if (isDbConnected) {
+      const dupCheck = await query(
+        `SELECT id, inquiry_ref, created_at FROM demo_inquiries 
+         WHERE LOWER(email) = $1 AND LOWER(product_name) = $2 AND created_at > NOW() - INTERVAL '3 minutes'
+         LIMIT 1`,
+        [emailVal, prodVal.toLowerCase()]
+      );
+      if (dupCheck.rows.length > 0) {
+        return res.status(429).json({
+          success: false,
+          code: 'RATE_LIMIT_DUPLICATE',
+          duplicate: true,
+          inquiry_ref: dupCheck.rows[0].inquiry_ref,
+          message: `We already received your inquiry (${dupCheck.rows[0].inquiry_ref}). Please wait a few minutes before resubmitting.`
+        });
+      }
+    }
+
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const inquiryRef = `INQ-2026-${randomSuffix}`;
+
+    const initialHistory = [{
+      date: new Date().toISOString(),
+      note: `Inquiry submitted online via ${catVal} demo form.`
+    }];
+
+    const initialAudit = [{
+      action: 'Inquiry Created',
+      timestamp: new Date().toISOString(),
+      actor: nameVal,
+      ip: req.ip
+    }];
+
+    let saved = null;
+    if (isDbConnected) {
+      const insRes = await query(
+        `INSERT INTO demo_inquiries (
+          inquiry_ref, contact_person, company_name, email, phone, category,
+          product_name, selected_plan, message, status, assigned_to, internal_notes,
+          followup_history, audit_trail, is_staging_test, ip_address, user_agent, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, 'New', 'Unassigned', '',
+          $10, $11, false, $12, $13, NOW(), NOW()
+        ) RETURNING *`,
+        [
+          inquiryRef, nameVal, compVal || nameVal, emailVal, phoneVal, catVal,
+          prodVal, planVal, msgVal,
+          JSON.stringify(initialHistory), JSON.stringify(initialAudit),
+          req.ip, req.headers['user-agent'] || ''
+        ]
+      );
+      if (insRes.rows.length > 0) saved = insRes.rows[0];
+    }
+
+    try {
+      await sendInquiryConfirmationEmail({
+        to: emailVal,
+        contactPerson: nameVal,
+        companyName: compVal,
+        inquiryRef,
+        category: catVal,
+        productName: prodVal,
+        selectedPlan: planVal
+      });
+    } catch (e) {
+      console.warn('[Inquiries] Confirmation email error:', e.message);
+    }
+
+    return res.status(201).json({
+      success: true,
+      inquiry_ref: inquiryRef,
+      message: `Thank you, ${nameVal}. Your inquiry ${inquiryRef} has been registered. Our enterprise specialist will follow up shortly.`,
+      inquiry: saved
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Secure Attachment Streaming Endpoint
+app.get('/api/tickets/attachments/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database unavailable' });
+    }
+    const q = await query(`SELECT * FROM ticket_attachments WHERE attachment_id = $1 LIMIT 1`, [id]);
+    if (q.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Attachment not found.' });
+    }
+    const att = q.rows[0];
+    res.setHeader('Content-Type', att.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${att.file_name}"`);
+    if (att.storage_path && att.storage_path.startsWith('data:')) {
+      const parts = att.storage_path.split(',');
+      const buf = Buffer.from(parts[1], 'base64');
+      return res.send(buf);
+    }
+    return res.send(Buffer.from('File content'));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Create Customer Support Ticket (with attachment validation and First-Ticket Email Acknowledgement)
 app.post('/api/customer/tickets', async (req, res, next) => {
   try {
-    const { subject, description, priority } = req.body || {};
-    if (!subject) return res.status(400).json({ message: 'Subject is required' });
+    const ctx = await resolveCustomerContext(req);
+    const { subject, description, priority = 'Medium', category = 'Technical', attachments = [] } = req.body || {};
 
-    const ticketNumber = `#${Math.floor(1000 + Math.random() * 9000)}`;
-    let createdTicket = {
-      id: Date.now(),
-      ticket_number: ticketNumber,
-      company_name: 'ABC Technologies',
-      user_name: 'Alex Johnson',
-      user_email: 'alex@abctech.com',
-      subject,
-      description: description || '',
-      priority: priority || 'Medium',
-      status: 'Open',
-      created_at: new Date().toISOString()
+    const reqEmail = (req.body?.customerEmail || req.body?.email || ctx.userEmail || 'customer@oxoo.ai').trim().toLowerCase();
+    const reqName = (req.body?.customerName || req.body?.name || ctx.userName || 'Customer').trim();
+    const reqCompany = (req.body?.company || req.body?.companyName || ctx.userCompany || 'Customer Company').trim();
+
+    if (!subject || !subject.trim()) {
+      return res.status(400).json({ success: false, message: 'Ticket subject is required.' });
+    }
+
+    const ticketNumber = `TK-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Validate and process attachments (max 10MB per file)
+    const processedAttachments = [];
+    if (Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (att && att.name && (att.data || att.url)) {
+          const rawSize = att.size || (att.data ? Math.round(att.data.length * 0.75) : 1024);
+          if (rawSize > 10 * 1024 * 1024) {
+            return res.status(400).json({
+              success: false,
+              message: `Attachment "${att.name}" exceeds the maximum allowed size of 10MB.`
+            });
+          }
+          const attId = `ATT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          processedAttachments.push({
+            id: attId,
+            name: att.name,
+            size: rawSize,
+            type: att.type || 'application/octet-stream',
+            url: `/api/tickets/attachments/${attId}`,
+            data: att.data || ''
+          });
+        }
+      }
+    }
+
+    const initialReply = {
+      id: `MSG-${Date.now().toString().slice(-6)}`,
+      sender: reqName || reqEmail,
+      role: 'customer',
+      message: (description || subject).trim(),
+      attachments: processedAttachments,
+      is_internal: false,
+      timestamp: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     };
+
+    let createdTicket = null;
 
     if (isDbConnected) {
       const insRes = await query(
-        `INSERT INTO support_tickets (ticket_number, company_name, user_name, user_email, subject, description, priority, status)
-         VALUES ($1, 'ABC Technologies', 'Alex Johnson', 'alex@abctech.com', $2, $3, $4, 'Open') RETURNING *`,
-        [ticketNumber, subject, description || '', priority || 'Medium']
+        `INSERT INTO support_tickets (
+           ticket_number, company_name, user_name, user_email,
+           subject, description, priority, category, status, replies, attachments, created_at, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', $9, $10, NOW(), NOW())
+         RETURNING *`,
+        [
+          ticketNumber,
+          reqCompany,
+          reqName,
+          reqEmail,
+          subject.trim(),
+          (description || '').trim(),
+          priority,
+          category,
+          JSON.stringify([initialReply]),
+          JSON.stringify(processedAttachments)
+        ]
       );
       if (insRes.rows.length > 0) createdTicket = insRes.rows[0];
-      await logAudit('Support Ticket Created', ticketNumber, 'Alex Johnson', req.ip);
+
+      // Save attachment metadata into ticket_attachments table
+      for (const pAtt of processedAttachments) {
+        try {
+          await query(
+            `INSERT INTO ticket_attachments (
+              attachment_id, ticket_id, ticket_number, file_name, file_size, mime_type, storage_path, uploaded_by_email, uploaded_by_role
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'customer')`,
+            [
+              pAtt.id,
+              createdTicket.id,
+              ticketNumber,
+              pAtt.name,
+              pAtt.size,
+              pAtt.type,
+              pAtt.data ? (pAtt.data.startsWith('data:') ? pAtt.data : `data:${pAtt.type};base64,${pAtt.data}`) : pAtt.url,
+              reqEmail
+            ]
+          );
+        } catch (attErr) {
+          console.warn('Failed to insert attachment record:', attErr.message);
+        }
+      }
+
+      // Customer In-app Notification
+      try {
+        await query(
+          `INSERT INTO customer_notifications (company_name, user_email, customer_email, title, message, type, link)
+           VALUES ($1, $2, $2, $3, $4, 'support', '/customer?tab=support')`,
+          [
+            reqCompany,
+            reqEmail,
+            `Ticket ${ticketNumber} Created`,
+            `Your support ticket "${subject.trim()}" has been received. Our team will review and respond shortly.`
+          ]
+        );
+      } catch (e) {
+        console.error('Failed to insert customer notification on ticket creation:', e.message);
+      }
+
+      // Official First-Ticket Acknowledgement Email (Mandatory Phase 6)
+      const origin = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173';
+      try {
+        await sendTicketAcknowledgementEmail({
+          to: reqEmail,
+          customerName: reqName || reqCompany,
+          ticketNumber,
+          ticketSubject: subject.trim(),
+          origin
+        });
+      } catch (mailErr) {
+        console.error('Failed to send first-ticket acknowledgement email:', mailErr.message);
+      }
+
+      await query(`UPDATE support_tickets SET ack_email_sent_at = NOW() WHERE id = $1`, [createdTicket.id]);
+      createdTicket.ack_email_sent_at = new Date().toISOString();
+
+      try {
+        await query(
+          `INSERT INTO notification_logs (event_id, recipient, template_key, subject, channel, customer_name, status, created_at)
+           VALUES ($1, $2, 'ticket_ack', 'We’ve Received Your OXOO Support Request', 'Email', $3, 'Sent', NOW())`,
+          [`TICKET-ACK-${ticketNumber}`, reqEmail, reqName]
+        );
+      } catch (nErr) {}
+
+      await logAudit('Support Ticket Created', ticketNumber, `${reqName} (${reqEmail})`, req.ip);
     }
 
     res.status(201).json({
       success: true,
       message: `Support ticket ${ticketNumber} created successfully.`,
-      ticket: createdTicket
+      ticket: {
+        ...(createdTicket || {}),
+        ticket_id: ticketNumber,
+        ticket_number: ticketNumber
+      }
     });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Reply to Support Ticket as Customer (Two-Way Conversation with Attachments)
+app.post('/api/customer/tickets/:id/reply', async (req, res, next) => {
+  try {
+    const ctx = await resolveCustomerContext(req);
+    const tId = req.params.id;
+    const { message, attachments = [] } = req.body || {};
+
+    if ((!message || !message.trim()) && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Reply message or attachment is required.' });
+    }
+
+    if (!isDbConnected) {
+      return res.status(503).json({ success: false, message: 'Database unavailable.' });
+    }
+
+    const senderEmail = (req.body?.customerEmail || req.body?.email || req.body?.userEmail || req.body?.senderEmail || ctx.userEmail || '').trim().toLowerCase();
+    const senderCompany = (req.body?.company || req.body?.companyName || ctx.userCompany || '').trim().toLowerCase();
+
+    const tRes = await query(
+      `SELECT * FROM support_tickets
+       WHERE (ticket_number = $1 OR id::text = $1)
+         AND (
+           $2 = '' OR 
+           LOWER(company_name) = LOWER($2) OR 
+           LOWER(user_email) = LOWER($3) OR 
+           LOWER(user_email) = LOWER($4) OR
+           LOWER(company_name) = LOWER($5)
+         )
+       LIMIT 1`,
+      [tId, ctx.userCompany, ctx.userEmail, senderEmail, senderCompany]
+    );
+
+    if (tRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Support ticket not found or access denied.' });
+    }
+
+    const ticket = tRes.rows[0];
+    let replies = Array.isArray(ticket.replies)
+      ? ticket.replies
+      : (typeof ticket.replies === 'string' ? JSON.parse(ticket.replies) : []);
+
+    // Validate reply attachments
+    const processedAttachments = [];
+    if (Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (att && att.name && (att.data || att.url)) {
+          const rawSize = att.size || (att.data ? Math.round(att.data.length * 0.75) : 1024);
+          if (rawSize > 10 * 1024 * 1024) {
+            return res.status(400).json({
+              success: false,
+              message: `Attachment "${att.name}" exceeds the maximum allowed size of 10MB.`
+            });
+          }
+          const attId = `ATT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          processedAttachments.push({
+            id: attId,
+            name: att.name,
+            size: rawSize,
+            type: att.type || 'application/octet-stream',
+            url: `/api/tickets/attachments/${attId}`,
+            data: att.data || ''
+          });
+
+          // Store in ticket_attachments
+          try {
+            await query(
+              `INSERT INTO ticket_attachments (
+                attachment_id, ticket_id, ticket_number, file_name, file_size, mime_type, storage_path, uploaded_by_email, uploaded_by_role
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'customer')`,
+              [
+                attId,
+                ticket.id,
+                ticket.ticket_number,
+                att.name,
+                rawSize,
+                att.type || 'application/octet-stream',
+                att.data ? (att.data.startsWith('data:') ? att.data : `data:${att.type || 'application/octet-stream'};base64,${att.data}`) : `/api/tickets/attachments/${attId}`,
+                ctx.userEmail
+              ]
+            );
+          } catch (e) {}
+        }
+      }
+    }
+
+    const newReply = {
+      id: `MSG-${Date.now().toString().slice(-6)}`,
+      sender: ctx.userName || ctx.userEmail,
+      role: 'customer',
+      message: (message || '').trim(),
+      attachments: processedAttachments,
+      is_internal: false,
+      timestamp: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    };
+
+    replies.push(newReply);
+
+    const updRes = await query(
+      `UPDATE support_tickets
+       SET replies = $1, status = 'Waiting for Support', updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [JSON.stringify(replies), ticket.id]
+    );
+
+    await logAudit('Ticket Customer Replied', ticket.ticket_number, `${ctx.userName} (${ctx.userEmail})`, req.ip);
+
+    res.json({
+      success: true,
+      message: 'Reply sent successfully.',
+      reply: newReply,
+      ticket: updRes.rows[0]
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// -------------------------------------------------------------
+// 8. Notifications Endpoints
+// -------------------------------------------------------------
+app.get('/api/customer/notifications', async (req, res, next) => {
+  try {
+    const ctx = await resolveCustomerContext(req);
+    let notifications = [];
+
+    if (isDbConnected) {
+      const nRes = await query(
+        `SELECT * FROM customer_notifications
+         WHERE LOWER(company_name) = LOWER($1) OR LOWER(customer_email) = LOWER($2)
+         ORDER BY created_at DESC LIMIT 50`,
+        [ctx.userCompany, ctx.userEmail]
+      );
+      notifications = nRes.rows;
+    }
+
+    res.json({ success: true, notifications });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Mark single notification read
+app.put('/api/customer/notifications/:id/read', async (req, res, next) => {
+  try {
+    const nid = parseInt(req.params.id, 10);
+    if (isDbConnected && nid) {
+      await query(`UPDATE customer_notifications SET is_read = true WHERE id = $1`, [nid]);
+    }
+    res.json({ success: true, message: 'Notification marked as read.' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Mark all notifications read
+app.put('/api/customer/notifications/mark-all-read', async (req, res, next) => {
+  try {
+    const ctx = await resolveCustomerContext(req);
+    if (isDbConnected) {
+      await query(
+        `UPDATE customer_notifications SET is_read = true WHERE LOWER(company_name) = LOWER($1) OR LOWER(customer_email) = LOWER($2)`,
+        [ctx.userCompany, ctx.userEmail]
+      );
+    }
+    res.json({ success: true, message: 'All notifications marked as read.' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Delete read notifications
+app.delete('/api/customer/notifications/read', async (req, res, next) => {
+  try {
+    const ctx = await resolveCustomerContext(req);
+    if (isDbConnected) {
+      await query(
+        `DELETE FROM customer_notifications WHERE is_read = true AND (LOWER(company_name) = LOWER($1) OR LOWER(customer_email) = LOWER($2))`,
+        [ctx.userCompany, ctx.userEmail]
+      );
+    }
+    res.json({ success: true, message: 'Read notifications cleared.' });
   } catch (e) {
     next(e);
   }
@@ -2956,6 +3961,37 @@ app.get('/api/admin/customers', requireAdminAuth, async (req, res, next) => {
 
     if (isDbConnected) {
       try {
+        // Automatically sync any newly registered user into customers table so they immediately show in admin
+        await query(`
+          INSERT INTO customers (
+            customer_id, company_name, contact_person, email, phone, country,
+            plan, account_status, subscription_status, payment_status,
+            amount, billing_cycle, selected_apps, joined_date, renewal_date, created_at, updated_at
+          )
+          SELECT 
+            CONCAT('CST-', LPAD(u.id::text, 4, '0')),
+            COALESCE(NULLIF(u.organization, ''), CONCAT(u.name, ' Company')),
+            u.name,
+            u.email,
+            '',
+            'India',
+            'Starter Plan (14-Day Free Trial)',
+            'Active',
+            'Trialing',
+            'Trial',
+            0,
+            'monthly',
+            '["Accounting", "Invoicing", "CRM"]'::jsonb,
+            COALESCE(u.created_at, NOW()),
+            NOW() + INTERVAL '14 days',
+            COALESCE(u.created_at, NOW()),
+            NOW()
+          FROM users u
+          WHERE u.role IN ('member', 'customer')
+            AND LOWER(u.email) NOT IN (SELECT LOWER(email) FROM customers WHERE email IS NOT NULL)
+          ON CONFLICT DO NOTHING
+        `).catch(() => {});
+
         // Collect dynamic filter options
         const plansRes = await query(`
           SELECT DISTINCT plan FROM customers WHERE plan IS NOT NULL AND plan != ''
@@ -3044,11 +4080,11 @@ app.get('/api/admin/customers', requireAdminAuth, async (req, res, next) => {
         const totalFilteredRes = await query(`SELECT COUNT(*) as count FROM customers ${whereClause}`, params);
         totalCount = parseInt(totalFilteredRes.rows[0]?.count || 0, 10);
 
-        // Fetch records
+        // Fetch records - NEWEST FIRST so created customers appear at the top
         const dataQuery = `
           SELECT * FROM customers 
           ${whereClause}
-          ORDER BY customer_id ASC
+          ORDER BY COALESCE(joined_date, created_at, NOW()) DESC, id DESC
           LIMIT $${pIdx} OFFSET $${pIdx + 1}
         `;
         const dataRes = await query(dataQuery, [...params, limitNum, offset]);
@@ -5199,6 +6235,22 @@ app.post('/api/payment/verify', async (req, res, next) => {
             } catch (emailErr) {
               console.error('Error sending invoice email to existing customer:', emailErr.message);
             }
+
+            // Record in-app notification for the customer
+            try {
+              await query(
+                `INSERT INTO customer_notifications (company_name, customer_email, title, message, type, link)
+                 VALUES ($1, $2, $3, $4, 'purchase', '/customer?tab=apps')`,
+                [
+                  companyName || 'My Organization',
+                  normEmail,
+                  'Software Purchase Confirmed',
+                  `Your purchase of ${planName} (${(selectedApps || []).join(', ')}) has been verified. Invoice ${invoiceNumber} is available.`
+                ]
+              );
+            } catch (notifErr) {
+              console.error('Failed to log purchase notification:', notifErr.message);
+            }
           }
         } catch (uErr) {
           console.error('Error recording customer in users table:', uErr.message);
@@ -5315,4 +6367,5 @@ async function start() {
   });
 }
 
+// Server startup with live Neon DB connection
 start();

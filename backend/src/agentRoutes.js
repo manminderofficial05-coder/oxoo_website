@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { query } = require('./db');
 const {
+  getLiveKnowledge,
+  invalidateAgentKnowledgeCache,
   getAgentSettings,
   processAgentChat,
   executeConfirmedAction
@@ -343,6 +345,8 @@ router.put('/admin/settings', requireAdminAuth, async (req, res, next) => {
       SET settings = EXCLUDED.settings, updated_at = NOW(), updated_by = EXCLUDED.updated_by
     `, [JSON.stringify(updated), req.adminUser?.name || 'Super Administrator']);
 
+    invalidateAgentKnowledgeCache();
+
     res.json({
       success: true,
       message: 'OXOO Agent settings updated successfully.',
@@ -350,6 +354,30 @@ router.put('/admin/settings', requireAdminAuth, async (req, res, next) => {
         ...updated,
         aiApiKey: effectiveKey ? '••••••••••••••••' : '',
         isKeySet: Boolean(effectiveKey)
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * 2.3 POST /api/agent/admin/sync
+ * Admin: Instantly force-sync agent knowledge from live website database
+ */
+router.post('/admin/sync', requireAdminAuth, async (_req, res, next) => {
+  try {
+    invalidateAgentKnowledgeCache();
+    const freshKnowledge = await getLiveKnowledge(true);
+    res.json({
+      success: true,
+      message: 'Agent knowledge synchronized successfully with live website database.',
+      stats: {
+        applications: freshKnowledge.applications.length,
+        plans: freshKnowledge.plans.length,
+        services: freshKnowledge.services.length,
+        categories: freshKnowledge.categories.length,
+        syncedAt: freshKnowledge.updatedAt
       }
     });
   } catch (err) {

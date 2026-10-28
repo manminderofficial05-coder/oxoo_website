@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Sparkles, Check, Building2, HelpCircle } from 'lucide-react';
 import { Header, Footer } from './components';
 import { ALL_APPS_CATEGORIES } from './AllAppsDirectory';
+import DemoInquiryModal from './demo/DemoInquiryModal';
 import './pricing.css';
 
 // --------------------------------------------------------------------------
@@ -75,13 +76,42 @@ export const SOFTWARE_CATEGORIES = ALL_APPS_CATEGORIES;
 
 export default function PricingPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Read incoming query params from Demos or Landing links
+  const querySoftware = searchParams.get('software') || searchParams.get('app') || searchParams.get('apps') || searchParams.get('demo') || searchParams.get('product') || '';
+  const queryCompany = searchParams.get('company') || '';
+
+  // Normalizer for software package id
+  const normalizeSoftware = (str) => {
+    if (!str) return 'finance';
+    const s = str.toLowerCase();
+    if (s.includes('hrms') || s.includes('hr') || s.includes('employee') || s.includes('human')) return 'human-resources';
+    if (s.includes('finance') || s.includes('accounting') || s.includes('gst')) return 'finance';
+    if (s.includes('sales') || s.includes('crm') || s.includes('deal')) return 'sales';
+    if (s.includes('supply') || s.includes('inventory') || s.includes('warehouse')) return 'supply-chain';
+    if (s.includes('ai') || s.includes('productivity') || s.includes('agent')) return 'productivity';
+    return 'finance';
+  };
+
+  const isInquiryRequested = (str) => {
+    if (!str) return false;
+    const s = str.toLowerCase();
+    return s.includes('website') || s.includes('marketplace') || s.includes('whatsapp');
+  };
+
+  const [selectedSoftware, setSelectedSoftware] = useState(() => normalizeSoftware(querySoftware));
+  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
 
   // State: Billing toggle (default yearly)
   const [isYearly, setIsYearly] = useState(true);
 
-  // Navigate to full-page checkout flow
+  const activeModule = SOFTWARE_MODULES.find((m) => m.id === selectedSoftware) || SOFTWARE_MODULES[0];
+
+  // Navigate to full-page checkout flow carrying selected product and parameters forward!
   const handleGoToCheckout = (plan, trial = false) => {
-    navigate(`/checkout?plan=${plan}&billing=${isYearly ? 'yearly' : 'monthly'}${trial ? '&trial=true' : ''}`);
+    const compParam = queryCompany ? `&company=${encodeURIComponent(queryCompany)}` : '';
+    navigate(`/checkout?plan=${plan}&apps=${selectedSoftware}&billing=${isYearly ? 'yearly' : 'monthly'}${trial ? '&trial=true' : ''}${compParam}`);
   };
 
   return (
@@ -98,6 +128,60 @@ export default function PricingPage() {
           <p className="pricing-sub-heading">
             Choose the plan that fits your business needs. Start free, buy one software, or create a custom package.
           </p>
+
+          {/* Software Package Selector Switcher Bar */}
+          <div style={{ margin: '14px auto 18px auto', maxWidth: '780px', background: '#ffffff', padding: '6px', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', padding: '0 8px' }}>
+                Software:
+              </span>
+              {SOFTWARE_MODULES.map((mod) => {
+                const isSelected = mod.id === selectedSoftware;
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    onClick={() => setSelectedSoftware(mod.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      border: isSelected ? `1.5px solid ${mod.color}` : '1px solid transparent',
+                      background: isSelected ? mod.bgColor : 'transparent',
+                      color: isSelected ? mod.color : '#475569',
+                      fontWeight: isSelected ? 700 : 500,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <img src={mod.iconSrc} alt={mod.shortName} style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                    {mod.shortName}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: '6px', fontSize: '11.5px', color: '#64748b', textAlign: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
+              Selected: <strong style={{ color: activeModule.color }}>{activeModule.name}</strong> — {activeModule.desc}
+            </div>
+          </div>
+
+          {/* Inquiry Banner for Custom Website / Marketplace / WhatsApp */}
+          {(isInquiryRequested(querySoftware) || true) && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '6px 14px', borderRadius: '999px', margin: '0 auto 14px auto', fontSize: '12px', color: '#1e40af' }}>
+              <Sparkles size={14} color="#2563eb" />
+              <span>Looking for <strong>Websites & Apps, Marketplace, or WhatsApp AI</strong>?</span>
+              <button
+                type="button"
+                onClick={() => setInquiryModalOpen(true)}
+                style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+              >
+                Submit Project Inquiry →
+              </button>
+            </div>
+          )}
 
           <div className="billing-toggle-row">
             <span
@@ -263,6 +347,14 @@ export default function PricingPage() {
         </section>
       </main>
       <Footer />
+      <DemoInquiryModal
+        isOpen={inquiryModalOpen}
+        onClose={() => setInquiryModalOpen(false)}
+        category="Website & Apps"
+        productName="OXOO Custom Digital Platform & WhatsApp AI"
+        defaultPlan="Growth Plan"
+        availablePlans={['Starter Plan', 'Growth Studio', 'Business eCommerce', 'Custom Enterprise Platform']}
+      />
     </>
   );
 }

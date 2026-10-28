@@ -1,4 +1,11 @@
 require('dotenv').config();
+const dns = require('dns');
+try {
+  if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+  }
+} catch (e) {}
+
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_CYBcrl9som7F@ep-restless-paper-b5ssp7vy-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
@@ -14,7 +21,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle PostgreSQL client:', err);
+  console.error('Unexpected error on idle PostgreSQL client:', err?.message || err);
 });
 
 async function query(text, params) {
@@ -320,6 +327,30 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS idx_customers_customer_id ON customers (customer_id);
     `);
 
+    // 17. Customer In-App Notifications Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS customer_notifications (
+        id SERIAL PRIMARY KEY,
+        customer_id VARCHAR(50),
+        company_name VARCHAR(255),
+        customer_email VARCHAR(255),
+        user_email VARCHAR(255),
+        category VARCHAR(50) DEFAULT 'system',
+        type VARCHAR(50) DEFAULT 'system',
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        read BOOLEAN DEFAULT false,
+        is_read BOOLEAN DEFAULT false,
+        related_type VARCHAR(50),
+        related_id VARCHAR(100),
+        action_url VARCHAR(255),
+        link VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_customer_notif_email ON customer_notifications (LOWER(TRIM(user_email)));
+      CREATE INDEX IF NOT EXISTS idx_customer_notif_cust_email ON customer_notifications (LOWER(TRIM(customer_email)));
+      CREATE INDEX IF NOT EXISTS idx_customer_notif_company ON customer_notifications (LOWER(TRIM(company_name)));
+    `);
 
     // Schema Migrations: Ensure numeric columns and credential/storage columns
     try {
@@ -327,6 +358,15 @@ async function initDb() {
         ALTER TABLE subscriptions ALTER COLUMN amount TYPE NUMERIC(12, 2);
         ALTER TABLE invoices ALTER COLUMN amount TYPE NUMERIC(12, 2);
         ALTER TABLE organizations ALTER COLUMN mrr TYPE NUMERIC(12, 2);
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_id VARCHAR(50);
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS storage_id VARCHAR(50);
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS purchased_apps JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE customer_notifications ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255);
+        ALTER TABLE customer_notifications ADD COLUMN IF NOT EXISTS user_email VARCHAR(255);
+        ALTER TABLE customer_notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+        ALTER TABLE customer_notifications ADD COLUMN IF NOT EXISTS link VARCHAR(255);
+        ALTER TABLE customer_notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
+        ALTER TABLE customer_notifications ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'system';
         ALTER TABLE orders ALTER COLUMN subtotal TYPE NUMERIC(12, 2);
         ALTER TABLE orders ALTER COLUMN tax_amount TYPE NUMERIC(12, 2);
         ALTER TABLE orders ALTER COLUMN discount_amount TYPE NUMERIC(12, 2);
@@ -1582,8 +1622,10 @@ async function initDb() {
           payload JSONB DEFAULT '{}'::jsonb,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+      `);
 
-        if (SHOULD_SEED_DEMO) {
+      if (SHOULD_SEED_DEMO) {
+        await client.query(`
           INSERT INTO notification_logs (
             event_id, recipient, template_key, subject, channel,
             customer_id, customer_name, related_entity_type, related_entity_id,
@@ -1596,8 +1638,8 @@ async function initDb() {
             ('NOTIF-2026-9005', 'billing@acmecorp.com', 'subscription_renewal_reminder', 'Reminder: Your Enterprise Plan Renews on 31 Oct 2026', 'Email', 'CST-0008', 'Acme Global Corp', 'Subscription', 'SUB-2026-0008', 'Sent', 1, 'Brevo', '<brevo_9005@smtp.brevo.com>', NOW() - INTERVAL '1 day'),
             ('NOTIF-2026-9006', 'dev@innovatech.io', 'failed_payment', 'Urgent: Payment Failed for Invoice INV-2026-1012', 'Email', 'CST-0009', 'Innovatech Labs', 'Invoice', 'INV-2026-1012', 'Failed', 2, 'Brevo', NULL, NOW() - INTERVAL '1 day')
           ON CONFLICT (event_id) DO NOTHING;
-        }
-      `);
+        `);
+      }
 
       // 21. INTEGRATIONS TABLE
       await client.query(`

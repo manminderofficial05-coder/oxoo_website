@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Header, Footer } from './components';
 import { APPS_DATA, getAppBySlug } from './appsData';
+import { resolveWorkspace } from './api';
 
 export default function AppWorkspace() {
   const { appSlug, slug } = useParams();
@@ -17,17 +18,40 @@ export default function AppWorkspace() {
   const navigate = useNavigate();
   const app = getAppBySlug(appSlug || slug) || APPS_DATA[0];
 
-  // Retrieve company domain (e.g., abcd.oxoo) from query params, state, or localStorage
+  // Retrieve company domain (e.g., maan.oxoo.ai or abcd.oxoo) from query params, state, or localStorage
   const queryParams = new URLSearchParams(location.search);
-  const companyFromQuery = queryParams.get('company');
+  const companyFromQuery = queryParams.get('company') || queryParams.get('workspace') || queryParams.get('org');
   const companyFromState = location.state?.companyName;
   const companyFromStorage = typeof window !== 'undefined' ? localStorage.getItem('oxoo_demo_company') : null;
-  const rawCompany = companyFromQuery || companyFromState || companyFromStorage || 'abcd.oxoo';
-  const companyDomain = rawCompany.endsWith('.oxoo') ? rawCompany : `${rawCompany}.oxoo`;
+  const rawCompany = companyFromQuery || companyFromState || companyFromStorage || 'maan.oxoo.ai';
+  const companyDomain = rawCompany.includes('.') ? rawCompany : `${rawCompany}.oxoo.ai`;
+
+  const [workspaceInfo, setWorkspaceInfo] = useState(null);
+  const [companyName, setCompanyName] = useState(() => {
+    if (companyFromQuery) return companyFromQuery.replace(/\.(oxoo\.ai|oxoo|com)$/i, '');
+    return companyFromState || companyFromStorage || 'Maan Corp';
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const lookupTarget = companyFromQuery || (typeof window !== 'undefined' ? window.location.hostname : '');
+    resolveWorkspace({ host: lookupTarget, subdomain: lookupTarget })
+      .then(res => {
+        if (isMounted && res && res.workspace) {
+          setWorkspaceInfo(res.workspace);
+          if (res.workspace.company_name) {
+            setCompanyName(res.workspace.company_name);
+          }
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, [companyFromQuery, location.search]);
 
   const [copiedUrl, setCopiedUrl] = useState(false);
   const handleCopyUrl = () => {
-    navigator.clipboard?.writeText(`https://${companyDomain}/apps/${app.slug}`);
+    const finalHost = workspaceInfo?.workspace_domain || companyDomain;
+    navigator.clipboard?.writeText(`https://${finalHost}/apps/${app.slug}`);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
   };
@@ -155,17 +179,21 @@ export default function AppWorkspace() {
                 </div>
                 <div className="workspace-meta">
                   <div className="workspace-pill-row">
-                    <span className="workspace-company-badge">
-                      <Building2 size={13} /> {companyDomain}
+                    <span className="workspace-company-badge" style={{ fontWeight: 700, background: '#0284c7', color: '#fff' }}>
+                      <Building2 size={13} /> {companyName}
                     </span>
-                    <span className="workspace-category-badge">{app.category}</span>
+                    <span className="workspace-category-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <img src="/oxoo-logo-white.png" alt="OXOO" style={{ height: '11px', filter: 'invert(1)' }} />
+                      <span>Powered by OXOO.ai</span>
+                    </span>
+                    <span className="workspace-category-badge">{workspaceInfo?.workspace_domain || companyDomain}</span>
                     <span className="workspace-status-badge">
-                      <span className="online-dot" /> Live Demo Workspace
+                      <span className="online-dot" /> Live Workspace
                     </span>
                   </div>
-                  <h1 className="workspace-title">{app.name} Workspace</h1>
+                  <h1 className="workspace-title">{companyName} — {app.name}</h1>
                   <p className="workspace-tagline">
-                    Connected live environment for <strong>{companyDomain}</strong> — {app.tagline}
+                    Connected customer workspace for <strong>{companyName}</strong> ({workspaceInfo?.workspace_domain || companyDomain}) — {app.tagline}
                   </p>
                 </div>
               </div>
