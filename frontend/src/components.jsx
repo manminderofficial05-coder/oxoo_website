@@ -2,27 +2,68 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowRight, Search, ChevronDown, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
-  LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MessageSquare,
-  Users, Package, ExternalLink, RotateCcw
+  ArrowRight, Search, ChevronDown, ChevronRight, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
+  LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MapPin, MessageSquare,
+  Users, Package, ExternalLink, RotateCcw, LayoutGrid, PlayCircle, Box, Zap, Briefcase, BarChart3, Globe,
+  Bot, Smartphone, ShoppingCart, Code, Share2, MessageCircle, ClipboardList, Inbox, Megaphone, GitBranch, ShoppingBag, CalendarCheck, Settings, FolderKanban
 } from 'lucide-react';
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
 import { useRegionPricing } from './RegionPricingContext';
 import { authStorage } from './authStorage';
+import { getHealthStatus } from './api';
+import {
+  LIVE_DEMO_LIST,
+  DEMO_FLOW_CONFIG,
+  SOCIAL_PROFILE_URLS,
+  FOOTER_SOLUTIONS_LINKS,
+  FOOTER_COMPANY_LINKS,
+  FOOTER_LEGAL_LINKS,
+  saveSelectedDemoId,
+} from './demoConfig';
+import {
+  PROJECT_CATEGORIES,
+  getSelectedProjectServices,
+  saveSelectedProjectServices
+} from './projectsConfig';
+
+export function renderProjectServiceIcon(iconKey, color = '#2563eb', size = 18) {
+  const props = { size, color, strokeWidth: 2 };
+  switch (iconKey) {
+    case 'Bot': return <Bot {...props} />;
+    case 'Smartphone': return <Smartphone {...props} />;
+    case 'ShoppingCart': return <ShoppingCart {...props} />;
+    case 'Box': return <Box {...props} />;
+    case 'MessageSquare': return <MessageSquare {...props} />;
+    case 'Code': return <Code {...props} />;
+    case 'Share2': return <Share2 {...props} />;
+    case 'Mail': return <Mail {...props} />;
+    case 'MessageCircle': return <MessageCircle {...props} />;
+    case 'Sparkles': return <Sparkles {...props} />;
+    case 'ClipboardList': return <ClipboardList {...props} />;
+    case 'Inbox': return <Inbox {...props} />;
+    case 'Megaphone': return <Megaphone {...props} />;
+    case 'GitBranch': return <GitBranch {...props} />;
+    case 'ShoppingBag': return <ShoppingBag {...props} />;
+    case 'CalendarCheck': return <CalendarCheck {...props} />;
+    case 'Settings': return <Settings {...props} />;
+    case 'Globe': return <Globe {...props} />;
+    default: return <FolderKanban {...props} />;
+  }
+}
 
 // Configured HRMS Employee Login URL from environment configuration
 const HRMS_EMPLOYEE_LOGIN_URL =
   import.meta.env.VITE_HRMS_EMPLOYEE_LOGIN_URL || 'https://oxoo-finance.onrender.com/';
 
 export function Logo({ light = false, withTagline = false, stacked = false, iconOnly = false, className = '' }) {
-  let src = '/oxoo-logo.png';
+  let src = '/oxoo-logo.png?v=navy';
   if (iconOnly) {
-    src = '/oxoo-icon.png';
+    src = '/oxoo-icon.png?v=navy';
   } else if (light) {
-    src = '/oxoo-logo-white.png';
+    src = '/oxoo-logo-white.png?v=navy';
   } else {
-    src = '/oxoo-logo.png';
+    src = '/oxoo-logo.png?v=navy';
   }
 
   return (
@@ -158,6 +199,30 @@ export function AnimatedHeroTitle() {
   );
 }
 
+function CountryFlagBadge({ code, countryName, size = 16 }) {
+  const [imgErr, setImgErr] = useState(false);
+  const norm = (code || '').trim().toUpperCase();
+  if (!norm || norm === 'GLOBAL' || norm === 'INTL' || norm.length !== 2 || imgErr) {
+    return <Globe2 size={size - 2} style={{ color: '#0284c7', flexShrink: 0 }} aria-hidden="true" />;
+  }
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${norm.toLowerCase()}.png`}
+      alt={countryName || norm}
+      width={size}
+      height={Math.round(size * 0.75)}
+      onError={() => setImgErr(true)}
+      style={{
+        borderRadius: '2px',
+        objectFit: 'cover',
+        boxShadow: '0 0 0 1px rgba(15, 23, 42, 0.12)',
+        flexShrink: 0,
+        display: 'inline-block'
+      }}
+    />
+  );
+}
+
 export function CountryCurrencySelector({ isMobile = false }) {
   const {
     currentRegion,
@@ -202,11 +267,9 @@ export function CountryCurrencySelector({ isMobile = false }) {
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label="Select Country and Currency"
-        title={`Selected Region: ${currentRegion.countryName} (${currentRegion.currency} ${currentRegion.symbol})`}
+        title={`Client Location: ${currentRegion.countryName} (${currentRegion.currency} ${currentRegion.symbol})`}
       >
-        <span className="country-flag" role="img" aria-label={currentRegion.countryName}>
-          {currentRegion.flag}
-        </span>
+        <CountryFlagBadge code={currentRegion.regionCode} countryName={currentRegion.countryName} size={16} />
         <span className="country-code-label">
           {currentRegion.regionCode === 'GLOBAL' ? 'INTL' : currentRegion.regionCode}
         </span>
@@ -226,9 +289,9 @@ export function CountryCurrencySelector({ isMobile = false }) {
             transition={{ duration: 0.15 }}
           >
             <div className="nav-country-menu-header">
-              <span className="country-menu-title">Select Region & Currency</span>
-              <span className="country-detected-note">
-                Detected: {detectedRegion.flag} {detectedRegion.countryName}
+              <span className="country-menu-title">Client Location & Currency</span>
+              <span className="country-detected-note" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                Detected: <CountryFlagBadge code={detectedRegion.regionCode} countryName={detectedRegion.countryName} size={14} /> {detectedRegion.countryName} ({detectedRegion.currency} {detectedRegion.symbol})
               </span>
             </div>
 
@@ -239,7 +302,7 @@ export function CountryCurrencySelector({ isMobile = false }) {
                 onClick={handleReset}
               >
                 <RotateCcw size={12} />
-                <span>Reset to detected ({detectedRegion.flag} {detectedRegion.countryName})</span>
+                <span>Reset to detected ({detectedRegion.countryName} — {detectedRegion.currency} {detectedRegion.symbol})</span>
               </button>
             )}
 
@@ -255,12 +318,24 @@ export function CountryCurrencySelector({ isMobile = false }) {
                     className={`nav-country-option-item ${isSelected ? 'selected' : ''}`}
                     onClick={() => handleSelect(reg.code)}
                   >
-                    <span className="opt-flag">{reg.flag}</span>
+                    <CountryFlagBadge code={reg.code} countryName={reg.label} size={16} />
                     <span className="opt-name">{reg.label}</span>
                     {isSelected && <Check size={14} className="opt-check-icon" />}
                   </button>
                 );
               })}
+            </div>
+            <div style={{
+              padding: '8px 12px',
+              borderTop: '1px solid #f1f5f9',
+              fontSize: '10.5px',
+              color: '#64748b',
+              lineHeight: 1.4,
+              background: '#f8fafc',
+              borderRadius: '0 0 10px 10px'
+            }}>
+              India: <strong>INR ₹</strong> · Outside India: <strong>USD $</strong><br />
+              Indian (INR) accounts cannot be used outside India.
             </div>
           </motion.div>
         )}
@@ -337,6 +412,9 @@ export function LanguageSelector() {
 export function Header() {
   const [openApps, setOpenApps] = useState(false);
   const [appsPinned, setAppsPinned] = useState(false);
+  const [openProjects, setOpenProjects] = useState(false);
+  const [projectsPinned, setProjectsPinned] = useState(false);
+  const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [mobile, setMobile] = useState(false);
@@ -351,6 +429,17 @@ export function Header() {
         const user = authStorage.getCustomerUser();
         const token = authStorage.getCustomerToken();
         if (user && token) {
+          // Enforce rule: Indian accounts cannot be used outside India
+          if (authStorage.isOutsideIndia() && authStorage.isIndianAccount(user)) {
+            authStorage.clearCustomerSession();
+            sessionStorage.setItem(
+              'oxoo_region_auth_error',
+              'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+            );
+            setCurrentUser(null);
+            window.dispatchEvent(new Event('oxoo_auth_change'));
+            return;
+          }
           setCurrentUser(user);
           return;
         }
@@ -368,9 +457,11 @@ export function Header() {
     readUser();
     window.addEventListener('oxoo_auth_change', readUser);
     window.addEventListener('oxoo_admin_auth_change', readUser);
+    window.addEventListener('oxoo_region_change', readUser);
     return () => {
       window.removeEventListener('oxoo_auth_change', readUser);
       window.removeEventListener('oxoo_admin_auth_change', readUser);
+      window.removeEventListener('oxoo_region_change', readUser);
     };
   }, [location.pathname]);
 
@@ -384,8 +475,11 @@ export function Header() {
   };
 
   const closeTimeoutRef = useRef(null);
+  const projectsCloseTimeoutRef = useRef(null);
   const appsBtnRef = useRef(null);
   const megaMenuRef = useRef(null);
+  const projectsBtnRef = useRef(null);
+  const projectsMegaRef = useRef(null);
 
   const filtered = services
     .filter(s => `${s.name} ${s.category}`.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -398,21 +492,32 @@ export function Header() {
     }
   };
 
+  const clearProjectsCloseTimeout = () => {
+    if (projectsCloseTimeoutRef.current) {
+      clearTimeout(projectsCloseTimeoutRef.current);
+      projectsCloseTimeoutRef.current = null;
+    }
+  };
+
   const closeAll = () => {
     clearCloseTimeout();
+    clearProjectsCloseTimeout();
     setOpenApps(false);
     setAppsPinned(false);
+    setOpenProjects(false);
+    setProjectsPinned(false);
     setProfileOpen(false);
     setMobile(false);
+    setMobileProjectsOpen(false);
     setSearchQuery('');
   };
 
   // Close menus on route change
   useEffect(() => {
     closeAll();
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
-  // Click outside listener: clicking anywhere outside closes the menus
+  // Click outside & Escape key listener
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -425,21 +530,43 @@ export function Header() {
         setOpenApps(false);
         setAppsPinned(false);
       }
+      if (
+        openProjects &&
+        projectsBtnRef.current &&
+        !projectsBtnRef.current.contains(e.target) &&
+        projectsMegaRef.current &&
+        !projectsMegaRef.current.contains(e.target)
+      ) {
+        setOpenProjects(false);
+        setProjectsPinned(false);
+      }
       if (profileOpen && !e.target.closest('.nav-profile-dropdown')) {
         setProfileOpen(false);
       }
     };
 
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        closeAll();
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
       clearCloseTimeout();
+      clearProjectsCloseTimeout();
     };
-  }, [openApps, profileOpen]);
+  }, [openApps, openProjects, profileOpen]);
 
   // Hover handlers for Apps button and Mega Menu box
   const handleAppsMouseEnter = () => {
     clearCloseTimeout();
+    clearProjectsCloseTimeout();
+    setOpenProjects(false);
+    setProjectsPinned(false);
     setOpenApps(true);
   };
 
@@ -468,6 +595,8 @@ export function Header() {
   const handleAppsClick = (e) => {
     e.stopPropagation();
     clearCloseTimeout();
+    setOpenProjects(false);
+    setProjectsPinned(false);
     if (openApps && appsPinned) {
       setOpenApps(false);
       setAppsPinned(false);
@@ -477,12 +606,66 @@ export function Header() {
     }
   };
 
+  // Hover & click handlers for Projects Mega Menu
+  const handleProjectsMouseEnter = () => {
+    clearProjectsCloseTimeout();
+    clearCloseTimeout();
+    setOpenApps(false);
+    setAppsPinned(false);
+    setOpenProjects(true);
+  };
+
+  const handleProjectsMouseLeave = () => {
+    if (projectsPinned) return;
+    clearProjectsCloseTimeout();
+    projectsCloseTimeoutRef.current = setTimeout(() => {
+      setOpenProjects(false);
+    }, 280);
+  };
+
+  const handleProjectsMenuEnter = () => {
+    clearProjectsCloseTimeout();
+    setOpenProjects(true);
+  };
+
+  const handleProjectsMenuLeave = () => {
+    if (projectsPinned) return;
+    clearProjectsCloseTimeout();
+    projectsCloseTimeoutRef.current = setTimeout(() => {
+      setOpenProjects(false);
+    }, 280);
+  };
+
+  const handleProjectsClick = (e) => {
+    e.stopPropagation();
+    clearProjectsCloseTimeout();
+    setOpenApps(false);
+    setAppsPinned(false);
+    if (openProjects && projectsPinned) {
+      setOpenProjects(false);
+      setProjectsPinned(false);
+    } else {
+      setOpenProjects(true);
+      setProjectsPinned(true);
+    }
+  };
+
+  const handleSelectProjectServiceFromMenu = (service, categoryTitle) => {
+    const existing = getSelectedProjectServices();
+    const next = existing.includes(service.name) ? existing : [...existing, service.name];
+    saveSelectedProjectServices(next);
+    closeAll();
+    navigate(
+      `/projects?service=${encodeURIComponent(service.slug)}&category=${encodeURIComponent(categoryTitle)}&action=start`
+    );
+  };
+
   return (
     <header className="site-header">
       <div className="nav-inner">
         <Logo />
 
-        <nav className="desktop-nav">
+        <nav className="desktop-nav" aria-label="Main Navigation">
           {/* Apps Dropdown Button */}
           <div
             className="nav-item-dropdown"
@@ -494,26 +677,42 @@ export function Header() {
               className={`nav-link ${openApps ? 'active' : ''}`}
               onClick={handleAppsClick}
               aria-expanded={openApps}
+              aria-haspopup="true"
             >
               Apps <ChevronDown size={13} className={`caret ${openApps ? 'rotate' : ''}`} />
             </button>
           </div>
 
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            to="/industries"
-            onMouseEnter={() => {
-              if (!appsPinned) setOpenApps(false);
-            }}
+          {/* Projects Dropdown Button (replaces Industries) */}
+          <div
+            className="nav-item-dropdown"
+            onMouseEnter={handleProjectsMouseEnter}
+            onMouseLeave={handleProjectsMouseLeave}
           >
-            Industries
-          </NavLink>
+            <button
+              ref={projectsBtnRef}
+              type="button"
+              className={`nav-link ${openProjects || location.pathname.startsWith('/projects') ? 'active' : ''}`}
+              onClick={handleProjectsClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleProjectsClick(e);
+                }
+              }}
+              aria-expanded={openProjects}
+              aria-haspopup="true"
+            >
+              Projects <ChevronDown size={13} className={`caret ${openProjects ? 'rotate' : ''}`} />
+            </button>
+          </div>
 
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             to="/services"
             onMouseEnter={() => {
               if (!appsPinned) setOpenApps(false);
+              if (!projectsPinned) setOpenProjects(false);
             }}
           >
             Community
@@ -524,6 +723,7 @@ export function Header() {
             to="/pricing"
             onMouseEnter={() => {
               if (!appsPinned) setOpenApps(false);
+              if (!projectsPinned) setOpenProjects(false);
             }}
           >
             Pricing
@@ -534,13 +734,14 @@ export function Header() {
             to="/help"
             onMouseEnter={() => {
               if (!appsPinned) setOpenApps(false);
+              if (!projectsPinned) setOpenProjects(false);
             }}
           >
             Help
           </NavLink>
         </nav>
 
-        {/* Right Action Items: Country & Language Selectors, Customer Login & Admin Login OR Profile */}
+        {/* Right Action Items: Country & Language Selectors, Sign in & Try it free OR Profile */}
         <div className="nav-actions">
           <CountryCurrencySelector />
           <LanguageSelector />
@@ -644,14 +845,23 @@ export function Header() {
               </AnimatePresence>
             </div>
           ) : (
-            <Link
-              to="/login"
-              className="nav-customer-login-btn"
-              title="Customer Sign In"
-            >
-              <User size={15} />
-              <span>Customer Login</span>
-            </Link>
+            <div className="nav-guest-auth-group">
+              <Link
+                to="/login"
+                className="nav-customer-login-btn"
+                title="Customer Sign In"
+              >
+                <User size={15} />
+                <span>Sign in</span>
+              </Link>
+              <Link
+                to="/choose-apps"
+                className="nav-try-free-btn"
+                title="Try OXOO.ai Free"
+              >
+                <span>Try it free</span>
+              </Link>
+            </div>
           )}
 
           <button
@@ -664,7 +874,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mega Menu Dropdown */}
+      {/* Apps Mega Menu Dropdown */}
       <AnimatePresence>
         {openApps && (
           <motion.div
@@ -791,6 +1001,103 @@ export function Header() {
         )}
       </AnimatePresence>
 
+      {/* Projects Mega Menu Dropdown */}
+      <AnimatePresence>
+        {openProjects && (
+          <motion.div
+            className="mega-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeAll}
+            onMouseEnter={handleProjectsMenuEnter}
+            onMouseLeave={handleProjectsMenuLeave}
+          >
+            <motion.div
+              ref={projectsMegaRef}
+              className="mega-menu projects-mega-menu"
+              role="region"
+              aria-label="OXOO.ai Projects & Services Menu"
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseEnter={handleProjectsMenuEnter}
+              onMouseLeave={handleProjectsMenuLeave}
+            >
+              <div className="projects-mega-header">
+                <div>
+                  <span className="eyebrow">CUSTOM DIGITAL SOLUTIONS & SERVICES</span>
+                  <h3>Build Websites, Mobile Apps, Marketing & WhatsApp AI</h3>
+                </div>
+                <Link to="/projects" onClick={closeAll} className="text-link">
+                  Explore Projects Hub <ArrowRight size={15} />
+                </Link>
+              </div>
+
+              <div className="projects-mega-grid">
+                {PROJECT_CATEGORIES.map((category) => (
+                  <div key={category.id} className="projects-mega-column">
+                    <div
+                      className="projects-mega-col-header"
+                      style={{ borderBottomColor: `${category.accentColor}26` }}
+                    >
+                      <span
+                        className="projects-mega-col-dot"
+                        style={{ backgroundColor: category.accentColor }}
+                      />
+                      <div className="projects-mega-col-titles">
+                        <h4 style={{ color: category.accentColor }}>{category.title}</h4>
+                        <p>{category.subtitle}</p>
+                      </div>
+                    </div>
+
+                    <ul className="projects-mega-service-list">
+                      {category.services.map((svc) => (
+                        <li key={svc.slug}>
+                          <button
+                            type="button"
+                            className="projects-mega-service-item"
+                            onClick={() => handleSelectProjectServiceFromMenu(svc, category.title)}
+                          >
+                            <span
+                              className="projects-mega-service-icon"
+                              style={{ backgroundColor: svc.iconBg }}
+                            >
+                              {renderProjectServiceIcon(svc.iconKey, svc.iconColor, 18)}
+                            </span>
+                            <span className="projects-mega-service-text">
+                              <strong>{svc.name}</strong>
+                              <small>{svc.shortDescription}</small>
+                            </span>
+                            <ChevronRight size={14} className="projects-mega-service-arrow" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+
+              <div className="projects-mega-bottom-bar">
+                <div className="projects-mega-bottom-copy">
+                  <Sparkles size={16} color="#0284c7" />
+                  <span>Have a project in mind? Combine multiple services into one tailored roadmap.</span>
+                </div>
+                <Link
+                  to="/projects"
+                  onClick={closeAll}
+                  className="projects-mega-cta-link"
+                >
+                  <strong>Have a project in mind? — Start Your Project →</strong>
+                </Link>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Mobile Drawer */}
       <AnimatePresence>
         {mobile && (
@@ -839,8 +1146,6 @@ export function Header() {
               </div>
             )}
 
-
-
             <div className="mobile-country-select-row" style={{ padding: '12px 18px', borderBottom: '1px solid #f1f5f9' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Region & Pricing
@@ -848,20 +1153,74 @@ export function Header() {
               <CountryCurrencySelector isMobile={true} />
             </div>
 
+            <Link to="/" onClick={closeAll} className="mobile-link">
+              <span>Home</span>
+              <ArrowRight size={16} />
+            </Link>
+            <Link to="/apps" onClick={closeAll} className="mobile-link">
+              <span>Apps</span>
+              <ArrowRight size={16} />
+            </Link>
+
+            {/* Mobile Projects Expandable Section */}
+            <div className="mobile-projects-accordion">
+              <button
+                type="button"
+                className="mobile-link mobile-projects-trigger"
+                onClick={() => setMobileProjectsOpen(!mobileProjectsOpen)}
+                aria-expanded={mobileProjectsOpen}
+              >
+                <span>Projects</span>
+                <ChevronDown size={16} className={`caret ${mobileProjectsOpen ? 'rotate' : ''}`} />
+              </button>
+              {mobileProjectsOpen && (
+                <div className="mobile-projects-panel">
+                  {PROJECT_CATEGORIES.map((cat) => (
+                    <div key={cat.id} className="mobile-projects-cat-group">
+                      <div className="mobile-projects-cat-title" style={{ color: cat.accentColor }}>
+                        {cat.title}
+                      </div>
+                      {cat.services.map((svc) => (
+                        <button
+                          key={svc.slug}
+                          type="button"
+                          className="mobile-projects-service-btn"
+                          onClick={() => handleSelectProjectServiceFromMenu(svc, cat.title)}
+                        >
+                          <span
+                            className="mobile-projects-svc-icon"
+                            style={{ backgroundColor: svc.iconBg }}
+                          >
+                            {renderProjectServiceIcon(svc.iconKey, svc.iconColor, 15)}
+                          </span>
+                          <span>{svc.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                  <Link
+                    to="/projects"
+                    onClick={closeAll}
+                    className="mobile-projects-start-cta"
+                  >
+                    Have a project in mind? — Start Your Project →
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {[
-              ['Home', '/'],
-              ['All Apps & Services', '/services'],
-              ['Industries We Serve', '/industries'],
-              ['Pricing Plans', '/pricing'],
-              ['Help & Support', '/help'],
+              ['Community', '/services'],
+              ['Pricing', '/pricing'],
+              ['Help', '/help'],
               ...(currentUser
                 ? [
                     [currentUser.role === 'admin' ? 'Admin Console' : 'Customer Dashboard', currentUser.role === 'admin' ? '/admin' : '/dashboard']
                   ]
                 : [
-                    ['Customer Login', '/login']
+                    ['Sign in', '/login'],
+                    ['Try it free', '/choose-apps']
                   ]),
-              ['Book a Demo / Contact', '/contact']
             ].map(([n, p]) => (
               <Link key={n} to={p} onClick={closeAll} className="mobile-link">
                 <span>{n}</span>
@@ -869,8 +1228,8 @@ export function Header() {
               </Link>
             ))}
             <div className="mobile-actions">
-              <Link to="/contact" onClick={closeAll} className="button button-emerald full-button">
-                Get a Free Quote
+              <Link to="/projects" onClick={closeAll} className="button button-emerald full-button">
+                Start Your Project →
               </Link>
             </div>
           </motion.div>
@@ -880,68 +1239,326 @@ export function Header() {
   );
 }
 
+function renderFooterDemoIcon(iconKey) {
+  switch (iconKey) {
+    case 'zap':
+      return <Zap size={15} color="#eab308" fill="#eab308" />;
+    case 'briefcase':
+      return <Briefcase size={15} color="#9a3412" />;
+    case 'users':
+      return <Users size={15} color="#7c3aed" />;
+    case 'bar-chart':
+      return <BarChart3 size={15} color="#2563eb" />;
+    case 'package':
+      return <Package size={15} color="#ea580c" />;
+    case 'globe':
+      return <Globe size={15} color="#0284c7" />;
+    default:
+      return <Sparkles size={15} color="#0284c7" />;
+  }
+}
+
 export function Footer() {
+  const navigate = useNavigate();
+  const [healthState, setHealthState] = useState({ connected: false, status: 'checking' });
+
+  useEffect(() => {
+    let active = true;
+    getHealthStatus().then((res) => {
+      if (active && res) {
+        setHealthState(res);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleLiveDemoClick = (e, demoId) => {
+    if (e) e.preventDefault();
+    const canonicalId = saveSelectedDemoId(demoId) || 'productivity-ai';
+    const targetRoute = DEMO_FLOW_CONFIG.requestFormRoute || '/request-demo';
+    navigate(`${targetRoute}?demo=${encodeURIComponent(canonicalId)}`, {
+      state: { selectedDemo: canonicalId },
+    });
+  };
+
+  const handleBookDemoClick = (e) => {
+    if (e) e.preventDefault();
+    const targetRoute = DEMO_FLOW_CONFIG.requestFormRoute || '/request-demo';
+    navigate(targetRoute);
+  };
+
   return (
-    <footer className="footer" id="resources">
-      <div className="footer-main">
-        <div className="footer-about">
-          <Logo withTagline={true} />
-          <p>
-            One Intelligent Platform. Every Business. Powering 10,000+ businesses worldwide with connected AI-driven software, professional implementation, and ongoing care.
-          </p>
-          <div className="footer-contact-pills">
-            <span><Phone size={13} /> +91 79 4050 0100</span>
-            <span><Mail size={13} /> hello@oxoo.ai</span>
+    <footer className="oxoo-footer" id="resources" role="contentinfo">
+      {/* Decorative soft background wave shapes */}
+      <div className="oxoo-footer-bg-shapes" aria-hidden="true">
+        <div className="oxoo-footer-wave-right" />
+        <div className="oxoo-footer-wave-bottom" />
+      </div>
+
+      <div className="oxoo-footer-container">
+        <div className="oxoo-footer-grid">
+          {/* Column 1 — OXOO Brand and Contact */}
+          <div className="oxoo-footer-col oxoo-footer-brand-col">
+            <Link to="/" className="oxoo-footer-logo-link" aria-label="OXOO Home">
+              <img src="/oxoo-logo.png" alt="OXOO" className="oxoo-footer-logo-img" />
+            </Link>
+
+            <p className="oxoo-footer-tagline">One Platform. Every Business Workflow.</p>
+
+            <p className="oxoo-footer-description">
+              Powering businesses with connected AI-driven software, professional implementation, and ongoing support.
+            </p>
+
+            <div className="oxoo-footer-contact-list">
+              <a href="tel:+917940500100" className="oxoo-footer-contact-item">
+                <span className="oxoo-footer-contact-icon" aria-hidden="true">
+                  <Phone size={15} />
+                </span>
+                <span>+91 79 4050 0100</span>
+              </a>
+
+              <a href="mailto:hello@oxoo.ai" className="oxoo-footer-contact-item">
+                <span className="oxoo-footer-contact-icon" aria-hidden="true">
+                  <Mail size={15} />
+                </span>
+                <span>hello@oxoo.ai</span>
+              </a>
+
+              <div className="oxoo-footer-contact-item">
+                <span className="oxoo-footer-contact-icon" aria-hidden="true">
+                  <MapPin size={15} />
+                </span>
+                <span>Bengaluru, India</span>
+              </div>
+            </div>
+
+            <div className="oxoo-footer-social-divider" aria-hidden="true" />
+
+            {/* Official Social Brand Icons (LinkedIn, Instagram, YouTube, Facebook, X) */}
+            <div className="oxoo-footer-social-row" aria-label="Social Media Links">
+              <a
+                href={SOCIAL_PROFILE_URLS.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="oxoo-footer-social-btn"
+                aria-label="OXOO.ai on LinkedIn"
+                title="LinkedIn"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <rect width="24" height="24" rx="4" fill="#0A66C2" />
+                  <path
+                    fill="#FFFFFF"
+                    d="M7.19 9.5H4.56V19h2.63V9.5zM5.88 8.28c.86 0 1.55-.7 1.55-1.56 0-.86-.69-1.55-1.55-1.55-.86 0-1.55.69-1.55 1.55 0 .86.69 1.56 1.55 1.56zM19.44 19h-2.62v-4.62c0-1.1-.02-2.52-1.54-2.52-1.54 0-1.78 1.2-1.78 2.44V19H10.88V9.5h2.52v1.3h.04c.35-.66 1.21-1.36 2.49-1.36 2.66 0 3.51 1.75 3.51 4.03V19z"
+                  />
+                </svg>
+              </a>
+
+              <a
+                href={SOCIAL_PROFILE_URLS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="oxoo-footer-social-btn"
+                aria-label="OXOO.ai on Instagram"
+                title="Instagram"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="oxoo-ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#f09433" />
+                      <stop offset="25%" stopColor="#e6683c" />
+                      <stop offset="50%" stopColor="#dc2743" />
+                      <stop offset="75%" stopColor="#cc2366" />
+                      <stop offset="100%" stopColor="#bc1888" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    fill="url(#oxoo-ig-grad)"
+                    d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85 0 3.2-.01 3.58-.07 4.85-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07-3.2 0-3.58-.01-4.85-.07-3.26-.15-4.77-1.7-4.92-4.92-.06-1.27-.07-1.64-.07-4.85 0-3.2.01-3.58.07-4.85C2.38 3.92 3.9 2.38 7.15 2.23c1.27-.06 1.65-.07 4.85-.07zM12 0C8.74 0 8.33.01 7.05.07 2.7.27.27 2.69.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.2 4.36 2.62 6.78 6.98 6.98 1.28.06 1.69.07 4.95.07s3.67-.01 4.95-.07c4.36-.2 6.78-2.62 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.2-4.36-2.62-6.78-6.98-6.98C15.67.01 15.26 0 12 0zm0 5.84a6.16 6.16 0 1 0 0 12.32 6.16 6.16 0 0 0 0-12.32zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.41-11.85a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88z"
+                  />
+                </svg>
+              </a>
+
+              <a
+                href={SOCIAL_PROFILE_URLS.youtube}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="oxoo-footer-social-btn"
+                aria-label="OXOO.ai on YouTube"
+                title="YouTube"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path
+                    fill="#FF0000"
+                    d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.38.55A3.02 3.02 0 0 0 .5 6.19 31.56 31.56 0 0 0 0 12a31.56 31.56 0 0 0 .5 5.81 3.02 3.02 0 0 0 2.12 2.14c1.88.55 9.38.55 9.38.55s7.5 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14A31.56 31.56 0 0 0 24 12a31.56 31.56 0 0 0-.5-5.81z"
+                  />
+                  <polygon fill="#FFFFFF" points="9.55,15.57 15.82,12 9.55,8.43" />
+                </svg>
+              </a>
+
+              <a
+                href={SOCIAL_PROFILE_URLS.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="oxoo-footer-social-btn"
+                aria-label="OXOO.ai on Facebook"
+                title="Facebook"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path
+                    fill="#1877F2"
+                    d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07c0 6.02 4.39 11.01 10.13 11.93v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.25h3.33l-.53 3.49h-2.8v8.44C19.61 23.08 24 18.09 24 12.07z"
+                  />
+                </svg>
+              </a>
+
+              <a
+                href={SOCIAL_PROFILE_URLS.x}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="oxoo-footer-social-btn"
+                aria-label="OXOO.ai on X (Twitter)"
+                title="X (Twitter)"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path
+                    fill="#0f172a"
+                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                  />
+                </svg>
+              </a>
+            </div>
           </div>
-          <div className="footer-social">
-            <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn">in</a>
-            <a href="https://twitter.com" target="_blank" rel="noreferrer" aria-label="Twitter">𝕏</a>
-            <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="GitHub">gh</a>
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">ig</a>
+
+          {/* Column 2 — Solutions */}
+          <nav className="oxoo-footer-col oxoo-footer-nav-col" aria-label="Solutions Navigation">
+            <div className="oxoo-footer-col-header">
+              <span className="oxoo-footer-col-badge badge-solutions" aria-hidden="true">
+                <LayoutGrid size={16} />
+              </span>
+              <h4>Solutions</h4>
+            </div>
+            <ul className="oxoo-footer-nav-list">
+              {FOOTER_SOLUTIONS_LINKS.map((item) => (
+                <li key={item.label}>
+                  <Link to={item.to} className="oxoo-footer-nav-link">
+                    <span>{item.label}</span>
+                    <ChevronRight size={14} className="oxoo-footer-chevron" aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Column 3 — Live Demos */}
+          <nav className="oxoo-footer-col oxoo-footer-nav-col" aria-label="Live Demos Navigation">
+            <div className="oxoo-footer-col-header">
+              <span className="oxoo-footer-col-badge badge-demos" aria-hidden="true">
+                <PlayCircle size={16} />
+              </span>
+              <h4>Live Demos</h4>
+            </div>
+            <ul className="oxoo-footer-nav-list">
+              {LIVE_DEMO_LIST.map((demo) => (
+                <li key={demo.id}>
+                  <a
+                    href={`${DEMO_FLOW_CONFIG.requestFormRoute}?demo=${encodeURIComponent(demo.id)}`}
+                    onClick={(e) => handleLiveDemoClick(e, demo.id)}
+                    className="oxoo-footer-nav-link oxoo-footer-demo-link"
+                    data-demo-id={demo.id}
+                  >
+                    <span className="oxoo-footer-demo-item-left">
+                      <span className="oxoo-footer-demo-cat-icon" aria-hidden="true">
+                        {renderFooterDemoIcon(demo.iconKey)}
+                      </span>
+                      <span>{demo.label}</span>
+                    </span>
+                    <ChevronRight size={14} className="oxoo-footer-chevron" aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Column 4 — Company & Plans */}
+          <nav className="oxoo-footer-col oxoo-footer-nav-col" aria-label="Company and Plans Navigation">
+            <div className="oxoo-footer-col-header">
+              <span className="oxoo-footer-col-badge badge-company" aria-hidden="true">
+                <Box size={16} />
+              </span>
+              <h4>Company &amp; Plans</h4>
+            </div>
+            <ul className="oxoo-footer-nav-list">
+              {FOOTER_COMPANY_LINKS.map((item) => (
+                <li key={item.label}>
+                  <Link to={item.to} className="oxoo-footer-nav-link">
+                    <span>{item.label}</span>
+                    <ChevronRight size={14} className="oxoo-footer-chevron" aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Column 5 — Demo Call-to-Action Card */}
+          <div className="oxoo-footer-col oxoo-footer-cta-col">
+            <div className="oxoo-footer-cta-card">
+              <div className="oxoo-footer-cta-glow" aria-hidden="true" />
+              <span className="oxoo-footer-cta-eyebrow">LET&apos;S GROW TOGETHER</span>
+              <h4 className="oxoo-footer-cta-heading">Ready to transform your business?</h4>
+              <p className="oxoo-footer-cta-desc">
+                Get a personalized demo and see how OXOO.ai can simplify your operations and accelerate your growth.
+              </p>
+              <a
+                href={DEMO_FLOW_CONFIG.requestFormRoute}
+                onClick={handleBookDemoClick}
+                className="oxoo-footer-cta-btn"
+              >
+                <span>Book a Demo</span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </a>
+            </div>
           </div>
-        </div>
-
-        <div>
-          <h4>Solutions</h4>
-          <Link to="/services">All Services</Link>
-          <Link to="/services/crm">CRM</Link>
-          <Link to="/services/accounting">Accounting & GST</Link>
-          <Link to="/services/hrms">HRMS & Payroll</Link>
-          <Link to="/services/inventory-management">Inventory Management</Link>
-          <Link to="/services/ai-automation">AI Automation</Link>
-        </div>
-
-        <div>
-          <h4>Live Demos</h4>
-          <Link to="/demo/ai-demo">⚡ Productivity & AI</Link>
-          <Link to="/demo/sales-demo">💼 Sales & CRM</Link>
-          <Link to="/demo/hrms-demo">👥 Human Resources</Link>
-          <Link to="/demo/finance-demo">📊 Finance & GST</Link>
-          <Link to="/demo/supply-chain-demo">📦 Supply Chain & Operations</Link>
-          <Link to="/demo/website-builder-demo">🌐 Website Builder</Link>
-        </div>
-
-        <div>
-          <h4>Company & Plans</h4>
-          <Link to="/pricing">Pricing Plans</Link>
-          <Link to="/help">Help & Support</Link>
-          <Link to="/help-form">Submit a Ticket</Link>
-          <Link to="/demo">Request Full Demo</Link>
-          <Link to="/contact">Contact Sales</Link>
         </div>
       </div>
 
-      <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} Oxoo.ai Inc. All rights reserved.</span>
-        <div className="footer-links">
-          <a href="#privacy">Privacy Policy</a>
-          <a href="#terms">Terms of Service</a>
-          <a href="#security">Security</a>
-          <a href="#compliance">ISO 27001 Certified</a>
+      {/* Footer Bottom Bar */}
+      <div className="oxoo-footer-bottom-wrap">
+        <div className="oxoo-footer-bottom">
+          <div className="oxoo-footer-copyright">
+            © 2026 OXOO.ai Inc. All rights reserved.
+          </div>
+
+          <nav className="oxoo-footer-legal-nav" aria-label="Legal and Compliance Links">
+            {FOOTER_LEGAL_LINKS.map((item, index) => (
+              <React.Fragment key={item.label}>
+                <Link
+                  to={item.to}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="oxoo-footer-legal-link"
+                >
+                  {item.label}
+                </Link>
+                {index < FOOTER_LEGAL_LINKS.length - 1 && (
+                  <span className="oxoo-footer-legal-pipe" aria-hidden="true">
+                    |
+                  </span>
+                )}
+              </React.Fragment>
+            ))}
+          </nav>
+
+          <div className="oxoo-footer-status-slot">
+            {healthState.connected && healthState.status === 'operational' && (
+              <span className="oxoo-footer-live-status" title="Connected to live OXOO.ai health monitor">
+                <span className="oxoo-footer-status-dot" aria-hidden="true" />
+                <span>Cloud services operational</span>
+              </span>
+            )}
+          </div>
         </div>
-        <span className="footer-status">
-          <i /> All cloud services 99.99% operational
-        </span>
       </div>
     </footer>
   );

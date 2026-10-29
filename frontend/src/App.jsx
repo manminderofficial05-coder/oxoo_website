@@ -31,6 +31,15 @@ import AdminLoginPage from './AdminLoginPage';
 import ResetPasswordPage from './ResetPasswordPage';
 import EmployeeLoginPage from './EmployeeLoginPage';
 import HelpPage from './HelpPage';
+import RequestDemoPage from './RequestDemoPage';
+import ProjectsPage from './ProjectsPage';
+import {
+  InfoPageView,
+  PrivacyPolicyPage,
+  TermsOfServicePage,
+  SecurityPage,
+  CompliancePage,
+} from './InfoPages';
 import OxooAgentWidget from './components/agent/OxooAgentWidget';
 import { authStorage } from './authStorage';
 
@@ -46,36 +55,36 @@ function useScrollTop() {
 // -------------------------------------------------------------
 const HERO_APP_CARDS = [
   // Row 1
-  { id: 'accounting', label: 'Accounting', iconSrc: '/apps/logo-accounting.png?v=clean', link: '/apps/accounting', withoutPrice: '₹3,500/mo' },
-  { id: 'knowledge', label: 'Knowledge', iconSrc: '/apps/logo-knowledge.png?v=clean', link: '/apps/knowledge', withoutPrice: '₹1,800/mo' },
-  { id: 'sign', label: 'Sign', iconSrc: '/apps/logo-sign.png?v=clean', link: '/apps/sign', withoutPrice: '₹2,200/mo' },
-  { id: 'crm', label: 'CRM', iconSrc: '/apps/logo-crm.png?v=clean', link: '/apps/crm', withoutPrice: '₹4,500/mo' },
-  { id: 'studio', label: 'Studio', iconSrc: '/apps/logo-studio.png?v=clean', link: '/apps/studio', withoutPrice: '₹5,000/mo' },
-  { id: 'subscriptions', label: 'Subscriptions', iconSrc: '/apps/logo-subscriptions.png?v=clean', link: '/apps/subscriptions', withoutPrice: '₹2,800/mo' },
+  { id: 'accounting', label: 'Accounting', iconSrc: '/apps/logo-accounting.png?v=clean', link: '/apps/accounting' },
+  { id: 'hr', label: 'HR', iconSrc: '/apps/logo-hr.png?v=clean', link: '/apps/hr' },
+  { id: 'website', label: 'Website', iconSrc: '/apps/logo-website.png?v=clean', link: '/apps/website' },
+  { id: 'crm', label: 'CRM', iconSrc: '/apps/logo-crm.png?v=clean', link: '/apps/crm' },
+  { id: 'inventory', label: 'Inventory', iconSrc: '/apps/logo-inventory.png?v=clean', link: '/apps/inventory' },
+  { id: 'sales', label: 'Sales', iconSrc: '/apps/logo-sales.png?v=clean', link: '/apps/sales' },
 
   // Row 2
-  { id: 'ai', label: 'AI', iconSrc: '/apps/logo-ai.png?v=clean', link: '/apps/ai', withoutPrice: '₹3,000/mo' },
-  { id: 'pos', label: 'Point of Sale', iconSrc: '/apps/logo-pos.png?v=clean', link: '/apps/pos', withoutPrice: '₹3,800/mo' },
-  { id: 'discuss', label: 'Discuss', iconSrc: '/apps/logo-discuss.png?v=clean', link: '/apps/discuss', withoutPrice: '₹1,500/mo' },
-  { id: 'documents', label: 'Documents', iconSrc: '/apps/logo-documents.png?v=clean', link: '/apps/documents', withoutPrice: '₹1,900/mo' },
-  { id: 'project', label: 'Project', iconSrc: '/apps/logo-project.png?v=clean', link: '/apps/projects', withoutPrice: '₹3,200/mo' },
-  { id: 'timesheets', label: 'Timesheets', iconSrc: '/apps/logo-timesheets.png?v=clean', link: '/apps/timesheets', withoutPrice: '₹1,600/mo' },
+  { id: 'ai', label: 'AI', iconSrc: '/apps/logo-ai.png?v=clean', link: '/apps/ai' },
+  { id: 'pos', label: 'Point of Sale', iconSrc: '/apps/logo-pos.png?v=clean', link: '/apps/pos' },
+  { id: 'ecommerce', label: 'eCommerce', iconSrc: '/apps/logo-ecommerce.png?v=clean', link: '/apps/ecommerce' },
+  { id: 'project', label: 'Project', iconSrc: '/apps/logo-project.png?v=clean', link: '/apps/projects' },
+  { id: 'discuss', label: 'Discuss', iconSrc: '/apps/logo-discuss.png?v=clean', link: '/apps/discuss' },
+  { id: 'timesheets', label: 'Timesheets', iconSrc: '/apps/logo-timesheets.png?v=clean', link: '/apps/timesheets' },
 
   // Row 3
-  { id: 'field-service', label: 'Field Service', iconSrc: '/apps/logo-field-service.png?v=clean', link: '/apps/field-service', withoutPrice: '₹4,000/mo' },
-  { id: 'planning', label: 'Planning', iconSrc: '/apps/logo-planning.png?v=clean', link: '/apps/planning', withoutPrice: '₹2,500/mo' },
-  { id: 'helpdesk', label: 'Helpdesk', iconSrc: '/apps/logo-helpdesk.png?v=clean', link: '/apps/helpdesk', withoutPrice: '₹3,500/mo' },
-  { id: 'ecommerce', label: 'eCommerce', iconSrc: '/apps/logo-ecommerce.png?v=clean', link: '/apps/ecommerce', withoutPrice: '₹4,900/mo' },
-  { id: 'website', label: 'Website', iconSrc: '/apps/logo-website.png?v=clean', link: '/apps/website', withoutPrice: '₹2,900/mo' },
-  { id: 'email-marketing', label: 'Email Marketing', iconSrc: '/apps/logo-email-marketing.png?v=clean', link: '/apps/email-marketing', withoutPrice: '₹3,100/mo' },
+  { id: 'field-service', label: 'Field Service', iconSrc: '/apps/logo-field-service.png?v=clean', link: '/apps/field-service' },
+  { id: 'planning', label: 'Planning', iconSrc: '/apps/logo-planning.png?v=clean', link: '/apps/planning' },
+  { id: 'helpdesk', label: 'Helpdesk', iconSrc: '/apps/logo-helpdesk.png?v=clean', link: '/apps/helpdesk' },
+   { id: 'documents', label: 'Documents', iconSrc: '/apps/logo-documents.png?v=clean', link: '/apps/documents' },
+  { id: 'sign', label: 'Sign', iconSrc: '/apps/logo-sign.png?v=clean', link: '/apps/sign' },
+  { id: 'email-marketing', label: 'Email Marketing', iconSrc: '/apps/logo-email-marketing.png?v=clean', link: '/apps/email-marketing' },
 
   // Row 4
-  { id: 'purchase', label: 'Purchase', iconSrc: '/apps/logo-purchase.png?v=clean', link: '/apps/purchase', withoutPrice: '₹2,700/mo' },
-  { id: 'inventory', label: 'Inventory', iconSrc: '/apps/logo-inventory.png?v=clean', link: '/apps/inventory', withoutPrice: '₹4,800/mo' },
-  { id: 'manufacturing', label: 'Manufacturing', iconSrc: '/apps/logo-manufacturing.png?v=clean', link: '/apps/manufacturing', withoutPrice: '₹6,500/mo' },
-  { id: 'sales', label: 'Sales', iconSrc: '/apps/logo-sales.png?v=clean', link: '/apps/sales', withoutPrice: '₹4,200/mo' },
-  { id: 'hr', label: 'HR', iconSrc: '/apps/logo-hr.png?v=clean', link: '/apps/hr', withoutPrice: '₹3,800/mo' },
-  { id: 'dashboard', label: 'Dashboard', iconSrc: '/apps/logo-dashboard.png?v=clean', link: '/apps/dashboard', withoutPrice: '₹2,400/mo' }
+  { id: 'purchase', label: 'Purchase', iconSrc: '/apps/logo-purchase.png?v=clean', link: '/apps/purchase' },
+  { id: 'knowledge', label: 'Knowledge', iconSrc: '/apps/logo-knowledge.png?v=clean', link: '/apps/knowledge' },
+  { id: 'subscriptions', label: 'Subscriptions', iconSrc: '/apps/logo-subscriptions.png?v=clean', link: '/apps/subscriptions' },
+  { id: 'manufacturing', label: 'Manufacturing', iconSrc: '/apps/logo-manufacturing.png?v=clean', link: '/apps/manufacturing' },
+  { id: 'studio', label: 'Studio', iconSrc: '/apps/logo-studio.png?v=clean', link: '/apps/studio' },
+  { id: 'dashboard', label: 'Dashboard', iconSrc: '/apps/logo-dashboard.png?v=clean', link: '/apps/dashboard' }
 ];
 
 
@@ -400,18 +409,17 @@ function Home() {
         <section className="vast-collection-section">
           <div className="vast-collection-container">
             <h2 className="vast-collection-title">
-              Imagine a vast collection of business apps at your disposal.
+              Imagine running your entire business from one intelligent platform.
             </h2>
             <p className="vast-collection-lead">
-              Got something to improve? There is an app for that.
-              <br />
-              No complexity, no cost, just a one-click install.
+              OXOO.ai brings HRMS, Finance, CRM, Sales, Inventory, Supply Chain, AI Agents, and  <br /> Website & App Builder together in one connected ecosystem.
+             
             </p>
 
             <p className="vast-collection-sub">
-              Each app simplifies a process and empowers more people.
+              Discover the power of connected business applications — built to simplify today, designed to scale tomorrow.
               <br />
-              Imagine the impact when everyone gets the right tool for the job, tailored with native AI.
+              
             </p>
 
             {/* Quote Persona Callout (Bill McDermott) */}
@@ -458,7 +466,7 @@ function Home() {
               {/* White rounded pill quote card */}
               <div className="persona-quote-card">
                 <span className="persona-quote-text">
-                  “If you simplify everything, you can do anything!”
+                  “When business becomes connected, possibilities become limitless.”
                 </span>
                 <span className="persona-quote-author">
                   — CEO, PrimePro.ai Technologies
@@ -862,6 +870,20 @@ function ServicesPage() {
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const catParam = params.get('category');
+    const searchParam = params.get('search');
+    if (catParam !== null) {
+      setSelectedCategory(catParam || 'All Categories');
+    } else {
+      setSelectedCategory('All Categories');
+    }
+    if (searchParam !== null) {
+      setSearch(searchParam);
+    }
+  }, [location.search]);
+
   // Filter 24 Applications in exact specified order
   const filteredApps = APPS_DATA.filter((app) => {
     const matchCat = selectedCategory === 'All Categories' || app.category.toLowerCase() === selectedCategory.toLowerCase();
@@ -938,8 +960,8 @@ function ServicesPage() {
                   const count = catName === 'All Categories'
                     ? (activeTab === 'apps' ? APPS_DATA.length : services.length)
                     : (activeTab === 'apps'
-                        ? APPS_DATA.filter(a => a.category.toLowerCase() === catName.toLowerCase()).length
-                        : services.filter(s => s.category.toLowerCase().includes(catName.toLowerCase())).length);
+                      ? APPS_DATA.filter(a => a.category.toLowerCase() === catName.toLowerCase()).length
+                      : services.filter(s => s.category.toLowerCase().includes(catName.toLowerCase())).length);
                   return (
                     <li key={catName}>
                       <button
@@ -1592,7 +1614,7 @@ function AdminProtectedRoute({ children }) {
       if (token && u) {
         return u.role === 'admin' || u.role === 'super_admin';
       }
-    } catch (e) {}
+    } catch (e) { }
     return false;
   });
 
@@ -1605,7 +1627,7 @@ function AdminProtectedRoute({ children }) {
           setIsAdminAuthenticated(u.role === 'admin' || u.role === 'super_admin');
           return;
         }
-      } catch (e) {}
+      } catch (e) { }
       setIsAdminAuthenticated(false);
     };
 
@@ -1629,9 +1651,13 @@ function CustomerProtectedRoute({ children }) {
       const token = authStorage.getCustomerToken();
       const u = authStorage.getCustomerUser();
       if (token && u) {
+        if (authStorage.isOutsideIndia() && authStorage.isIndianAccount(u)) {
+          authStorage.clearCustomerSession();
+          return false;
+        }
         return Boolean(u.id || u.email);
       }
-    } catch (e) {}
+    } catch (e) { }
     return false;
   });
 
@@ -1641,16 +1667,23 @@ function CustomerProtectedRoute({ children }) {
         const token = authStorage.getCustomerToken();
         const u = authStorage.getCustomerUser();
         if (token && u) {
+          if (authStorage.isOutsideIndia() && authStorage.isIndianAccount(u)) {
+            authStorage.clearCustomerSession();
+            setIsCustomerAuthenticated(false);
+            return;
+          }
           setIsCustomerAuthenticated(Boolean(u.id || u.email));
           return;
         }
-      } catch (e) {}
+      } catch (e) { }
       setIsCustomerAuthenticated(false);
     };
 
     window.addEventListener('oxoo_auth_change', checkAuth);
+    window.addEventListener('oxoo_region_change', checkAuth);
     return () => {
       window.removeEventListener('oxoo_auth_change', checkAuth);
+      window.removeEventListener('oxoo_region_change', checkAuth);
     };
   }, []);
 
@@ -1691,95 +1724,105 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-      <Route path="/choose-apps" element={<ChooseAppsPage />} />
-      <Route path="/apps" element={<AllAppsDirectory />} />
-      <Route path="/all-apps" element={<AllAppsDirectory />} />
-      <Route path="/apps/:appSlug" element={<AppShowcase />} />
-      <Route path="/apps/:appSlug/portal" element={<PrimeProPortal />} />
-      <Route path="/apps/:appSlug/workspace" element={<AppWorkspace />} />
-      <Route path="/apps/:appSlug/demo" element={<AppDemoPage />} />
-      <Route path="/apps/:appSlug/live-demo" element={<WebsiteDemoViewer />} />
-      <Route path="/demo" element={<AppDemoPage />} />
-      <Route path="/demo/request" element={<AppDemoPage />} />
-      <Route path="/demo/live" element={<WebsiteDemoViewer />} />
-      <Route path="/demo/ai" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/demo/ai-demo" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/demo/productivity" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/demo/sales" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
-      <Route path="/demo/sales-demo" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
-      <Route path="/demo/hrms" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
-      <Route path="/demo/hrms-demo" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
-      <Route path="/demo/finance" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
-      <Route path="/demo/finance-demo" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
-      <Route path="/demo/oxoo-finance-demo" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
-      <Route path="/demo/supply-chain" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
-      <Route path="/demo/supply-chain-demo" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
-      <Route path="/demo/website" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
-      <Route path="/demo/website-demo" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
-      <Route path="/demo/website-builder-demo" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
-      {/* Direct demo static path fallbacks */}
-      <Route path="/dashboard/overview" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/overview/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/ai-chat" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/voice-ai" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/appointments" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/patient-crm" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/agents" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/leads" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/conversations" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/sequences" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/settings" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/billing" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/profile" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/notifications" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/assignment" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/dashboard/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/sign-in" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/sign-in/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/sign-up" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/sign-up/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/ai-demo/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
-      <Route path="/sales-demo/*" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
-      <Route path="/hrms-demo/*" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
-      <Route path="/finance-demo/*" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
-      <Route path="/supply-chain-demo/*" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
-      <Route path="/website-builder-demo/*" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
-      <Route path="/services" element={<ServicesPage />} />
-      <Route path="/services/:slug" element={<AppShowcase />} />
-      <Route path="/services/:slug/portal" element={<PrimeProPortal />} />
-      <Route path="/services/:slug/workspace" element={<AppWorkspace />} />
-      <Route path="/portal" element={<PrimeProPortal />} />
-      <Route path="/industries" element={<IndustriesPage />} />
-      <Route path="/pricing" element={<PricingPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} />
-      <Route path="/buy" element={<CheckoutPage />} />
-      <Route path="/contact" element={<ContactPage />} />
-      <Route path="/help" element={<HelpPage />} />
-      <Route path="/help-form" element={<HelpPage />} />
-      {/* Customer Authentication & Dashboard (Strictly Isolated & Safe) */}
-      <Route path="/customer/login" element={<CustomerLoginPage />} />
-      <Route path="/customer-login" element={<CustomerLoginPage />} />
-      <Route path="/signin" element={<CustomerLoginPage />} />
-      <Route path="/login" element={<CustomerLoginPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/customer" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
-      <Route path="/dashboard" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
+        <Route path="/choose-apps" element={<ChooseAppsPage />} />
+        <Route path="/apps" element={<AllAppsDirectory />} />
+        <Route path="/all-apps" element={<AllAppsDirectory />} />
+        <Route path="/apps/:appSlug" element={<AppShowcase />} />
+        <Route path="/apps/:appSlug/portal" element={<PrimeProPortal />} />
+        <Route path="/apps/:appSlug/workspace" element={<AppWorkspace />} />
+        <Route path="/apps/:appSlug/demo" element={<AppDemoPage />} />
+        <Route path="/apps/:appSlug/live-demo" element={<WebsiteDemoViewer />} />
+        <Route path="/demo" element={<AppDemoPage />} />
+        <Route path="/demo/request" element={<AppDemoPage />} />
+        <Route path="/demo/live" element={<WebsiteDemoViewer />} />
+        <Route path="/demo/ai" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/demo/ai-demo" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/demo/productivity" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/demo/sales" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
+        <Route path="/demo/sales-demo" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
+        <Route path="/demo/hrms" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
+        <Route path="/demo/hrms-demo" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
+        <Route path="/demo/finance" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
+        <Route path="/demo/finance-demo" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
+        <Route path="/demo/oxoo-finance-demo" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
+        <Route path="/demo/supply-chain" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
+        <Route path="/demo/supply-chain-demo" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
+        <Route path="/demo/website" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
+        <Route path="/demo/website-demo" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
+        <Route path="/demo/website-builder-demo" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
+        {/* Direct demo static path fallbacks */}
+        <Route path="/dashboard/overview" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/overview/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/ai-chat" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/voice-ai" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/appointments" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/patient-crm" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/agents" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/leads" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/conversations" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/sequences" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/settings" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/billing" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/profile" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/notifications" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/assignment" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/dashboard/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/sign-in" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/sign-in/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/sign-up" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/sign-up/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/ai-demo/*" element={<WebsiteDemoViewer defaultDemo="ai-demo" />} />
+        <Route path="/sales-demo/*" element={<WebsiteDemoViewer defaultDemo="sales-demo" />} />
+        <Route path="/hrms-demo/*" element={<WebsiteDemoViewer defaultDemo="hrms-demo" />} />
+        <Route path="/finance-demo/*" element={<WebsiteDemoViewer defaultDemo="finance-demo" />} />
+        <Route path="/supply-chain-demo/*" element={<WebsiteDemoViewer defaultDemo="supply-chain-demo" />} />
+        <Route path="/website-builder-demo/*" element={<WebsiteDemoViewer defaultDemo="website-builder-demo" />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/services/:slug" element={<AppShowcase />} />
+        <Route path="/services/:slug/portal" element={<PrimeProPortal />} />
+        <Route path="/services/:slug/workspace" element={<AppWorkspace />} />
+        <Route path="/portal" element={<PrimeProPortal />} />
+        <Route path="/industries" element={<IndustriesPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/buy" element={<CheckoutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/request-demo" element={<RequestDemoPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/help-form" element={<HelpPage />} />
+        <Route path="/about" element={<InfoPageView pageKey="about" />} />
+        <Route path="/careers" element={<InfoPageView pageKey="careers" />} />
+        <Route path="/partners" element={<InfoPageView pageKey="partners" />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
+        <Route path="/security" element={<SecurityPage />} />
+        <Route path="/compliance" element={<CompliancePage />} />
+        {/* Customer Authentication & Dashboard (Strictly Isolated & Safe) */}
+        <Route path="/customer/login" element={<CustomerLoginPage />} />
+        <Route path="/customer-login" element={<CustomerLoginPage />} />
+        <Route path="/signin" element={<CustomerLoginPage />} />
+        <Route path="/login" element={<CustomerLoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/customer" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
+        <Route path="/dashboard" element={<CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute>} />
 
-      {/* Employee Authentication (HRMS & Finance Suite) */}
-      <Route path="/employee/login" element={<EmployeeLoginPage />} />
-      <Route path="/employee-login" element={<EmployeeLoginPage />} />
-      <Route path="/hrms/login" element={<EmployeeLoginPage />} />
+        {/* Employee Authentication (HRMS & Finance Suite) */}
+        <Route path="/employee/login" element={<EmployeeLoginPage />} />
+        <Route path="/employee-login" element={<EmployeeLoginPage />} />
+        <Route path="/hrms/login" element={<EmployeeLoginPage />} />
 
-      {/* Administrator Authentication & Console (Isolated at /admin) */}
-      <Route path="/admin/login" element={<AdminLoginPage />} />
-      <Route path="/admin-login" element={<AdminLoginPage />} />
-      <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-      <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-      <Route path="/admin/*" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-    <OxooAgentWidget />
-  </>
+        {/* Administrator Authentication & Console (Isolated at /admin) */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin-login" element={<AdminLoginPage />} />
+        <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+        <Route path="/admin/*" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <OxooAgentWidget />
+    </>
   );
 }
 

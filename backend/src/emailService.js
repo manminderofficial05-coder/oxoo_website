@@ -140,7 +140,12 @@ async function sendMailWithFallback(mailOptions) {
         return { success: true, messageId: res.messageId, port: 443, provider: 'brevo' };
       }
     } catch (bErr) {
-      console.warn(`[EmailService] Brevo HTTPS API attempt failed (${bErr.message}). Trying Brevo SMTP relay...`);
+      if (bErr.message && bErr.message.includes('unrecognised IP address')) {
+        console.error(`\x1b[31m[EmailService:CRITICAL] Brevo IP Authorization Block!\x1b[0m ${bErr.message}`);
+        console.error(`\x1b[33m=> To fix: Add your IP to https://app.brevo.com/security/authorised_ips or disable the Authorized IPs restriction.\x1b[0m`);
+      } else {
+        console.warn(`[EmailService] Brevo HTTPS API attempt failed (${bErr.message}). Trying Brevo SMTP relay...`);
+      }
     }
   }
 
@@ -1208,6 +1213,500 @@ async function sendInquiryConfirmationEmail({ to, contactPerson, companyName, in
   }
 }
 
+// -------------------------------------------------------------
+// Live Demo Request Notification Email (Sales/Support + Visitor)
+// -------------------------------------------------------------
+async function sendDemoRequestNotificationEmail({
+  requestRef,
+  fullName,
+  email,
+  phone,
+  companyName,
+  companyWebsite,
+  companySize,
+  demoId,
+  demoLabel,
+  preferredDate,
+  preferredTime,
+  requirements
+}) {
+  const normEmail = (email || '').trim().toLowerCase();
+  if (!normEmail) return { success: false, error: 'Visitor email is required' };
+
+  const safeName = (fullName || 'Visitor').trim();
+  const safeCompany = (companyName || '').trim();
+  const safePhone = (phone || '').trim();
+  const safeWebsite = (companyWebsite || 'Not provided').trim();
+  const safeSize = (companySize || 'Not specified').trim();
+  const safeDemoLabel = (demoLabel || demoId || 'OXOO Live Demo').trim();
+  const safeDate = (preferredDate || 'Flexible').trim();
+  const safeTime = (preferredTime || 'Flexible').trim();
+  const safeNotes = (requirements || 'None provided').trim();
+  const safeRef = (requestRef || 'DEMO-2026').trim();
+
+  const salesTeamRecipient = (
+    process.env.SALES_NOTIFICATION_EMAIL ||
+    process.env.SUPPORT_EMAIL ||
+    process.env.EMAIL_USER ||
+    'hello@oxoo.ai'
+  ).trim();
+
+  const salesSubject = `[New Live Demo Request] ${safeDemoLabel} — ${safeCompany} (${safeRef})`;
+  const salesHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${salesSubject}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <tr>
+      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
+        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">New OXOO.ai Live Demo Request</h2>
+        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Demo: ${safeDemoLabel}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">A visitor has requested access to the <strong>${safeDemoLabel}</strong> live demo and personalized walkthrough:</p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 16px 0;">
+          <table width="100%" style="font-size: 13px; color: #334155;">
+            <tr><td style="padding: 5px 0; font-weight: 700; width: 160px;">Full Name:</td><td>${safeName}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Business Email:</td><td>${normEmail}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Phone Number:</td><td>${safePhone}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Company Name:</td><td>${safeCompany}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Company Website:</td><td>${safeWebsite}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Company Size:</td><td>${safeSize}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Interested Demo:</td><td>${safeDemoLabel}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Preferred Date:</td><td>${safeDate}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Preferred Time:</td><td>${safeTime}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700; vertical-align: top;">Requirements:</td><td>${safeNotes}</td></tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    // 1. Notify Sales / Support Team
+    const salesInfo = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: salesTeamRecipient,
+      subject: salesSubject,
+      html: salesHtml
+    });
+
+    // 2. Send Visitor Confirmation
+    await sendInquiryConfirmationEmail({
+      to: normEmail,
+      contactPerson: safeName,
+      companyName: safeCompany,
+      inquiryRef: safeRef,
+      category: 'Live Demo Request',
+      productName: safeDemoLabel,
+      selectedPlan: safeSize !== 'Not specified' ? `Company Size: ${safeSize}` : 'Live Interactive Demo'
+    });
+
+    return { success: true, messageId: salesInfo?.messageId || `mock-${Date.now()}` };
+  } catch (err) {
+    console.error(`[EmailService] Failed to send demo request notification:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Send notification to OXOO Sales/Projects team and confirmation to customer
+ * when a new Project Request is submitted.
+ */
+async function sendProjectRequestNotificationEmail({
+  requestId,
+  customerName,
+  businessEmail,
+  phoneNumber,
+  companyName,
+  country,
+  selectedCategories,
+  selectedServices,
+  projectTitle,
+  projectDescription,
+  budgetRange,
+  preferredStartDate,
+  expectedCompletionDate
+}) {
+  const normEmail = (businessEmail || '').toLowerCase().trim();
+  const safeRef = (requestId || 'PRJ-2026').trim();
+  const safeName = (customerName || 'Valued Client').trim();
+  const safeCompany = (companyName || 'Organization').trim();
+  const safeTitle = (projectTitle || 'Custom Digital Solution').trim();
+  const safeCats = Array.isArray(selectedCategories) && selectedCategories.length > 0 ? selectedCategories.join(', ') : 'General';
+  const safeSvcs = Array.isArray(selectedServices) && selectedServices.length > 0 ? selectedServices.join(', ') : 'Custom Scope';
+
+  const teamRecipient = (
+    process.env.SALES_NOTIFICATION_EMAIL ||
+    process.env.SUPPORT_EMAIL ||
+    process.env.EMAIL_USER ||
+    'hello@oxoo.ai'
+  ).trim();
+
+  const teamSubject = `[New Project Request] ${safeRef} — ${safeTitle} (${safeCompany})`;
+  const teamHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${teamSubject}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <tr>
+      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
+        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">New OXOO.ai Project Request</h2>
+        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: ${safeRef} · Company: ${safeCompany}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">A new project enquiry has been submitted through the OXOO.ai Projects Hub:</p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 16px 0;">
+          <table width="100%" style="font-size: 13px; color: #334155;">
+            <tr><td style="padding: 5px 0; font-weight: 700; width: 170px;">Reference ID:</td><td><strong>${safeRef}</strong></td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Customer Name:</td><td>${safeName}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Business Email:</td><td>${normEmail}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Phone:</td><td>${phoneNumber || 'Not provided'}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Company & Country:</td><td>${safeCompany} (${country || 'Global'})</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Categories:</td><td>${safeCats}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Selected Services:</td><td>${safeSvcs}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Project Title:</td><td>${safeTitle}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Budget Range:</td><td>${budgetRange || 'Flexible / To be discussed'}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Timeline:</td><td>Start: ${preferredStartDate || 'Flexible'} · Target: ${expectedCompletionDate || 'Flexible'}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700; vertical-align: top;">Summary:</td><td>${projectDescription || ''}</td></tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const customerSubject = `Project Request Received — ${safeRef} | OXOO.ai`;
+  const customerHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${customerSubject}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.04);">
+    <tr>
+      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
+        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">We've Received Your Project Request</h2>
+        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: <strong>${safeRef}</strong></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">Hi <strong>${safeName}</strong>,</p>
+        <p>Thank you for submitting your project request to <strong>OXOO.ai</strong>. Our solutions architects and engineering team are reviewing your project requirements.</p>
+
+        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 20px 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Your Submitted Project Details</h3>
+        
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 12px 0 20px 0;">
+          <table width="100%" style="font-size: 13.5px; color: #334155; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; font-weight: 700; width: 170px; color: #64748b;">Reference ID:</td><td style="padding: 6px 0; font-weight: 800; color: #0284c7;">${safeRef}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Full Name:</td><td style="padding: 6px 0;">${safeName}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Email Address:</td><td style="padding: 6px 0;">${normEmail}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Phone Number:</td><td style="padding: 6px 0;">${phoneNumber || 'Not provided'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Country:</td><td style="padding: 6px 0;">${country || 'Global'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Project Title:</td><td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${safeTitle}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Selected Services:</td><td style="padding: 6px 0;"><span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 600;">${safeSvcs}</span></td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Service Categories:</td><td style="padding: 6px 0;">${safeCats}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Budget Range:</td><td style="padding: 6px 0;">${budgetRange || 'Flexible / To be discussed'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Estimated Timeline:</td><td style="padding: 6px 0;">Start: ${preferredStartDate || 'Flexible'} · Target: ${expectedCompletionDate || 'Flexible'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b; vertical-align: top;">Project Brief:</td><td style="padding: 6px 0; line-height: 1.5;">${(projectDescription || '').replace(/\n/g, '<br/>')}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Current Status:</td><td style="padding: 6px 0; font-weight: 700; color: #0284c7;">New (Under Architecture Review)</td></tr>
+          </table>
+        </div>
+
+        <!-- Direct change / assistance box -->
+        <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 16px; margin: 20px 0;">
+          <h4 style="margin: 0 0 6px 0; color: #166534; font-size: 14px; font-weight: 700;">Need to change or update anything?</h4>
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #15803d; line-height: 1.5;">
+            If you want to update any details, add more requirements, adjust your timeline, or connect with our engineering team, reach out directly:
+          </p>
+          <table width="100%" style="font-size: 13px; color: #166534;">
+            <tr><td style="padding: 3px 0; width: 140px; font-weight: 700;">• Direct Reply:</td><td>Simply reply directly to this email with your updates.</td></tr>
+            <tr><td style="padding: 3px 0; font-weight: 700;">• Email Us:</td><td><a href="mailto:hello@oxoo.ai" style="color: #0284c7; font-weight: 600; text-decoration: underline;">hello@oxoo.ai</a></td></tr>
+            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 79 4050 0100</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
+          </table>
+        </div>
+
+        <p style="margin: 20px 0 0 0; font-size: 13px; color: #64748b;">
+          A dedicated specialist from our team will reach out within 1 business day with architecture recommendations and a transparent proposal.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 16px 30px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+        © 2026 OXOO.ai Inc. Bengaluru, India · One Platform. Every Business Workflow.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const teamInfo = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: teamRecipient,
+      subject: teamSubject,
+      html: teamHtml
+    });
+    let custInfo = null;
+    if (normEmail) {
+      custInfo = await sendMailWithFallback({
+        from: DEFAULT_FROM,
+        to: normEmail,
+        subject: customerSubject,
+        html: customerHtml
+      });
+    }
+    const isRealDelivery = Boolean(
+      teamInfo?.messageId && !String(teamInfo.messageId).startsWith('mock-id-')
+    );
+    return {
+      success: true,
+      delivered: isRealDelivery,
+      messageId: custInfo?.messageId || teamInfo?.messageId || null
+    };
+  } catch (err) {
+    console.error('[EmailService] sendProjectRequestNotificationEmail error:', err.message);
+    return { success: false, delivered: false, error: err.message };
+  }
+}
+
+/**
+ * Send notification when a Consultation Call Request is submitted or updated.
+ */
+async function sendConsultationRequestNotificationEmail({
+  requestId,
+  customerName,
+  businessEmail,
+  phoneNumber,
+  companyName,
+  country,
+  preferredContactMethod,
+  preferredDate,
+  preferredTime,
+  selectedServices,
+  projectSummary
+}) {
+  const normEmail = (businessEmail || '').toLowerCase().trim();
+  const safeRef = (requestId || 'CNS-2026').trim();
+  const safeName = (customerName || 'Valued Client').trim();
+  const safeCompany = (companyName || 'Organization').trim();
+  const safeSvcs = Array.isArray(selectedServices) && selectedServices.length > 0 ? selectedServices.join(', ') : 'General Consultation';
+
+  const teamRecipient = (
+    process.env.SALES_NOTIFICATION_EMAIL ||
+    process.env.SUPPORT_EMAIL ||
+    process.env.EMAIL_USER ||
+    'hello@oxoo.ai'
+  ).trim();
+
+  const teamSubject = `[New Consultation Request] ${safeRef} — ${safeName} (${safeCompany})`;
+  const teamHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${teamSubject}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <tr>
+      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
+        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">New Consultation Call Request</h2>
+        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Company: ${safeCompany}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 26px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">A customer has requested a consultation call via the OXOO.ai Projects page:</p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 16px 0;">
+          <table width="100%" style="font-size: 13px; color: #334155;">
+            <tr><td style="padding: 5px 0; font-weight: 700; width: 170px;">Reference ID:</td><td><strong>${safeRef}</strong></td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Customer:</td><td>${safeName} (${normEmail})</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Phone:</td><td>${phoneNumber || 'Not provided'}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Company & Country:</td><td>${safeCompany} (${country || 'Global'})</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Contact Method:</td><td>${preferredContactMethod || 'Phone / Video'}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Requested Slot:</td><td>${preferredDate ? `${preferredDate} ${preferredTime || ''}` : 'Flexible / Earliest available'}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700;">Selected Services:</td><td>${safeSvcs}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: 700; vertical-align: top;">Project Summary:</td><td>${projectSummary || ''}</td></tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const customerSubject = `Consultation Request Received — ${safeRef} | OXOO.ai`;
+  const customerHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${customerSubject}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.04);">
+    <tr>
+      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
+        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Consultation Call Request Received</h2>
+        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: <strong>${safeRef}</strong></p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">Hi <strong>${safeName}</strong>,</p>
+        <p>Thank you for requesting a consultation call with <strong>OXOO.ai</strong>. We have logged your appointment request and our solutions specialist is preparing for your session.</p>
+
+        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 20px 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Your Consultation Request Details</h3>
+        
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 12px 0 20px 0;">
+          <table width="100%" style="font-size: 13.5px; color: #334155; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; font-weight: 700; width: 170px; color: #64748b;">Reference ID:</td><td style="padding: 6px 0; font-weight: 800; color: #0284c7;">${safeRef}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Full Name:</td><td style="padding: 6px 0;">${safeName}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Email Address:</td><td style="padding: 6px 0;">${normEmail}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Phone Number:</td><td style="padding: 6px 0;">${phoneNumber || 'Not provided'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Country:</td><td style="padding: 6px 0;">${country || 'Global'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Contact Method:</td><td style="padding: 6px 0; font-weight: 600;">${preferredContactMethod || 'Phone / Video Call'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Requested Slot:</td><td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${preferredDate ? `${preferredDate} · ${preferredTime || '10:00 AM – 10:30 AM'}` : 'Flexible / Earliest available'}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Selected Services:</td><td style="padding: 6px 0;"><span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 600;">${safeSvcs}</span></td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b; vertical-align: top;">Project Brief:</td><td style="padding: 6px 0; line-height: 1.5;">${(projectSummary || 'Discussion of digital project requirements').replace(/\n/g, '<br/>')}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Appointment Status:</td><td style="padding: 6px 0; color: #d97706; font-weight: 700;">Pending Confirmation by Team</td></tr>
+          </table>
+        </div>
+
+        <!-- Direct change / reschedule box -->
+        <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 16px; margin: 20px 0;">
+          <h4 style="margin: 0 0 6px 0; color: #166534; font-size: 14px; font-weight: 700;">Need to reschedule or update your details?</h4>
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #15803d; line-height: 1.5;">
+            If you need to change your appointment slot, update your contact number, or modify your project requirements, connect directly with our team:
+          </p>
+          <table width="100%" style="font-size: 13px; color: #166534;">
+            <tr><td style="padding: 3px 0; width: 140px; font-weight: 700;">• Direct Reply:</td><td>Simply reply directly to this email with your preferred new date/time or notes.</td></tr>
+            <tr><td style="padding: 3px 0; font-weight: 700;">• Email Us:</td><td><a href="mailto:hello@oxoo.ai" style="color: #0284c7; font-weight: 600; text-decoration: underline;">hello@oxoo.ai</a></td></tr>
+            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 79 4050 0100</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
+          </table>
+        </div>
+
+        <p style="margin: 20px 0 0 0; font-size: 13px; color: #64748b;">
+          Our team will send you a calendar invite and confirmation as soon as your slot is confirmed.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 16px 30px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+        © 2026 OXOO.ai Inc. Bengaluru, India · One Platform. Every Business Workflow.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const teamInfo = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: teamRecipient,
+      subject: teamSubject,
+      html: teamHtml
+    });
+    if (normEmail) {
+      await sendMailWithFallback({
+        from: DEFAULT_FROM,
+        to: normEmail,
+        subject: customerSubject,
+        html: customerHtml
+      });
+    }
+    const isRealDelivery = Boolean(
+      teamInfo?.messageId && !String(teamInfo.messageId).startsWith('mock-id-')
+    );
+    return {
+      success: true,
+      delivered: isRealDelivery,
+      messageId: teamInfo?.messageId || null
+    };
+  } catch (err) {
+    console.error('[EmailService] sendConsultationRequestNotificationEmail error:', err.message);
+    return { success: false, delivered: false, error: err.message };
+  }
+}
+
+/**
+ * Send an email to the customer when an admin updates their Project/Consultation status
+ * or requests additional information.
+ */
+async function sendProjectStatusUpdateEmail({
+  to,
+  customerName,
+  requestId,
+  newStatus,
+  messageToCustomer,
+  confirmedDate,
+  confirmedTime,
+  meetingLink
+}) {
+  const normEmail = (to || '').toLowerCase().trim();
+  if (!normEmail) return { success: false, delivered: false };
+  const safeName = (customerName || 'Valued Client').trim();
+  const safeRef = (requestId || 'PRJ-2026').trim();
+
+  const subject = `Update on Your OXOO.ai Request (${safeRef}) — ${newStatus}`;
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${subject}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <tr>
+      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
+        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">OXOO.ai Request Update</h2>
+        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Status: ${newStatus}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 26px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
+        <p style="margin-top: 0;">Hi <strong>${safeName}</strong>,</p>
+        <p>Your OXOO.ai request <strong>${safeRef}</strong> has been updated to: <strong>${newStatus}</strong>.</p>
+        ${
+          confirmedDate
+            ? `<div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px; margin: 14px 0;">
+                <p style="margin: 0 0 4px 0;"><strong>Confirmed Consultation Date:</strong> ${confirmedDate} ${confirmedTime || ''}</p>
+                ${meetingLink ? `<p style="margin: 0;"><strong>Meeting Link:</strong> <a href="${meetingLink}" style="color: #0284c7;">${meetingLink}</a></p>` : ''}
+              </div>`
+            : ''
+        }
+        ${
+          messageToCustomer
+            ? `<div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 16px; margin: 16px 0;">
+                <p style="margin: 0; font-size: 13px; color: #0f172a;"><strong>Message from OXOO.ai Team:</strong><br/>${messageToCustomer}</p>
+              </div>`
+            : ''
+        }
+        <p style="margin-bottom: 0;">If you have any questions or additional details to share, simply reply to this email or contact us at <a href="mailto:hello@oxoo.ai" style="color: #0284c7;">hello@oxoo.ai</a>.</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const info = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: normEmail,
+      subject,
+      html
+    });
+    const isRealDelivery = Boolean(info?.messageId && !String(info.messageId).startsWith('mock-id-'));
+    return { success: true, delivered: isRealDelivery, messageId: info?.messageId || null };
+  } catch (err) {
+    console.error('[EmailService] sendProjectStatusUpdateEmail error:', err.message);
+    return { success: false, delivered: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendOtpEmail,
   verifyOtp,
@@ -1217,5 +1716,9 @@ module.exports = {
   sendAdminSubscriptionDueEmail,
   sendTicketAcknowledgementEmail,
   sendInquiryConfirmationEmail,
+  sendDemoRequestNotificationEmail,
+  sendProjectRequestNotificationEmail,
+  sendConsultationRequestNotificationEmail,
+  sendProjectStatusUpdateEmail,
   sendMailWithFallback
 };

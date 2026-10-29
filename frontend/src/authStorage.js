@@ -119,6 +119,48 @@ export const authStorage = {
       localStorage.removeItem('oxoo_admin_token');
       localStorage.removeItem('oxoo_admin_user');
     } catch (e) {}
+  },
+
+  // -------------------------------------------------------------
+  // Region & Indian Account Restriction Helpers
+  // -------------------------------------------------------------
+  getActiveClientCountry: () => {
+    try {
+      return (
+        sessionStorage.getItem('oxoo_active_country') ||
+        localStorage.getItem('oxoo_selected_country') ||
+        sessionStorage.getItem('oxoo_detected_country') ||
+        'IN'
+      ).toUpperCase();
+    } catch (e) {
+      return 'IN';
+    }
+  },
+
+  isOutsideIndia: () => {
+    const code = authStorage.getActiveClientCountry();
+    return Boolean(code && code !== 'IN' && code !== 'INDIA');
+  },
+
+  isIndianAccount: (userOrEmail) => {
+    if (!userOrEmail) return false;
+    if (typeof userOrEmail === 'string') {
+      const em = userOrEmail.trim().toLowerCase();
+      return em === 'priya@retailmart.in' || em.endsWith('.in');
+    }
+    if (userOrEmail.role === 'admin' || userOrEmail.role === 'super_admin') {
+      return false;
+    }
+    if (userOrEmail.isIndianAccount === true) return true;
+    if (userOrEmail.isIndianAccount === false) return false;
+    const ctry = String(userOrEmail.country || userOrEmail.pricingRegion || '').trim().toUpperCase();
+    const curr = String(userOrEmail.currency || '').trim().toUpperCase();
+    const email = String(userOrEmail.email || '').trim().toLowerCase();
+    if (ctry && ctry !== 'IN' && ctry !== 'INDIA') return false;
+    if (curr && curr !== 'INR') return false;
+    if (ctry === 'IN' || ctry === 'INDIA' || curr === 'INR') return true;
+    if (email === 'priya@retailmart.in' || email.endsWith('.in')) return true;
+    return false;
   }
 };
 

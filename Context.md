@@ -465,4 +465,69 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
    - Subscription renewal payment is strictly enabled only when 5 or fewer days remain before the subscription's expiration date (`daysRemaining <= 5`).
    - If more than 5 days remain, the renewal payment button is locked with countdown notifications on both frontend and backend.
 
+---
 
+## 13. OXOO.ai 5-Column Footer & Live Demo Request Flow
+
+1. **5-Column Footer (`frontend/src/components.jsx`, `frontend/src/styles.css`):**
+   - **Column 1 (Brand & Contact):** OXOO.ai logo, tagline (`"One Platform. Every Business Workflow."`), description, phone (`+91 79 4050 0100`), email (`hello@oxoo.ai`), location (`Bengaluru, India`), and 5 official SVG brand icons (`LinkedIn`, `Instagram`, `YouTube`, `Facebook`, `X`). Excludes GitHub and third-party build credits.
+   - **Column 2 (Solutions):** Links to `/services`, `/apps/crm`, `/apps/accounting`, `/apps/hr`, `/apps/inventory`, `/services?category=Supply%20Chain`, `/apps/ai`, `/apps/website`.
+   - **Column 3 (Live Demos):** 6 demo categories (`Productivity & AI`, `Sales & CRM`, `Human Resources`, `Finance & GST`, `Supply Chain & Operations`, `Website Builder`). Clicking any link stores the selected demo ID and navigates to `/request-demo`.
+   - **Column 4 (Company & Plans):** Links to `/pricing`, `/help`, `/help-form`, `/request-demo`, `/contact`, `/about`, `/careers`, `/partners`.
+   - **Column 5 (CTA Card):** Pale-blue card with `"LET'S GROW TOGETHER"`, `"Ready to transform your business?"`, and `"Book a Demo →"` button.
+   - **Bottom Bar:** Copyright, legal & trust links (`/privacy-policy`, `/terms`, `/security`, `/compliance` labeled `"Security & Compliance"` unless ISO/IEC 27001 certification is verified in `frontend/src/legalConfig.js`), and a live health indicator connected to `GET /api/health` (displayed only when backend health status is verified).
+2. **4 Legal & Trust Pages (`frontend/src/legalConfig.js`, `frontend/src/InfoPages.jsx`):**
+   - `/privacy-policy` (17 sections), `/terms` (19 sections), `/security` (10 sections), and `/compliance` (8 sections) with sticky desktop Table of Contents, collapsible mobile Table of Contents, 4-tab document switcher, accessible heading hierarchy, and configurable legal entity/address/contact/certification metadata.
+3. **Central Demo Routing & 4-Step Live Demo Flow (`frontend/src/demoConfig.js`, `frontend/src/RequestDemoPage.jsx`, `POST /api/demo-requests`):**
+   - Strictly validates demo identifiers (`productivity-ai`, `sales-crm`, `human-resources`, `finance-gst`, `supply-chain`, `website-builder`) against internal routes (`/demo/ai-demo`, `/demo/sales-demo`, `/demo/hrms-demo`, `/demo/finance-demo`, `/demo/supply-chain-demo`, `/demo/website-builder-demo`), preventing open-redirect injection.
+   - Validates all required fields (`Full Name`, `Business Email`, `Phone Number` with country code, `Company Name`, `Interested Product/Demo`, `Privacy Policy acknowledgement`) on both frontend and backend, stores requests in PostgreSQL (`demo_inquiries` and `leads`), notifies sales/support via `sendDemoRequestNotificationEmail`, and reveals the `"Continue to Demo"` button only after confirmed submission.
+4. **Client Location Detection, USD Pricing Outside India & Indian Account Region Lock (`frontend/src/pricingConfig.js`, `backend/src/pricingConfig.js`, `frontend/src/RegionPricingContext.jsx`, `frontend/src/authStorage.js`, `frontend/src/components.jsx`, `frontend/src/CustomerLoginPage.jsx`, `frontend/src/CheckoutPage.jsx`, `backend/src/server.js`):**
+   - **Header Location & Currency Pill**: Automatically detects the visitor's country on website load (via `/api/geo/detect`, direct client IP lookup `api.country.is`, and browser IANA timezone) and displays a crisp flag badge (`CountryFlagBadge`) + country code + currency (`INR ₹` in India, `USD $` everywhere outside India).
+   - **Global USD Pricing Outside India**: Inside India (`IN`), prices are shown and billed in `INR ₹`. Anywhere outside India (`countryCode !== 'IN'`), all plans and checkout steps display and bill in **US Dollars (`USD $`)** (`$20/yr`, `$25/mo` Standard Pack; `$40/yr`, `$50/mo` Custom Pack) while preserving the visitor's detected country indicator.
+   - **Indian Account Restriction Outside India**: Customer accounts registered in India (`INR ₹` / `country = 'India'`) are blocked from logging in, accessing the customer dashboard, or purchasing from outside India (`HTTP 403 INDIAN_ACCOUNT_OUTSIDE_INDIA`).
+
+
+
+
+---
+
+## 14. Unified Projects Hub, Service Catalogue & Project Request Management
+
+1. **Navbar & Projects Mega Menu (`frontend/src/components.jsx`, `frontend/src/projectsConfig.js`, `frontend/src/styles.css`):**
+   - Replaces `Industries` in the main navbar with `Projects` (while preserving the `/industries` route).
+   - Opens a 3-column mega menu with 18 selectable services across:
+     - **A. Websites & Apps:** `AI Website Builder`, `Android & iOS Apps`, `eCommerce Websites`, `3D Websites`, `AI Chatbots`, `Web Apps & Other`
+     - **B. Marketing:** `Social Marketing`, `Email Marketing`, `SMS Marketing`, `Marketing Automation`, `WhatsApp Marketing`, `Surveys`
+     - **C. WhatsApp Chat AI:** `WhatsApp AI Inbox`, `WhatsApp Marketing & Broadcasts`, `WhatsApp Flow Builder`, `WhatsApp Commerce`, `WhatsApp Booking & Reminders`, `WhatsApp Integrations & Settings`
+   - Clicking any service navigates to `/projects?service=<slug>&action=start` and pre-selects the service in the project request flow.
+2. **Projects Landing Page (`/projects` — `frontend/src/ProjectsPage.jsx`, `frontend/src/projects.css`):**
+   - **Hero Section:** `"Turn Your Ideas Into Powerful Digital Solutions."` with `Start Your Project` and `Talk to Our Team` actions and a multi-device digital studio showcase.
+   - **Multi-Service Selection:** Visitors can select one or multiple services across all 3 categories (`sessionStorage` key `oxoo_selected_project_services`).
+   - **Option A — Request a Consultation Call (`Talk to Our Team`):** Captures contact details, preferred contact method, optional preferred date/time (checked against live slot availability via `GET /api/projects/consultation-slots`), selected services, and project summary (`POST /api/projects/consultations`, generating `CNS-2026-XXXXXX`), plus direct `Call Now` (`tel:+917940500100`).
+   - **Option B — Submit a Project Request (`Fill Project Requirements`):** 4-Step wizard (`Step 1: Contact Details`, `Step 2: Select Services`, `Step 3: Project Requirements & Reference File Upload`, `Step 4: Review & Submit` with privacy consent) submitting to `POST /api/projects/requests` (`PRJ-2026-XXXXXX`).
+3. **Super Admin Project Management Module (`frontend/src/components/admin/ProjectManagementModule.jsx`, `backend/src/projectRoutes.js`):**
+   - Protected by `requireAdminAuth` under `/api/admin/projects/*`, separate from Demo Inquiries and Support Tickets.
+   - Displays 6 live database KPI summary cards (`Total Project Requests`, `New Requests`, `Under Review`, `Proposals Sent`, `Consultation Requests`, `Confirmed Consultations`).
+   - **Section A (Project Requests):** Full view, secure attachment download (`/api/admin/projects/attachments/:attachmentId`), team member assignment, private `internal_notes`, status workflow (`New` through `Completed`/`Archived`), customer email updates, linked consultation creation, and CSV export (`/api/admin/projects/requests/export/csv`).
+   - **Section B (Consultation Requests):** Full view, specialist assignment, status updates, and appointment confirmation/rescheduling/cancellation with conflict checks and `appointment_history` tracking.
+
+---
+
+## 15. Customer Details Email Notification, Sticky Scope Auto-Clear & Footer Logo Branding
+
+1. **Rich Customer Confirmation Emails (`backend/src/emailService.js`):**
+   - **Project Request Confirmation:** When submitted via `/api/projects/requests`, dispatches a comprehensive HTML summary to the customer (`business_email`) containing all submitted details (Reference ID, Full Name, Email, Phone, Country, Project Title, Selected Services & Categories, Budget Range, Timeline, Brief, and Architecture Review status).
+   - **Consultation Call Confirmation:** When submitted via `/api/projects/consultations`, dispatches a full appointment summary to the customer (`business_email`) containing Reference ID, Full Name, Email, Phone, Country, Contact Method, Requested Date & Time Slot, Selected Services, Brief, and Appointment Status.
+   - **Direct Team Contact & Change Notice:** Both customer emails include a dedicated callout banner explaining that if the customer wishes to make any updates, add details, or reschedule, they can:
+     - Directly reply to the email
+     - Email `hello@oxoo.ai`
+     - Call direct phone support at `+91 79 4050 0100` (Mon–Fri, 9 AM–7 PM IST).
+2. **Sticky Scope Bar Auto-Clear on Submission & Option Card Order (`frontend/src/ProjectsPage.jsx`):**
+   - Immediately clears `selectedServices` (`setSelectedServices([])`) and flushes `sessionStorage` upon successful submission of either a Project Request or a Consultation Call.
+   - Explicitly hides the sticky upper scope bar when in confirmation view (`!submittedProjectResult && !submittedConsultResult`).
+   - Reordered engagement mode switcher cards so **Option A · Discovery Call (`Request a Consultation Call`)** is first on the left, and **Option B · Structured Brief (`Submit a Project Request`)** is second on the right. Defaults `activeMode` to `'consultation'` on initial load.
+3. **Footer Logo `.ai` Removal (`frontend/src/components.jsx`, `frontend/src/styles.css`):**
+   - Removed `.ai` text suffix (`.oxoo-footer-logo-ai`) from the footer logo link in Column 1, displaying only the clean `OXOO` brand logo.
+4. **Project Form Date Removal & Location-Aware Single-Currency Budget (`frontend/src/ProjectsPage.jsx`, `frontend/src/projectsConfig.js`):**
+   - Removed "Preferred Project Start Date" and "Expected Completion Date (if known)" date input fields from Option B project wizard.
+   - Connected the Estimated Budget Range dropdown to `useRegionPricing()`: visitors located in India see only Indian Rupees (`₹`), while visitors located outside India see only US Dollars (`$`), without displaying combined currency pairs (`$ / ₹`).

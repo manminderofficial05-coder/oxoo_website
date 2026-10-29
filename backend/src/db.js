@@ -1961,6 +1961,192 @@ async function initDb() {
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS idx_agent_events_type ON agent_events(event_type);
+
+        -- 19. Unified Projects Hub & Consultation Management Tables
+        CREATE TABLE IF NOT EXISTS project_requests (
+          id SERIAL PRIMARY KEY,
+          request_id VARCHAR(40) NOT NULL UNIQUE,
+          customer_name VARCHAR(255) NOT NULL,
+          business_email VARCHAR(255) NOT NULL,
+          phone_number VARCHAR(100) NOT NULL,
+          company_name VARCHAR(255) NOT NULL,
+          company_website VARCHAR(255) DEFAULT '',
+          country VARCHAR(120) NOT NULL,
+          industry VARCHAR(120) DEFAULT '',
+          company_size VARCHAR(80) DEFAULT '',
+          selected_categories JSONB DEFAULT '[]'::jsonb,
+          selected_services JSONB DEFAULT '[]'::jsonb,
+          project_title VARCHAR(255) NOT NULL,
+          project_description TEXT NOT NULL,
+          business_problem TEXT DEFAULT '',
+          required_features TEXT DEFAULT '',
+          target_audience TEXT DEFAULT '',
+          preferred_technology VARCHAR(255) DEFAULT '',
+          existing_url VARCHAR(500) DEFAULT '',
+          reference_websites TEXT DEFAULT '',
+          design_preferences TEXT DEFAULT '',
+          expected_deliverables TEXT DEFAULT '',
+          preferred_start_date VARCHAR(100) DEFAULT '',
+          expected_completion_date VARCHAR(100) DEFAULT '',
+          budget_range VARCHAR(120) DEFAULT '',
+          additional_requirements TEXT DEFAULT '',
+          attachments_meta JSONB DEFAULT '[]'::jsonb,
+          consent_accepted BOOLEAN DEFAULT true,
+          assigned_team_member VARCHAR(255) DEFAULT 'Unassigned',
+          status VARCHAR(80) DEFAULT 'New',
+          internal_notes JSONB DEFAULT '[]'::jsonb,
+          status_history JSONB DEFAULT '[]'::jsonb,
+          notification_delivered BOOLEAN DEFAULT false,
+          source_ip VARCHAR(100) DEFAULT '',
+          submission_date TIMESTAMPTZ DEFAULT NOW(),
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS business_email VARCHAR(255) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS phone_number VARCHAR(100) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS company_name VARCHAR(255) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS company_website VARCHAR(255) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS country VARCHAR(120) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS industry VARCHAR(120) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS company_size VARCHAR(80) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS selected_categories JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS selected_services JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS project_title VARCHAR(255) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS project_description TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS business_problem TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS required_features TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS target_audience TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS preferred_technology VARCHAR(255) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS existing_url VARCHAR(500) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS reference_websites TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS design_preferences TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS expected_deliverables TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS preferred_start_date VARCHAR(100) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS expected_completion_date VARCHAR(100) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS budget_range VARCHAR(120) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS additional_requirements TEXT DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS attachments_meta JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS consent_accepted BOOLEAN DEFAULT true;
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS assigned_team_member VARCHAR(255) DEFAULT 'Unassigned';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS status VARCHAR(80) DEFAULT 'New';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS internal_notes JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS status_history JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS notification_delivered BOOLEAN DEFAULT false;
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS source_ip VARCHAR(100) DEFAULT '';
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS submission_date TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        CREATE INDEX IF NOT EXISTS idx_proj_req_status ON project_requests(status);
+        CREATE INDEX IF NOT EXISTS idx_proj_req_email ON project_requests(business_email);
+        CREATE INDEX IF NOT EXISTS idx_proj_req_sub_date ON project_requests(submission_date DESC);
+
+        CREATE TABLE IF NOT EXISTS project_attachments (
+          id SERIAL PRIMARY KEY,
+          attachment_id VARCHAR(60) NOT NULL UNIQUE,
+          project_request_id VARCHAR(40) NOT NULL REFERENCES project_requests(request_id) ON DELETE CASCADE,
+          file_name VARCHAR(255) NOT NULL,
+          mime_type VARCHAR(120) NOT NULL,
+          size_bytes INTEGER NOT NULL,
+          content_base64 TEXT NOT NULL,
+          uploaded_by VARCHAR(255) DEFAULT '',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE project_attachments ADD COLUMN IF NOT EXISTS project_request_id VARCHAR(40);
+        ALTER TABLE project_attachments ADD COLUMN IF NOT EXISTS file_name VARCHAR(255) DEFAULT '';
+        ALTER TABLE project_attachments ADD COLUMN IF NOT EXISTS mime_type VARCHAR(120) DEFAULT '';
+        ALTER TABLE project_attachments ADD COLUMN IF NOT EXISTS size_bytes INTEGER DEFAULT 0;
+        ALTER TABLE project_attachments ADD COLUMN IF NOT EXISTS content_base64 TEXT DEFAULT '';
+        ALTER TABLE project_attachments ADD COLUMN IF NOT EXISTS uploaded_by VARCHAR(255) DEFAULT '';
+        CREATE INDEX IF NOT EXISTS idx_proj_att_req ON project_attachments(project_request_id);
+
+        CREATE TABLE IF NOT EXISTS consultation_requests (
+          id SERIAL PRIMARY KEY,
+          request_id VARCHAR(40) NOT NULL UNIQUE,
+          linked_project_request_id VARCHAR(40) DEFAULT NULL,
+          customer_name VARCHAR(255) NOT NULL,
+          business_email VARCHAR(255) NOT NULL,
+          phone_number VARCHAR(100) NOT NULL,
+          company_name VARCHAR(255) NOT NULL,
+          country VARCHAR(120) NOT NULL,
+          preferred_contact_method VARCHAR(80) DEFAULT 'Video Consultation (Google Meet / Zoom)',
+          preferred_date VARCHAR(40) DEFAULT '',
+          preferred_time VARCHAR(80) DEFAULT '',
+          confirmed_date VARCHAR(40) DEFAULT '',
+          confirmed_time VARCHAR(80) DEFAULT '',
+          meeting_link VARCHAR(500) DEFAULT '',
+          selected_categories JSONB DEFAULT '[]'::jsonb,
+          selected_services JSONB DEFAULT '[]'::jsonb,
+          project_summary TEXT NOT NULL,
+          assigned_team_member VARCHAR(255) DEFAULT 'Unassigned',
+          status VARCHAR(80) DEFAULT 'New',
+          internal_notes JSONB DEFAULT '[]'::jsonb,
+          appointment_history JSONB DEFAULT '[]'::jsonb,
+          notification_delivered BOOLEAN DEFAULT false,
+          source_ip VARCHAR(100) DEFAULT '',
+          submission_date TIMESTAMPTZ DEFAULT NOW(),
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS linked_project_request_id VARCHAR(40) DEFAULT NULL;
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS business_email VARCHAR(255) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS phone_number VARCHAR(100) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS company_name VARCHAR(255) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS country VARCHAR(120) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS preferred_contact_method VARCHAR(80) DEFAULT 'Phone Call';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS preferred_date VARCHAR(40) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS preferred_time VARCHAR(80) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS confirmed_date VARCHAR(40) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS confirmed_time VARCHAR(80) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS meeting_link VARCHAR(500) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS selected_categories JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS selected_services JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS project_summary TEXT DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS assigned_team_member VARCHAR(255) DEFAULT 'Unassigned';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS status VARCHAR(80) DEFAULT 'New';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS internal_notes JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS appointment_history JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS notification_delivered BOOLEAN DEFAULT false;
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS source_ip VARCHAR(100) DEFAULT '';
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS submission_date TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE consultation_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        DO $$
+        DECLARE
+          col_rec RECORD;
+        BEGIN
+          FOR col_rec IN
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'project_requests'
+              AND column_name IN ('full_name', 'email', 'phone', 'assigned_to')
+          LOOP
+            EXECUTE format('ALTER TABLE project_requests ALTER COLUMN %I SET DEFAULT %L', col_rec.column_name, '');
+            EXECUTE format('ALTER TABLE project_requests ALTER COLUMN %I DROP NOT NULL', col_rec.column_name);
+          END LOOP;
+          FOR col_rec IN
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'project_attachments'
+              AND column_name IN ('request_id', 'file_size_bytes', 'file_data_base64')
+          LOOP
+            EXECUTE format('ALTER TABLE project_attachments ALTER COLUMN %I DROP NOT NULL', col_rec.column_name);
+          END LOOP;
+          FOR col_rec IN
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'consultation_requests'
+              AND column_name IN ('full_name', 'email', 'phone', 'assigned_to')
+          LOOP
+            EXECUTE format('ALTER TABLE consultation_requests ALTER COLUMN %I SET DEFAULT %L', col_rec.column_name, '');
+            EXECUTE format('ALTER TABLE consultation_requests ALTER COLUMN %I DROP NOT NULL', col_rec.column_name);
+          END LOOP;
+        END $$;
+        CREATE INDEX IF NOT EXISTS idx_cons_req_status ON consultation_requests(status);
+        CREATE INDEX IF NOT EXISTS idx_cons_req_email ON consultation_requests(business_email);
+        CREATE INDEX IF NOT EXISTS idx_cons_req_slot ON consultation_requests(preferred_date, preferred_time);
+        CREATE INDEX IF NOT EXISTS idx_cons_req_sub_date ON consultation_requests(submission_date DESC);
       `);
     } catch (modErr) {
       console.error('Module upgrade schema seed error:', modErr.message);

@@ -11,7 +11,7 @@ import {
   Edit3, Trash2, Send, ExternalLink, Sliders, Server, Globe,
   Key, UserPlus, FileText, CheckCircle, AlertTriangle,
   Monitor, Laptop, MoreVertical, IndianRupee, PlayCircle,
-  ChevronLeft, ChevronRight, Copy, Sparkles, Inbox
+  ChevronLeft, ChevronRight, Copy, Sparkles, Inbox, FolderKanban
 } from 'lucide-react';
 import {
   getAdminMetrics, getAdminRevenueChart, getAdminGrowthChart,
@@ -40,6 +40,7 @@ import IntegrationsModule from './components/admin/IntegrationsModule';
 import SettingsModule from './components/admin/SettingsModule';
 import NeedsContactModule from './components/admin/NeedsContactModule';
 import DemoInquiriesModule from './components/admin/DemoInquiriesModule';
+import ProjectManagementModule from './components/admin/ProjectManagementModule';
 
 // Hook for smooth numerical count-up animation on KPI cards
 function useCountUp(target, duration = 1200) {
@@ -1430,6 +1431,15 @@ export default function AdminDashboard() {
             >
               <Inbox className="oxoo-nav-v2-icon" />
               <span>Demo & Website Inquiries</span>
+            </button>
+
+            <button
+              type="button"
+              className={`oxoo-nav-v2-btn ${activeTab === 'projects' ? 'active' : ''}`}
+              onClick={() => setActiveTab('projects')}
+            >
+              <FolderKanban className="oxoo-nav-v2-icon" />
+              <span>Project Management</span>
             </button>
 
             <button
@@ -7812,6 +7822,13 @@ export default function AdminDashboard() {
               ------------------------------------------------------- */}
           {activeTab === 'inquiries' && (
             <DemoInquiriesModule showToast={showToast} logAuditEvent={logAuditEvent} />
+          )}
+
+          {/* -------------------------------------------------------
+              16. PROJECT MANAGEMENT & CONSULTATION HUB
+              ------------------------------------------------------- */}
+          {activeTab === 'projects' && (
+            <ProjectManagementModule showToast={showToast} logAuditEvent={logAuditEvent} />
           )}
 
         </main>

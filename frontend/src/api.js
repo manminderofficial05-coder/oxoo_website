@@ -43,22 +43,54 @@ export async function submitSupportTicket(payload) {
   return data;
 }
 
-export async function loginUser(email, password) {
+export async function loginUser(email, password, clientCountryOverride) {
+  const activeCountry = (clientCountryOverride || authStorage.getActiveClientCountry() || 'IN').toUpperCase();
+  const isOutsideIndia = activeCountry !== 'IN' && activeCountry !== 'INDIA';
+  const emailNorm = String(email || '').trim().toLowerCase();
+
   try {
     const r = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-country': activeCountry
+      },
+      body: JSON.stringify({ email, password, clientCountry: activeCountry })
     });
     const data = await r.json().catch(() => ({}));
     if (r.ok && data.token) return data;
 
-    const emailNorm = String(email || '').trim().toLowerCase();
+    // Never fall back to demo token if server explicitly rejected due to region restriction or invalid credentials
+    if (r.status === 403 || data.code === 'INDIAN_ACCOUNT_OUTSIDE_INDIA') {
+      throw new Error(
+        data.message ||
+          'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+      );
+    }
+
+    if (r.status === 401) {
+      throw new Error(data.message || 'Invalid email, Storage ID, or password.');
+    }
+
     if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@oxoo.ai') &&
         (password === 'oxoo123' || password === 'demo123')) {
+      if (isOutsideIndia && (emailNorm === 'priya@retailmart.in' || emailNorm.endsWith('.in'))) {
+        throw new Error(
+          'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+        );
+      }
       return {
         token: 'demo-customer-jwt-token-77',
-        user: { id: 101, name: 'Priya Sharma', email: emailNorm, role: 'customer', organization: 'RetailMart Solutions' },
+        user: {
+          id: 101,
+          name: 'Priya Sharma',
+          email: emailNorm,
+          role: 'customer',
+          organization: 'RetailMart Solutions',
+          country: isOutsideIndia ? activeCountry : 'India',
+          currency: isOutsideIndia ? 'USD' : 'INR',
+          isIndianAccount: !isOutsideIndia
+        },
         message: 'Login successful as Customer.'
       };
     }
@@ -73,12 +105,28 @@ export async function loginUser(email, password) {
 
     throw new Error(data.message || 'Invalid email or password.');
   } catch (err) {
-    const emailNorm = String(email || '').trim().toLowerCase();
+    if (err.message && (err.message.includes('Access Restricted') || err.message.includes('Invalid'))) {
+      throw err;
+    }
     if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@oxoo.ai') &&
         (password === 'oxoo123' || password === 'demo123')) {
+      if (isOutsideIndia && (emailNorm === 'priya@retailmart.in' || emailNorm.endsWith('.in'))) {
+        throw new Error(
+          'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+        );
+      }
       return {
         token: 'demo-customer-jwt-token-77',
-        user: { id: 101, name: 'Priya Sharma', email: emailNorm, role: 'customer', organization: 'RetailMart Solutions' },
+        user: {
+          id: 101,
+          name: 'Priya Sharma',
+          email: emailNorm,
+          role: 'customer',
+          organization: 'RetailMart Solutions',
+          country: isOutsideIndia ? activeCountry : 'India',
+          currency: isOutsideIndia ? 'USD' : 'INR',
+          isIndianAccount: !isOutsideIndia
+        },
         message: 'Login successful as Customer.'
       };
     }
@@ -109,9 +157,11 @@ export function getAdminHeaders() {
 export function getCustomerHeaders() {
   const token = authStorage.getCustomerToken();
   const user = authStorage.getCustomerUser();
+  const activeCountry = authStorage.getActiveClientCountry();
 
   return {
     'Content-Type': 'application/json',
+    'x-client-country': activeCountry,
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(user?.email ? { 'x-user-email': user.email } : {}),
     ...(user?.organization ? { 'x-user-company': user.organization } : {})
@@ -178,10 +228,18 @@ export async function loginAdminUser(email, password) {
 }
 
 export async function registerUser(payload) {
+  const activeCountry = authStorage.getActiveClientCountry();
   const r = await fetch(`${API_URL}/api/auth/register`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-country': activeCountry
+    },
+    body: JSON.stringify({
+      ...payload,
+      country: payload?.country || activeCountry,
+      clientCountry: activeCountry
+    })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Unable to create account.');
@@ -204,19 +262,31 @@ export async function getAdminOverview() {
 export async function getCustomerOverview(params = {}) {
   try {
     const user = authStorage.getCustomerUser();
+    const activeCountry = authStorage.getActiveClientCountry();
 
     const email = params.email || user?.email || '';
     const company = params.company || user?.organization || '';
     const queryStr = new URLSearchParams();
     if (email) queryStr.set('email', email);
     if (company) queryStr.set('company', company);
+    if (activeCountry) queryStr.set('clientCountry', activeCountry);
 
     const r = await fetch(`${API_URL}/api/customer/overview?${queryStr.toString()}`, {
       headers: {
+        ...getCustomerHeaders(),
         'x-user-email': email,
-        'x-user-company': company
+        'x-user-company': company,
+        'x-client-country': activeCountry
       }
     });
+    if (r.status === 403) {
+      const errData = await r.json().catch(() => ({}));
+      if (errData.code === 'INDIAN_ACCOUNT_OUTSIDE_INDIA') {
+        authStorage.clearCustomerSession();
+        window.dispatchEvent(new Event('oxoo_auth_change'));
+      }
+      throw new Error(errData.message || 'Access denied');
+    }
     if (!r.ok) throw new Error('Customer overview unavailable');
     return await r.json();
   } catch (err) {
@@ -228,17 +298,21 @@ export async function getCustomerOverview(params = {}) {
 export async function getCustomerBilling(params = {}) {
   try {
     const user = authStorage.getCustomerUser();
+    const activeCountry = authStorage.getActiveClientCountry();
 
     const email = params.email || user?.email || '';
     const company = params.company || user?.organization || '';
     const queryStr = new URLSearchParams();
     if (email) queryStr.set('email', email);
     if (company) queryStr.set('company', company);
+    if (activeCountry) queryStr.set('clientCountry', activeCountry);
 
     const r = await fetch(`${API_URL}/api/customer/billing?${queryStr.toString()}`, {
       headers: {
+        ...getCustomerHeaders(),
         'x-user-email': email,
-        'x-user-company': company
+        'x-user-company': company,
+        'x-client-country': activeCountry
       }
     });
     if (!r.ok) throw new Error('Customer billing unavailable');
@@ -251,7 +325,7 @@ export async function getCustomerBilling(params = {}) {
 export async function upgradeCustomerPlan(planName) {
   const r = await fetch(`${API_URL}/api/customer/upgrade`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getCustomerHeaders(),
     body: JSON.stringify({ planName })
   });
   return await r.json();
@@ -260,9 +334,23 @@ export async function upgradeCustomerPlan(planName) {
 export async function checkEmailSoftware(email) {
   try {
     if (!email) return { registered: false, ownedApps: [], ownedAppIds: [] };
-    const r = await fetch(`${API_URL}/api/customer/check-email-software?email=${encodeURIComponent(email)}`);
+    const activeCountry = authStorage.getActiveClientCountry();
+    const r = await fetch(
+      `${API_URL}/api/customer/check-email-software?email=${encodeURIComponent(email)}&clientCountry=${encodeURIComponent(activeCountry)}`,
+      { headers: { 'x-client-country': activeCountry } }
+    );
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 403 && data.code === 'INDIAN_ACCOUNT_OUTSIDE_INDIA') {
+      return {
+        registered: true,
+        isIndianAccountRestricted: true,
+        message: data.message,
+        ownedApps: [],
+        ownedAppIds: []
+      };
+    }
     if (!r.ok) return { registered: false, ownedApps: [], ownedAppIds: [] };
-    return await r.json();
+    return data;
   } catch (e) {
     return { registered: false, ownedApps: [], ownedAppIds: [] };
   }
@@ -855,10 +943,19 @@ export async function calculatePricing(payload) {
 }
 
 export async function createPaymentOrder(payload) {
+  const activeCountry = payload?.country || payload?.region || authStorage.getActiveClientCountry();
   const r = await fetch(`${API_URL}/api/payment/create-order`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-country': activeCountry
+    },
+    body: JSON.stringify({
+      ...payload,
+      country: activeCountry,
+      region: activeCountry,
+      clientCountry: activeCountry
+    })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Unable to create order');
@@ -866,10 +963,18 @@ export async function createPaymentOrder(payload) {
 }
 
 export async function verifyPayment(payload) {
+  const activeCountry = payload?.country || payload?.pricingRegion || authStorage.getActiveClientCountry();
   const r = await fetch(`${API_URL}/api/payment/verify`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-country': activeCountry
+    },
+    body: JSON.stringify({
+      ...payload,
+      country: activeCountry,
+      pricingRegion: activeCountry
+    })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Payment verification failed');
@@ -888,10 +993,14 @@ export async function getPaymentInvoice(orderNumber) {
 }
 
 export async function sendEmailOtp({ email, phone = '', purpose = 'Verification', customerName = '' }) {
+  const activeCountry = authStorage.getActiveClientCountry();
   const r = await fetch(`${API_URL}/api/auth/send-otp`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, phone, purpose, customerName })
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-country': activeCountry
+    },
+    body: JSON.stringify({ email, phone, purpose, customerName, clientCountry: activeCountry })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Failed to send verification code.');
@@ -911,10 +1020,14 @@ export async function verifyEmailOtp({ email, phone = '', otp, smsOtp }) {
 
 export async function checkEmailExists(email) {
   try {
+    const activeCountry = authStorage.getActiveClientCountry();
     const r = await fetch(`${API_URL}/api/auth/check-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-country': activeCountry
+      },
+      body: JSON.stringify({ email, clientCountry: activeCountry })
     });
     return await r.json();
   } catch (err) {
@@ -923,10 +1036,18 @@ export async function checkEmailExists(email) {
 }
 
 export async function setupCustomerPassword(payload) {
+  const activeCountry = payload?.country || authStorage.getActiveClientCountry();
   const r = await fetch(`${API_URL}/api/customer/setup-password`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-country': activeCountry
+    },
+    body: JSON.stringify({
+      ...payload,
+      country: activeCountry,
+      clientCountry: activeCountry
+    })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Failed to setup customer password.');
@@ -1866,6 +1987,254 @@ export async function deleteAdminInquiry(id) {
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.message || 'Failed to delete inquiry');
+  return data;
+}
+
+// -------------------------------------------------------------
+// Live Demo Request Submission & Real Health Status Check
+// -------------------------------------------------------------
+export async function submitDemoRequest(payload) {
+  const response = await fetch(`${API_URL}/api/demo-requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) {
+    const err = new Error(data.message || 'Unable to submit demo request. Please check your details and try again.');
+    err.field = data.field || null;
+    err.code = data.code || null;
+    err.status = response.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function getHealthStatus() {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch(`${API_URL}/api/health`, {
+      method: 'GET',
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (!response.ok) return { connected: false, status: 'offline' };
+    const data = await response.json();
+    if (data && data.status === 'ok') {
+      return {
+        connected: true,
+        status: 'operational',
+        database: data.database || 'unknown',
+        timestamp: data.timestamp || null
+      };
+    }
+    return { connected: false, status: 'degraded' };
+  } catch (err) {
+    return { connected: false, status: 'offline' };
+  }
+}
+
+// -------------------------------------------------------------
+// Unified Projects Hub & Consultation Management APIs
+// -------------------------------------------------------------
+export async function getProjectConsultationSlots(date) {
+  try {
+    const r = await fetch(`${API_URL}/api/projects/consultation-slots?date=${encodeURIComponent(date || '')}`);
+    if (!r.ok) throw new Error('Unable to load consultation slots');
+    return await r.json();
+  } catch {
+    return { success: true, date, slots: [] };
+  }
+}
+
+export async function submitProjectRequest(payload) {
+  const r = await fetch(`${API_URL}/api/projects/requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.success) {
+    const err = new Error(data.message || 'Unable to submit project request. Please verify your details.');
+    err.field = data.field || null;
+    err.code = data.code || null;
+    err.status = r.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function submitConsultationRequest(payload) {
+  const r = await fetch(`${API_URL}/api/projects/consultations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.success) {
+    const err = new Error(data.message || 'Unable to submit consultation call request.');
+    err.field = data.field || null;
+    err.code = data.code || null;
+    err.status = r.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function getAdminProjectsSummary() {
+  try {
+    const r = await fetch(`${API_URL}/api/admin/projects/summary`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Failed to load project management summary');
+    return await r.json();
+  } catch (err) {
+    return {
+      success: false,
+      summary: {
+        totalProjectRequests: 0,
+        newRequests: 0,
+        underReview: 0,
+        proposalsSent: 0,
+        consultationRequests: 0,
+        confirmedConsultations: 0
+      },
+      staffMembers: [],
+      projectStatuses: [],
+      consultationStatuses: []
+    };
+  }
+}
+
+export async function getAdminProjectRequests(params = {}) {
+  try {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'All') {
+        q.set(k, v);
+      }
+    });
+    const r = await fetch(`${API_URL}/api/admin/projects/requests?${q.toString()}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Failed to load project requests');
+    return await r.json();
+  } catch {
+    return { success: false, requests: [], pagination: { total: 0, page: 1, limit: 15, totalPages: 1 } };
+  }
+}
+
+export async function getAdminProjectRequestDetails(requestId) {
+  const r = await fetch(`${API_URL}/api/admin/projects/requests/${encodeURIComponent(requestId)}`, {
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to load project request details');
+  return data;
+}
+
+export async function updateAdminProjectRequest(requestId, payload) {
+  const r = await fetch(`${API_URL}/api/admin/projects/requests/${encodeURIComponent(requestId)}`, {
+    method: 'PATCH',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update project request');
+  return data;
+}
+
+export async function createAdminConsultationFromProject(requestId, payload = {}) {
+  const r = await fetch(
+    `${API_URL}/api/admin/projects/requests/${encodeURIComponent(requestId)}/create-consultation`,
+    {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify(payload)
+    }
+  );
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to create consultation request');
+  return data;
+}
+
+export async function downloadAdminProjectAttachment(attachmentId, fileName = 'attachment') {
+  const r = await fetch(`${API_URL}/api/admin/projects/attachments/${encodeURIComponent(attachmentId)}`, {
+    headers: getAdminHeaders()
+  });
+  if (!r.ok) {
+    const errData = await r.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to download attachment');
+  }
+  const blob = await r.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function exportAdminProjectRequestsCsv(params = {}) {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '' && v !== 'All') {
+      q.set(k, v);
+    }
+  });
+  const r = await fetch(`${API_URL}/api/admin/projects/requests/export/csv?${q.toString()}`, {
+    headers: getAdminHeaders()
+  });
+  if (!r.ok) throw new Error('Failed to export project requests CSV');
+  const blob = await r.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `OXOO-Project-Requests-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function getAdminConsultationRequests(params = {}) {
+  try {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'All') {
+        q.set(k, v);
+      }
+    });
+    const r = await fetch(`${API_URL}/api/admin/projects/consultations?${q.toString()}`, {
+      headers: getAdminHeaders()
+    });
+    if (!r.ok) throw new Error('Failed to load consultation requests');
+    return await r.json();
+  } catch {
+    return { success: false, consultations: [], pagination: { total: 0, page: 1, limit: 15, totalPages: 1 } };
+  }
+}
+
+export async function getAdminConsultationDetails(requestId) {
+  const r = await fetch(`${API_URL}/api/admin/projects/consultations/${encodeURIComponent(requestId)}`, {
+    headers: getAdminHeaders()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to load consultation details');
+  return data;
+}
+
+export async function updateAdminConsultationRequest(requestId, payload) {
+  const r = await fetch(`${API_URL}/api/admin/projects/consultations/${encodeURIComponent(requestId)}`, {
+    method: 'PATCH',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || 'Failed to update consultation request');
   return data;
 }
 

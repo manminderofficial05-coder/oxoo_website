@@ -1,343 +1,254 @@
 /**
- * OXOO.ai — Centralized Regional Pricing Configuration (Frontend)
- * Synchronized with server-side authoritative pricing configuration.
+ * OXOO Global Country & Multi-Currency Pricing Configuration
+ * Single source of truth for regional pricing across Homepage, PricingPage, CheckoutPage, and App Directories.
+ *
+ * RULE:
+ * - Inside India (IN): Prices are displayed and billed in Indian Rupees (INR ₹).
+ * - Anywhere Outside India (US, GB, AE, CA, AU, SG, DE, GLOBAL, or any non-IN country):
+ *   Prices are ALWAYS displayed and billed in US Dollars (USD $), while the header
+ *   displays the client's detected country location.
  */
+
+export const USD_PLANS_CONFIG = {
+  freeDemo: {
+    id: 'free-demo',
+    name: 'Free Demo',
+    price: 0
+  },
+  singleApp: {
+    id: 'single-app',
+    name: 'Standard Pack',
+    monthlyPrice: 25,
+    yearlyPrice: 20,
+    monthlyStrikethroughPrice: 33,
+    yearlyStrikethroughPrice: 25,
+    discountPercentMonthly: 24,
+    discountPercentYearly: 20,
+    monthly: { price: 25, originalPrice: 33 },
+    yearly: { price: 20, originalPrice: 25 }
+  },
+  customApps: {
+    id: 'custom-apps',
+    name: 'Custom Pack',
+    monthlyBasePrice: 50,
+    yearlyBasePrice: 40,
+    monthlyAdditionalAppPrice: 25,
+    yearlyAdditionalAppPrice: 20,
+    monthlyStrikethroughBasePrice: 65,
+    yearlyStrikethroughBasePrice: 50,
+    discountPercentMonthly: 23,
+    discountPercentYearly: 20,
+    monthly: { price: 50, originalPrice: 65 },
+    yearly: { price: 40, originalPrice: 50 }
+  },
+  additionalApp: {
+    monthly: { price: 25 },
+    yearly: { price: 20 }
+  }
+};
+
+export const INR_PLANS_CONFIG = {
+  freeDemo: {
+    id: 'free-demo',
+    name: 'Free Demo',
+    price: 0
+  },
+  singleApp: {
+    id: 'single-app',
+    name: 'Standard Pack',
+    monthlyPrice: 740,
+    yearlyPrice: 580,
+    monthlyStrikethroughPrice: 975,
+    yearlyStrikethroughPrice: 740,
+    discountPercentMonthly: 24,
+    discountPercentYearly: 22,
+    monthly: { price: 740, originalPrice: 975 },
+    yearly: { price: 580, originalPrice: 740 }
+  },
+  customApps: {
+    id: 'custom-apps',
+    name: 'Custom Pack',
+    monthlyBasePrice: 1280,
+    yearlyBasePrice: 980,
+    monthlyAdditionalAppPrice: 740,
+    yearlyAdditionalAppPrice: 580,
+    monthlyStrikethroughBasePrice: 1660,
+    yearlyStrikethroughBasePrice: 1280,
+    discountPercentMonthly: 23,
+    discountPercentYearly: 23,
+    monthly: { price: 1280, originalPrice: 1660 },
+    yearly: { price: 980, originalPrice: 1280 }
+  },
+  additionalApp: {
+    monthly: { price: 740 },
+    yearly: { price: 580 }
+  }
+};
+
+export const COUNTRY_DIRECTORY = {
+  IN: { countryName: 'India', flag: '🇮🇳', dialCode: '+91' },
+  US: { countryName: 'United States', flag: '🇺🇸', dialCode: '+1' },
+  GB: { countryName: 'United Kingdom', flag: '🇬🇧', dialCode: '+44' },
+  AE: { countryName: 'United Arab Emirates', flag: '🇦🇪', dialCode: '+971' },
+  CA: { countryName: 'Canada', flag: '🇨🇦', dialCode: '+1' },
+  AU: { countryName: 'Australia', flag: '🇦🇺', dialCode: '+61' },
+  SG: { countryName: 'Singapore', flag: '🇸🇬', dialCode: '+65' },
+  DE: { countryName: 'Germany', flag: '🇩🇪', dialCode: '+49' },
+  FR: { countryName: 'France', flag: '🇫🇷', dialCode: '+33' },
+  NL: { countryName: 'Netherlands', flag: '🇳🇱', dialCode: '+31' },
+  JP: { countryName: 'Japan', flag: '🇯🇵', dialCode: '+81' },
+  SA: { countryName: 'Saudi Arabia', flag: '🇸🇦', dialCode: '+966' },
+  QA: { countryName: 'Qatar', flag: '🇶🇦', dialCode: '+974' },
+  MY: { countryName: 'Malaysia', flag: '🇲🇾', dialCode: '+60' },
+  NZ: { countryName: 'New Zealand', flag: '🇳🇿', dialCode: '+64' },
+  CH: { countryName: 'Switzerland', flag: '🇨🇭', dialCode: '+41' },
+  SE: { countryName: 'Sweden', flag: '🇸🇪', dialCode: '+46' },
+  IE: { countryName: 'Ireland', flag: '🇮🇪', dialCode: '+353' },
+  IT: { countryName: 'Italy', flag: '🇮🇹', dialCode: '+39' },
+  ES: { countryName: 'Spain', flag: '🇪🇸', dialCode: '+34' },
+  BR: { countryName: 'Brazil', flag: '🇧🇷', dialCode: '+55' },
+  ZA: { countryName: 'South Africa', flag: '🇿🇦', dialCode: '+27' },
+  GLOBAL: { countryName: 'International', flag: '🌐', dialCode: '+1' }
+};
+
+function createUsdRegion(code, countryName, flag, dialCode = '+1') {
+  return {
+    regionCode: code,
+    countryName,
+    flag,
+    dialCode,
+    currency: 'USD',
+    symbol: '$',
+    locale: 'en-US',
+    taxRate: 0.00,
+    taxName: 'Tax (Exempt / Included)',
+    discountPercentYearly: 20,
+    isIndia: false,
+    plans: USD_PLANS_CONFIG
+  };
+}
 
 export const REGIONAL_PRICING = {
   IN: {
     regionCode: 'IN',
     countryName: 'India',
     flag: '🇮🇳',
+    dialCode: '+91',
     currency: 'INR',
     symbol: '₹',
     locale: 'en-IN',
-    taxRate: 0.18, // 18% GST (CGST 9% + SGST 9%)
+    taxRate: 0.18,
     taxName: 'GST (18%)',
-    plans: {
-      singleApp: {
-        id: 'single-app',
-        name: 'Standard Pack',
-        planTier: 'Basic',
-        tagline: 'Buy one software at affordable price',
-        monthlyPrice: 740,
-        yearlyPrice: 580,
-        monthlyStrikethroughPrice: 975,
-        yearlyStrikethroughPrice: 740,
-        discountPercentYearly: 22,
-        discountPercentMonthly: 24,
-        maxApps: 1,
-        additionalAppMonthlyPrice: 740,
-        additionalAppYearlyPrice: 580
-      },
-      customApps: {
-        id: 'custom-apps',
-        name: 'Custom Pack',
-        planTier: 'Pro',
-        tagline: 'Choose 2 or more software and get advanced features',
-        monthlyBasePrice: 1280,
-        yearlyBasePrice: 980,
-        monthlyStrikethroughBasePrice: 1660,
-        yearlyStrikethroughBasePrice: 1280,
-        monthlyAdditionalAppPrice: 740,
-        yearlyAdditionalAppPrice: 580,
-        discountPercentYearly: 23,
-        discountPercentMonthly: 23,
-        minApps: 2
-      }
-    }
+    discountPercentYearly: 24,
+    isIndia: true,
+    plans: INR_PLANS_CONFIG
   },
-  US: {
-    regionCode: 'US',
-    countryName: 'United States',
-    flag: '🇺🇸',
-    currency: 'USD',
-    symbol: '$',
-    locale: 'en-US',
-    taxRate: 0.00,
-    taxName: 'Sales Tax',
-    plans: {
-      singleApp: {
-        id: 'single-app',
-        name: 'Standard Pack',
-        planTier: 'Basic',
-        tagline: 'Buy one software at affordable price',
-        monthlyPrice: 25,
-        yearlyPrice: 20,
-        monthlyStrikethroughPrice: 32,
-        yearlyStrikethroughPrice: 25,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 22,
-        maxApps: 1,
-        additionalAppMonthlyPrice: 25,
-        additionalAppYearlyPrice: 20
-      },
-      customApps: {
-        id: 'custom-apps',
-        name: 'Custom Pack',
-        planTier: 'Pro',
-        tagline: 'Choose 2 or more software and get advanced features',
-        monthlyBasePrice: 50,
-        yearlyBasePrice: 40,
-        monthlyStrikethroughBasePrice: 65,
-        yearlyStrikethroughBasePrice: 50,
-        monthlyAdditionalAppPrice: 25,
-        yearlyAdditionalAppPrice: 20,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 23,
-        minApps: 2
-      }
-    }
-  },
-  GB: {
-    regionCode: 'GB',
-    countryName: 'United Kingdom',
-    flag: '🇬🇧',
-    currency: 'GBP',
-    symbol: '£',
-    locale: 'en-GB',
-    taxRate: 0.00,
-    taxName: 'VAT',
-    plans: {
-      singleApp: {
-        id: 'single-app',
-        name: 'Standard Pack',
-        planTier: 'Basic',
-        tagline: 'Buy one software at affordable price',
-        monthlyPrice: 20,
-        yearlyPrice: 16,
-        monthlyStrikethroughPrice: 26,
-        yearlyStrikethroughPrice: 20,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 23,
-        maxApps: 1,
-        additionalAppMonthlyPrice: 20,
-        additionalAppYearlyPrice: 16
-      },
-      customApps: {
-        id: 'custom-apps',
-        name: 'Custom Pack',
-        planTier: 'Pro',
-        tagline: 'Choose 2 or more software and get advanced features',
-        monthlyBasePrice: 40,
-        yearlyBasePrice: 32,
-        monthlyStrikethroughBasePrice: 52,
-        yearlyStrikethroughBasePrice: 40,
-        monthlyAdditionalAppPrice: 20,
-        yearlyAdditionalAppPrice: 16,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 23,
-        minApps: 2
-      }
-    }
-  },
-  AE: {
-    regionCode: 'AE',
-    countryName: 'United Arab Emirates',
-    flag: '🇦🇪',
-    currency: 'AED',
-    symbol: 'AED',
-    locale: 'en-AE',
-    taxRate: 0.00,
-    taxName: 'VAT',
-    plans: {
-      singleApp: {
-        id: 'single-app',
-        name: 'Standard Pack',
-        planTier: 'Basic',
-        tagline: 'Buy one software at affordable price',
-        monthlyPrice: 95,
-        yearlyPrice: 75,
-        monthlyStrikethroughPrice: 120,
-        yearlyStrikethroughPrice: 95,
-        discountPercentYearly: 21,
-        discountPercentMonthly: 21,
-        maxApps: 1,
-        additionalAppMonthlyPrice: 95,
-        additionalAppYearlyPrice: 75
-      },
-      customApps: {
-        id: 'custom-apps',
-        name: 'Custom Pack',
-        planTier: 'Pro',
-        tagline: 'Choose 2 or more software and get advanced features',
-        monthlyBasePrice: 190,
-        yearlyBasePrice: 150,
-        monthlyStrikethroughBasePrice: 240,
-        yearlyStrikethroughBasePrice: 190,
-        monthlyAdditionalAppPrice: 95,
-        yearlyAdditionalAppPrice: 75,
-        discountPercentYearly: 21,
-        discountPercentMonthly: 21,
-        minApps: 2
-      }
-    }
-  },
-  CA: {
-    regionCode: 'CA',
-    countryName: 'Canada',
-    flag: '🇨🇦',
-    currency: 'CAD',
-    symbol: 'CA$',
-    locale: 'en-CA',
-    taxRate: 0.00,
-    taxName: 'HST/GST',
-    plans: {
-      singleApp: {
-        id: 'single-app',
-        name: 'Standard Pack',
-        planTier: 'Basic',
-        tagline: 'Buy one software at affordable price',
-        monthlyPrice: 35,
-        yearlyPrice: 28,
-        monthlyStrikethroughPrice: 45,
-        yearlyStrikethroughPrice: 35,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 22,
-        maxApps: 1,
-        additionalAppMonthlyPrice: 35,
-        additionalAppYearlyPrice: 28
-      },
-      customApps: {
-        id: 'custom-apps',
-        name: 'Custom Pack',
-        planTier: 'Pro',
-        tagline: 'Choose 2 or more software and get advanced features',
-        monthlyBasePrice: 70,
-        yearlyBasePrice: 55,
-        monthlyStrikethroughBasePrice: 90,
-        yearlyStrikethroughBasePrice: 70,
-        monthlyAdditionalAppPrice: 35,
-        yearlyAdditionalAppPrice: 28,
-        discountPercentYearly: 21,
-        discountPercentMonthly: 22,
-        minApps: 2
-      }
-    }
-  },
-  AU: {
-    regionCode: 'AU',
-    countryName: 'Australia',
-    flag: '🇦🇺',
-    currency: 'AUD',
-    symbol: 'A$',
-    locale: 'en-AU',
-    taxRate: 0.00,
-    taxName: 'GST',
-    plans: {
-      singleApp: {
-        id: 'single-app',
-        name: 'Standard Pack',
-        planTier: 'Basic',
-        tagline: 'Buy one software at affordable price',
-        monthlyPrice: 38,
-        yearlyPrice: 30,
-        monthlyStrikethroughPrice: 50,
-        yearlyStrikethroughPrice: 38,
-        discountPercentYearly: 21,
-        discountPercentMonthly: 24,
-        maxApps: 1,
-        additionalAppMonthlyPrice: 38,
-        additionalAppYearlyPrice: 30
-      },
-      customApps: {
-        id: 'custom-apps',
-        name: 'Custom Pack',
-        planTier: 'Pro',
-        tagline: 'Choose 2 or more software and get advanced features',
-        monthlyBasePrice: 75,
-        yearlyBasePrice: 60,
-        monthlyStrikethroughBasePrice: 95,
-        yearlyStrikethroughBasePrice: 75,
-        monthlyAdditionalAppPrice: 38,
-        yearlyAdditionalAppPrice: 30,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 21,
-        minApps: 2
-      }
-    }
-  },
-  GLOBAL: {
-    regionCode: 'GLOBAL',
-    countryName: 'International',
-    flag: '🌍',
-    currency: 'USD',
-    symbol: '$',
-    locale: 'en-US',
-    taxRate: 0.00,
-    taxName: 'Tax',
-    plans: {
-      singleApp: {
-        id: 'single-app',
-        name: 'Standard Pack',
-        planTier: 'Basic',
-        tagline: 'Buy one software at affordable price',
-        monthlyPrice: 25,
-        yearlyPrice: 20,
-        monthlyStrikethroughPrice: 32,
-        yearlyStrikethroughPrice: 25,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 22,
-        maxApps: 1,
-        additionalAppMonthlyPrice: 25,
-        additionalAppYearlyPrice: 20
-      },
-      customApps: {
-        id: 'custom-apps',
-        name: 'Custom Pack',
-        planTier: 'Pro',
-        tagline: 'Choose 2 or more software and get advanced features',
-        monthlyBasePrice: 50,
-        yearlyBasePrice: 40,
-        monthlyStrikethroughBasePrice: 65,
-        yearlyStrikethroughBasePrice: 50,
-        monthlyAdditionalAppPrice: 25,
-        yearlyAdditionalAppPrice: 20,
-        discountPercentYearly: 20,
-        discountPercentMonthly: 23,
-        minApps: 2
-      }
-    }
-  }
+  US: createUsdRegion('US', 'United States', '🇺🇸', '+1'),
+  GB: createUsdRegion('GB', 'United Kingdom', '🇬🇧', '+44'),
+  AE: createUsdRegion('AE', 'United Arab Emirates', '🇦🇪', '+971'),
+  CA: createUsdRegion('CA', 'Canada', '🇨🇦', '+1'),
+  AU: createUsdRegion('AU', 'Australia', '🇦🇺', '+61'),
+  SG: createUsdRegion('SG', 'Singapore', '🇸🇬', '+65'),
+  DE: createUsdRegion('DE', 'Germany', '🇩🇪', '+49'),
+  FR: createUsdRegion('FR', 'France', '🇫🇷', '+33'),
+  JP: createUsdRegion('JP', 'Japan', '🇯🇵', '+81'),
+  GLOBAL: createUsdRegion('GLOBAL', 'International', '🌐', '+1')
 };
 
+/**
+ * List of selectable countries/regions for the Header & Pricing selector
+ * India shows INR ₹; all locations outside India show USD $
+ */
 export const SELECTABLE_REGIONS = [
   { code: 'IN', label: 'India — INR ₹', flag: '🇮🇳', currency: 'INR', symbol: '₹' },
   { code: 'US', label: 'United States — USD $', flag: '🇺🇸', currency: 'USD', symbol: '$' },
-  { code: 'GB', label: 'United Kingdom — GBP £', flag: '🇬🇧', currency: 'GBP', symbol: '£' },
-  { code: 'AE', label: 'United Arab Emirates — AED د.إ', flag: '🇦🇪', currency: 'AED', symbol: 'AED' },
-  { code: 'CA', label: 'Canada — CAD CA$', flag: '🇨🇦', currency: 'CAD', symbol: 'CA$' },
-  { code: 'AU', label: 'Australia — AUD A$', flag: '🇦🇺', currency: 'AUD', symbol: 'A$' },
-  { code: 'GLOBAL', label: 'International — USD $', flag: '🌍', currency: 'USD', symbol: '$' }
+  { code: 'GB', label: 'United Kingdom — USD $', flag: '🇬🇧', currency: 'USD', symbol: '$' },
+  { code: 'AE', label: 'United Arab Emirates — USD $', flag: '🇦🇪', currency: 'USD', symbol: '$' },
+  { code: 'CA', label: 'Canada — USD $', flag: '🇨🇦', currency: 'USD', symbol: '$' },
+  { code: 'AU', label: 'Australia — USD $', flag: '🇦🇺', currency: 'USD', symbol: '$' },
+  { code: 'SG', label: 'Singapore — USD $', flag: '🇸🇬', currency: 'USD', symbol: '$' },
+  { code: 'DE', label: 'Germany — USD $', flag: '🇩🇪', currency: 'USD', symbol: '$' },
+  { code: 'GLOBAL', label: 'Other Country — USD $', flag: '🌐', currency: 'USD', symbol: '$' }
 ];
 
-export function resolvePricingRegion(countryCode) {
-  const normalized = countryCode ? String(countryCode).trim().toUpperCase() : 'GLOBAL';
-  const baseRegion = REGIONAL_PRICING[normalized] || REGIONAL_PRICING.GLOBAL;
-
-  // Ensure backward-compatible aliases exist on plans
-  if (baseRegion && baseRegion.plans && !baseRegion.plans.singleApp.yearly) {
-    const s = baseRegion.plans.singleApp;
-    const c = baseRegion.plans.customApps;
-    s.yearly = { price: s.yearlyPrice, originalPrice: s.yearlyStrikethroughPrice, discountPercent: s.discountPercentYearly };
-    s.monthly = { price: s.monthlyPrice, originalPrice: s.monthlyStrikethroughPrice, discountPercent: s.discountPercentMonthly };
-    c.yearly = { price: c.yearlyBasePrice, originalPrice: c.yearlyStrikethroughBasePrice, discountPercent: c.discountPercentYearly };
-    c.monthly = { price: c.monthlyBasePrice, originalPrice: c.monthlyStrikethroughBasePrice, discountPercent: c.discountPercentMonthly };
-    baseRegion.plans.additionalApp = {
-      yearly: { price: c.yearlyAdditionalAppPrice },
-      monthly: { price: c.monthlyAdditionalAppPrice }
-    };
+function isoToFlagEmoji(code) {
+  if (!code || code.length !== 2) return '🌐';
+  try {
+    return code
+      .toUpperCase()
+      .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
+  } catch {
+    return '🌐';
   }
-
-  return baseRegion;
 }
 
-export function formatRegionalCurrency(amount, regionCode = 'IN') {
-  const region = REGIONAL_PRICING[regionCode] || REGIONAL_PRICING.GLOBAL;
-  const num = Number(amount || 0);
-  return new Intl.NumberFormat(region.locale, {
-    style: 'currency',
-    currency: region.currency,
-    minimumFractionDigits: region.currency === 'INR' || num % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2
-  }).format(num);
+/**
+ * Resolve any ISO 3166-1 alpha-2 country code to a supported pricing region.
+ * - 'IN' or 'INDIA' -> India (INR ₹)
+ * - Anything else outside India -> That country's location metadata with US Dollar (USD $) pricing!
+ */
+export function resolvePricingRegion(countryCode) {
+  if (!countryCode || typeof countryCode !== 'string') {
+    return REGIONAL_PRICING.IN;
+  }
+  const normalized = countryCode.trim().toUpperCase();
+  if (normalized === 'IN' || normalized === 'INDIA') {
+    return REGIONAL_PRICING.IN;
+  }
+  if ( normalized === 'UK' ) {
+    return REGIONAL_PRICING.GB;
+  }
+  if ( normalized === 'UAE' ) {
+    return REGIONAL_PRICING.AE;
+  }
+  if ( normalized === 'USA' ) {
+    return REGIONAL_PRICING.US;
+  }
+  if (REGIONAL_PRICING[normalized]) {
+    return REGIONAL_PRICING[normalized];
+  }
+  // Any other 2-letter ISO country code outside India gets its own country code/name/flag + USD $ pricing
+  if (/^[A-Z]{2}$/.test(normalized)) {
+    const meta = COUNTRY_DIRECTORY[normalized];
+    let displayCountryName = meta?.countryName || normalized;
+    if (!meta && typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+      try {
+        const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+        displayCountryName = regionNames.of(normalized) || normalized;
+      } catch {
+        displayCountryName = normalized;
+      }
+    }
+    return createUsdRegion(
+      normalized,
+      displayCountryName,
+      meta?.flag || isoToFlagEmoji(normalized),
+      meta?.dialCode || '+1'
+    );
+  }
+  return REGIONAL_PRICING.GLOBAL;
+}
+
+/**
+ * Format a numeric price cleanly using region's currency & locale
+ */
+export function formatRegionalPrice(amount, regionOrCode = 'IN', options = {}) {
+  const region = typeof regionOrCode === 'string'
+    ? resolvePricingRegion(regionOrCode)
+    : (regionOrCode || REGIONAL_PRICING.IN);
+
+  const num = Number(amount);
+  if (Number.isNaN(num)) return `${region.symbol}0`;
+
+  const hasDecimals = num % 1 !== 0;
+  try {
+    return new Intl.NumberFormat(region.locale, {
+      style: 'currency',
+      currency: region.currency,
+      minimumFractionDigits: options.minimumFractionDigits ?? (hasDecimals ? 2 : 0),
+      maximumFractionDigits: options.maximumFractionDigits ?? (hasDecimals ? 2 : 0)
+    }).format(num);
+  } catch {
+    return `${region.symbol}${num.toLocaleString()}`;
+  }
 }

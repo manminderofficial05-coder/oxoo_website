@@ -62,7 +62,7 @@ function numberToWordsINR(amount) {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentRegion, formatPrice } = useRegionPricing();
+  const { currentRegion, formatPrice, isOutsideIndia } = useRegionPricing();
 
   // Current active step (1 to 5)
   const initialStep = parseInt(searchParams.get('step') || '1', 10);
@@ -172,19 +172,48 @@ export default function CheckoutPage() {
 
   const [duplicateSoftwareWarning, setDuplicateSoftwareWarning] = useState('');
 
-  // Validate if entered email already owns any of the selected software (informative, non-blocking)
+  // Keep formData.country synchronized with active client region
+  useEffect(() => {
+    if (currentRegion?.countryName) {
+      setFormData((prev) => ({
+        ...prev,
+        country: currentRegion.countryName === 'International' ? 'United States' : currentRegion.countryName
+      }));
+    }
+  }, [currentRegion?.regionCode, currentRegion?.countryName]);
+
+  // Validate if entered email already owns any of the selected software or is restricted outside India
   const verifyEmailSoftwareOwnership = async (emailToCheck) => {
     const email = (emailToCheck || formData.email || '').trim().toLowerCase();
     if (!email || !email.includes('@')) return false;
 
+    if (isOutsideIndia && authStorage.isIndianAccount(email)) {
+      setFormErrors((prev) => ({
+        ...prev,
+        email: 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please use an International (USD $) account.'
+      }));
+      return true;
+    }
+
     try {
       const res = await checkEmailSoftware(email);
+      if (res?.isIndianAccountRestricted || (isOutsideIndia && res?.isIndianAccount)) {
+        setFormErrors((prev) => ({
+          ...prev,
+          email: res.message || 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please use an International (USD $) account.'
+        }));
+        return true;
+      }
       if (res?.ownedAppIds && res.ownedAppIds.length > 0) {
         setOwnedAppIds((prev) => Array.from(new Set([...prev, ...res.ownedAppIds])));
       }
       setDuplicateSoftwareWarning('');
       return false;
     } catch (e) {
+      if (e?.message && e.message.toLowerCase().includes('indian account')) {
+        setFormErrors((prev) => ({ ...prev, email: e.message }));
+        return true;
+      }
       return false;
     }
   };
@@ -486,6 +515,8 @@ export default function CheckoutPage() {
       const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!EMAIL_REGEX.test(formData.email.trim())) {
         errs.email = 'Please enter a valid email address';
+      } else if (isOutsideIndia && authStorage.isIndianAccount(formData.email.trim())) {
+        errs.email = 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please use an International (USD $) account.';
       }
     }
     if (!formData.phone.trim()) {
@@ -502,6 +533,9 @@ export default function CheckoutPage() {
   const handleProceedFromStep3 = async (e) => {
     if (e) e.preventDefault();
     if (!validateCompanyDetails()) return;
+
+    const restricted = await verifyEmailSoftwareOwnership(formData.email);
+    if (restricted) return;
 
     if (isEmailVerified) {
       setCurrentStep(4);
@@ -1273,7 +1307,7 @@ export default function CheckoutPage() {
                   <div className="form-field-group">
                     <label className="form-field-label">Phone (10 Digits) *</label>
                     <div className="phone-input-container">
-                      <span className="phone-prefix-chip">+91</span>
+                      <span className="phone-prefix-chip">{currentRegion?.dialCode || '+91'}</span>
                       <input
                         type="tel"
                         inputMode="numeric"
@@ -1678,7 +1712,7 @@ export default function CheckoutPage() {
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Total Payable:</span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#16a34a' }}>
-                    ₹{totals.totalAmount.toFixed(2)}
+                    {totals.symbol}{totals.totalAmount.toFixed(2)} ({totals.currency})
                   </div>
                 </div>
               </div>
@@ -2126,7 +2160,7 @@ export default function CheckoutPage() {
                     Set Your Password Above to Unlock Your Official Tax Invoice
                   </h4>
                   <p style={{ fontSize: '0.92rem', color: '#64748b', maxWidth: '620px', margin: '0 auto', lineHeight: 1.6 }}>
-                    Your payment of <strong>₹{totals.totalAmount.toFixed(2)}</strong> is verified and your software instance is ready.
+                    Your payment of <strong>{totals.symbol}{totals.totalAmount.toFixed(2)} ({totals.currency})</strong> is verified and your software instance is ready.
                     Per security compliance, your <strong>Official Tax Invoice PDF</strong> and <strong>Customer Dashboard Access</strong> will be generated, displayed, and emailed to <strong>{formData.email}</strong> right after you save your password above.
                   </p>
                 </div>
@@ -2227,7 +2261,7 @@ export default function CheckoutPage() {
                       </span>
                       <span>{formData.yourName || 'Rahul Sharma'}</span>
                       <span>{formData.email || 'rahul@abc.com'}</span>
-                      <span>+91 {formData.phone || '98765 43210'}</span>
+                      <span>{currentRegion?.dialCode || '+91'} {formData.phone || '98765 43210'}</span>
                       <span>
                         {formData.streetAndNumber || '123, MG Road'}, {formData.city || 'Bengaluru'}, {formData.stateProvince || 'Karnataka'} - {formData.zipCode || '560001'}, {formData.country || 'India'}
                       </span>

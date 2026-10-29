@@ -674,3 +674,111 @@ CREATE INDEX idx_agent_conv_user ON public.agent_conversations USING btree (user
 CREATE INDEX idx_agent_messages_conv ON public.agent_messages USING btree (conversation_id);
 CREATE INDEX idx_agent_events_type ON public.agent_events USING btree (event_type);
 
+-- -------------------------------------------------------------
+-- Table: project_requests (OXOO Unified Projects Hub Enquiries)
+-- -------------------------------------------------------------
+CREATE TABLE public.project_requests (
+    id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
+    request_id character varying(40) NOT NULL,
+    customer_name character varying(255) NOT NULL,
+    business_email character varying(255) NOT NULL,
+    phone_number character varying(100) NOT NULL,
+    company_name character varying(255) NOT NULL,
+    company_website character varying(255) DEFAULT ''::character varying,
+    country character varying(120) NOT NULL,
+    industry character varying(120) DEFAULT ''::character varying,
+    company_size character varying(80) DEFAULT ''::character varying,
+    selected_categories jsonb DEFAULT '[]'::jsonb,
+    selected_services jsonb DEFAULT '[]'::jsonb,
+    project_title character varying(255) NOT NULL,
+    project_description text NOT NULL,
+    business_problem text DEFAULT ''::text,
+    required_features text DEFAULT ''::text,
+    target_audience text DEFAULT ''::text,
+    preferred_technology character varying(255) DEFAULT ''::character varying,
+    existing_url character varying(500) DEFAULT ''::character varying,
+    reference_websites text DEFAULT ''::text,
+    design_preferences text DEFAULT ''::text,
+    expected_deliverables text DEFAULT ''::text,
+    preferred_start_date character varying(100) DEFAULT ''::character varying,
+    expected_completion_date character varying(100) DEFAULT ''::character varying,
+    budget_range character varying(120) DEFAULT ''::character varying,
+    additional_requirements text DEFAULT ''::text,
+    attachments_meta jsonb DEFAULT '[]'::jsonb,
+    consent_accepted boolean DEFAULT true,
+    assigned_team_member character varying(255) DEFAULT 'Unassigned'::character varying,
+    status character varying(80) DEFAULT 'New'::character varying,
+    internal_notes jsonb DEFAULT '[]'::jsonb,
+    status_history jsonb DEFAULT '[]'::jsonb,
+    notification_delivered boolean DEFAULT false,
+    source_ip character varying(100) DEFAULT ''::character varying,
+    submission_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT project_requests_pkey PRIMARY KEY (id),
+    CONSTRAINT project_requests_request_id_key UNIQUE (request_id)
+);
+
+-- -------------------------------------------------------------
+-- Table: project_attachments (Secure Reference Files for Projects)
+-- -------------------------------------------------------------
+CREATE TABLE public.project_attachments (
+    id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
+    attachment_id character varying(60) NOT NULL,
+    project_request_id character varying(40) NOT NULL,
+    file_name character varying(255) NOT NULL,
+    mime_type character varying(120) NOT NULL,
+    size_bytes integer NOT NULL,
+    content_base64 text NOT NULL,
+    uploaded_by character varying(255) DEFAULT ''::character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT project_attachments_pkey PRIMARY KEY (id),
+    CONSTRAINT project_attachments_attachment_id_key UNIQUE (attachment_id),
+    CONSTRAINT project_attachments_req_fkey FOREIGN KEY (project_request_id)
+        REFERENCES public.project_requests (request_id) ON DELETE CASCADE
+);
+
+-- -------------------------------------------------------------
+-- Table: consultation_requests (Project Consultation Calls)
+-- -------------------------------------------------------------
+CREATE TABLE public.consultation_requests (
+    id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
+    request_id character varying(40) NOT NULL,
+    linked_project_request_id character varying(40) DEFAULT NULL,
+    customer_name character varying(255) NOT NULL,
+    business_email character varying(255) NOT NULL,
+    phone_number character varying(100) NOT NULL,
+    company_name character varying(255) NOT NULL,
+    country character varying(120) NOT NULL,
+    preferred_contact_method character varying(80) DEFAULT 'Video Consultation (Google Meet / Zoom)'::character varying,
+    preferred_date character varying(40) DEFAULT ''::character varying,
+    preferred_time character varying(80) DEFAULT ''::character varying,
+    confirmed_date character varying(40) DEFAULT ''::character varying,
+    confirmed_time character varying(80) DEFAULT ''::character varying,
+    meeting_link character varying(500) DEFAULT ''::character varying,
+    selected_categories jsonb DEFAULT '[]'::jsonb,
+    selected_services jsonb DEFAULT '[]'::jsonb,
+    project_summary text NOT NULL,
+    assigned_team_member character varying(255) DEFAULT 'Unassigned'::character varying,
+    status character varying(80) DEFAULT 'New'::character varying,
+    internal_notes jsonb DEFAULT '[]'::jsonb,
+    appointment_history jsonb DEFAULT '[]'::jsonb,
+    notification_delivered boolean DEFAULT false,
+    source_ip character varying(100) DEFAULT ''::character varying,
+    submission_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT consultation_requests_pkey PRIMARY KEY (id),
+    CONSTRAINT consultation_requests_request_id_key UNIQUE (request_id)
+);
+
+CREATE INDEX idx_proj_req_status ON public.project_requests USING btree (status);
+CREATE INDEX idx_proj_req_email ON public.project_requests USING btree (business_email);
+CREATE INDEX idx_proj_req_sub_date ON public.project_requests USING btree (submission_date DESC);
+CREATE INDEX idx_proj_att_req ON public.project_attachments USING btree (project_request_id);
+CREATE INDEX idx_cons_req_status ON public.consultation_requests USING btree (status);
+CREATE INDEX idx_cons_req_email ON public.consultation_requests USING btree (business_email);
+CREATE INDEX idx_cons_req_slot ON public.consultation_requests USING btree (preferred_date, preferred_time);
+CREATE INDEX idx_cons_req_sub_date ON public.consultation_requests USING btree (submission_date DESC);
+
+

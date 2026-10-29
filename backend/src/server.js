@@ -23,7 +23,8 @@ const {
   sendPasswordResetEmail, 
   sendAdminSubscriptionDueEmail,
   sendTicketAcknowledgementEmail,
-  sendInquiryConfirmationEmail
+  sendInquiryConfirmationEmail,
+  sendDemoRequestNotificationEmail
 } = require('./emailService');
 const { generateInvoicePdf } = require('./invoicePdf');
 const oxooCentralRouter = require('./oxooCentralRoutes');
@@ -163,8 +164,106 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api/v1/oxoo', oxooCentralRouter);
 
 // -------------------------------------------------------------
-// 2. AUTHENTICATION ROUTES (POSTGRESQL)
+// 2. AUTHENTICATION ROUTES & REGIONAL ACCOUNT ISOLATION (POSTGRESQL)
 // -------------------------------------------------------------
+function resolveClientCountryFromReq(req) {
+  const candidates = [
+    req.headers?.['x-client-country'],
+    req.headers?.['x-test-country'],
+    req.body?.clientCountry,
+    req.body?.country,
+    req.body?.region,
+    req.query?.clientCountry,
+    req.query?.testCountry,
+    req.query?.country,
+    req.query?.region,
+    req.headers?.['cf-ipcountry'],
+    req.headers?.['x-country-code'],
+    req.headers?.['x-vercel-ip-country'],
+    req.headers?.['cloudfront-viewer-country']
+  ];
+
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const str = String(raw).trim();
+    if (!str || str.toUpperCase() === 'XX') continue;
+    const region = resolvePricingRegion(str);
+    if (region && region.regionCode) {
+      return region.regionCode;
+    }
+  }
+  return 'IN';
+}
+
+function isClientOutsideIndia(req) {
+  const code = resolveClientCountryFromReq(req);
+  return Boolean(code && code !== 'IN');
+}
+
+async function inspectAccountRegionDb(email, companyName = '') {
+  const normEmail = String(email || '').trim().toLowerCase();
+  const normCompany = String(companyName || '').trim().toLowerCase();
+
+  // Built-in Indian demo account or .in domain
+  if (
+    normEmail === 'priya@retailmart.in' ||
+    normEmail.endsWith('.in') ||
+    normEmail.endsWith('.co.in') ||
+    normCompany === 'retailmart solutions'
+  ) {
+    return { isIndianAccount: true, country: 'India', countryCode: 'IN', currency: 'INR' };
+  }
+
+  if (!isDbConnected) {
+    return { isIndianAccount: false, country: 'International', countryCode: 'GLOBAL', currency: 'USD' };
+  }
+
+  try {
+    // 1. Check orders table for currency / pricing_region history
+    if (normEmail) {
+      const ordRes = await query(
+        `SELECT currency, pricing_region FROM orders WHERE LOWER(customer_email) = $1 ORDER BY id DESC LIMIT 1`,
+        [normEmail]
+      );
+      if (ordRes.rows.length > 0) {
+        const ord = ordRes.rows[0];
+        const ordCurr = String(ord.currency || '').toUpperCase();
+        const ordReg = String(ord.pricing_region || '').toUpperCase();
+        if (ordCurr === 'USD' || (ordReg && ordReg !== 'IN')) {
+          const r = resolvePricingRegion(ordReg || 'US');
+          return { isIndianAccount: false, country: r.countryName, countryCode: r.regionCode, currency: 'USD' };
+        }
+        if (ordCurr === 'INR' || ordReg === 'IN') {
+          return { isIndianAccount: true, country: 'India', countryCode: 'IN', currency: 'INR' };
+        }
+      }
+    }
+
+    // 2. Check customers table for country
+    if (normEmail || normCompany) {
+      const custRes = await query(
+        `SELECT country FROM customers WHERE LOWER(email) = $1 OR ($2 <> '' AND LOWER(company_name) = $2) ORDER BY id DESC LIMIT 1`,
+        [normEmail, normCompany]
+      );
+      if (custRes.rows.length > 0) {
+        const custCountry = String(custRes.rows[0].country || '').trim();
+        const custCountryUpper = custCountry.toUpperCase();
+        if (custCountryUpper === 'INDIA' || custCountryUpper === 'IN' || custCountryUpper === 'BHARAT') {
+          return { isIndianAccount: true, country: 'India', countryCode: 'IN', currency: 'INR' };
+        }
+        if (custCountry) {
+          const r = resolvePricingRegion(custCountry);
+          return { isIndianAccount: false, country: custCountry, countryCode: r.regionCode, currency: 'USD' };
+        }
+      }
+    }
+  } catch (e) {
+    // Ignore DB lookup errors and fall through
+  }
+
+  return { isIndianAccount: false, country: 'International', countryCode: 'GLOBAL', currency: 'USD' };
+}
+
 app.post('/api/auth/register', async (req, res, next) => {
   try {
     const { name, email, password, organization } = req.body || {};
@@ -172,6 +271,17 @@ app.post('/api/auth/register', async (req, res, next) => {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
     }
     const emailNorm = String(email).trim().toLowerCase();
+    const clientCountryCode = resolveClientCountryFromReq(req);
+    const outsideIndia = clientCountryCode !== 'IN';
+    const pricingRegion = resolvePricingRegion(clientCountryCode);
+    const resolvedCountryName = pricingRegion.countryName === 'International' ? 'United States' : (pricingRegion.countryName || 'India');
+
+    if (outsideIndia && (emailNorm.endsWith('.in') || emailNorm.endsWith('.co.in') || emailNorm === 'priya@retailmart.in')) {
+      return res.status(403).json({
+        code: 'INDIAN_ACCOUNT_OUTSIDE_INDIA',
+        message: 'Access Restricted: Indian accounts (INR ₹) cannot be used or registered outside India. Please use an International (USD $) account.'
+      });
+    }
 
     if (!isDbConnected) {
       // Demo fallback response
@@ -179,7 +289,17 @@ app.post('/api/auth/register', async (req, res, next) => {
       return res.status(201).json({
         message: 'Account created successfully (Demo Mode).',
         token,
-        user: { id: 'demo-user', name, email: emailNorm, role: 'member', organization: organization || 'Oxoo.ai Tenant' }
+        user: {
+          id: 'demo-user',
+          name,
+          email: emailNorm,
+          role: 'member',
+          organization: organization || 'Oxoo.ai Tenant',
+          country: resolvedCountryName,
+          countryCode: clientCountryCode,
+          currency: outsideIndia ? 'USD' : 'INR',
+          isIndianAccount: !outsideIndia
+        }
       });
     }
 
@@ -201,7 +321,7 @@ app.post('/api/auth/register', async (req, res, next) => {
 
     const user = userResult.rows[0];
 
-    // Automatically provision customer record in customers table so they show up immediately in Admin Customer Tab
+    // Automatically provision customer record in customers table with the client's actual country
     try {
       const cCount = await query('SELECT COUNT(*) as count FROM customers');
       const nextNum = parseInt(cCount.rows[0]?.count || 0, 10) + 1;
@@ -213,7 +333,7 @@ app.post('/api/auth/register', async (req, res, next) => {
           plan, account_status, subscription_status, payment_status,
           amount, billing_cycle, selected_apps, joined_date, renewal_date, created_at, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, 'India',
+          $1, $2, $3, $4, $5, $6,
           'Starter Plan (14-Day Free Trial)', 'Active', 'Trialing', 'Trial',
           0, 'monthly', '["Accounting", "Invoicing", "CRM"]'::jsonb, NOW(), NOW() + INTERVAL '14 days', NOW(), NOW()
         )
@@ -223,7 +343,8 @@ app.post('/api/auth/register', async (req, res, next) => {
           user.organization || (user.name + ' Enterprise'),
           user.name,
           emailNorm,
-          req.body?.phone || ''
+          req.body?.phone || '',
+          resolvedCountryName
         ]
       );
     } catch (custErr) {
@@ -232,12 +353,22 @@ app.post('/api/auth/register', async (req, res, next) => {
 
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
-    await logAudit('User Registered', emailNorm, user.name, req.ip, { organization: user.organization });
+    await logAudit('User Registered', emailNorm, user.name, req.ip, { organization: user.organization, country: resolvedCountryName });
 
     res.status(201).json({
       message: 'Registration successful.',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, organization: user.organization }
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        organization: user.organization,
+        country: resolvedCountryName,
+        countryCode: clientCountryCode,
+        currency: outsideIndia ? 'USD' : 'INR',
+        isIndianAccount: !outsideIndia
+      }
     });
   } catch (e) {
     next(e);
@@ -251,8 +382,9 @@ app.post('/api/auth/login', async (req, res, next) => {
       return res.status(400).json({ message: 'Email and password are required.' });
     }
     const emailNorm = String(email).trim().toLowerCase();
+    const outsideIndia = isClientOutsideIndia(req);
 
-    // Default admin shortcut
+    // Default admin shortcut (Super Admin is never geo-blocked)
     if ((emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io') &&
         (password === 'oxoo123' || password === 'admin123' || password === 'multiix123')) {
       let adminId = 1;
@@ -270,19 +402,42 @@ app.post('/api/auth/login', async (req, res, next) => {
       });
     }
 
-    // Default demo customer shortcut
+    // Default Indian demo customer shortcut — blocked outside India
     if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@oxoo.ai' || emailNorm === 'demo@oxoo.ai' || emailNorm === 'user@oxoo.ai') &&
         (password === 'oxoo123' || password === 'demo123' || password === 'customer123')) {
+      if (outsideIndia && emailNorm === 'priya@retailmart.in') {
+        return res.status(403).json({
+          code: 'INDIAN_ACCOUNT_OUTSIDE_INDIA',
+          message: 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+        });
+      }
       const custId = 101;
+      const isIndDemo = emailNorm === 'priya@retailmart.in';
       const token = jwt.sign({ id: custId, email: emailNorm, name: 'Priya Sharma', role: 'customer' }, JWT_SECRET, { expiresIn: '7d' });
       return res.json({
         message: 'Authenticated as Customer.',
         token,
-        user: { id: custId, name: 'Priya Sharma', email: emailNorm, role: 'customer', organization: 'RetailMart Solutions' }
+        user: {
+          id: custId,
+          name: 'Priya Sharma',
+          email: emailNorm,
+          role: 'customer',
+          organization: 'RetailMart Solutions',
+          country: isIndDemo ? 'India' : 'United States',
+          countryCode: isIndDemo ? 'IN' : 'US',
+          currency: isIndDemo ? 'INR' : 'USD',
+          isIndianAccount: isIndDemo
+        }
       });
     }
 
     if (!isDbConnected) {
+      if (outsideIndia && (emailNorm.endsWith('.in') || emailNorm.endsWith('.co.in'))) {
+        return res.status(403).json({
+          code: 'INDIAN_ACCOUNT_OUTSIDE_INDIA',
+          message: 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+        });
+      }
       const token = jwt.sign({ id: 'user-guest', email: emailNorm, name: 'Demo User', role: 'member' }, JWT_SECRET, { expiresIn: '7d' });
       return res.json({
         message: 'Login successful (Demo Mode).',
@@ -305,6 +460,16 @@ app.post('/api/auth/login', async (req, res, next) => {
     const isMatch = await bcrypt.compare(String(password), user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email, Storage ID, or password.' });
+    }
+
+    // Enforce regional account restriction for customer/member accounts (never block admin)
+    const isAdminRole = String(user.role || '').toLowerCase().includes('admin');
+    const accountRegionInfo = await inspectAccountRegionDb(user.email, user.organization);
+    if (!isAdminRole && outsideIndia && accountRegionInfo.isIndianAccount) {
+      return res.status(403).json({
+        code: 'INDIAN_ACCOUNT_OUTSIDE_INDIA',
+        message: 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+      });
     }
 
     // Update last login
@@ -357,7 +522,11 @@ app.post('/api/auth/login', async (req, res, next) => {
         plan: userPlan,
         purchasedApps: userPurchasedApps,
         apps: userPurchasedApps,
-        active_apps: userPurchasedApps
+        active_apps: userPurchasedApps,
+        country: accountRegionInfo.country,
+        countryCode: accountRegionInfo.countryCode,
+        currency: accountRegionInfo.currency,
+        isIndianAccount: accountRegionInfo.isIndianAccount
       }
     });
   } catch (e) {
@@ -1009,10 +1178,21 @@ app.get('/api/customer/check-email-software', async (req, res, next) => {
       registered = true;
     }
 
+    const accountRegionInfo = await inspectAccountRegionDb(email);
+    const outsideIndia = isClientOutsideIndia(req);
+    const isIndianAccountRestricted = Boolean(outsideIndia && accountRegionInfo.isIndianAccount);
+
     res.json({
       registered,
       ownedApps,
-      ownedAppIds
+      ownedAppIds,
+      isIndianAccount: accountRegionInfo.isIndianAccount,
+      accountCountry: accountRegionInfo.country,
+      accountCurrency: accountRegionInfo.currency,
+      isIndianAccountRestricted,
+      message: isIndianAccountRestricted
+        ? 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please use an International (USD $) account.'
+        : undefined
     });
   } catch (err) {
     console.error('Error in /api/customer/check-email-software:', err.message);
@@ -1918,6 +2098,18 @@ app.get('/api/customer/overview', verifyToken, async (req, res, next) => {
     const ctx = await resolveCustomerContext(req);
     const { userEmail, userCompany, memberRecord } = ctx;
 
+    const outsideIndia = isClientOutsideIndia(req);
+    const isAdminUser = String(req.user?.role || '').toLowerCase().includes('admin');
+    if (outsideIndia && !isAdminUser) {
+      const accountRegionInfo = await inspectAccountRegionDb(userEmail, userCompany);
+      if (accountRegionInfo.isIndianAccount) {
+        return res.status(403).json({
+          code: 'INDIAN_ACCOUNT_OUTSIDE_INDIA',
+          message: 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
+        });
+      }
+    }
+
     let org = null;
     let openTicketsCount = 0;
     let teamCount = 0;
@@ -2780,6 +2972,334 @@ app.post('/api/inquiries', async (req, res, next) => {
     });
   } catch (err) {
     next(err);
+  }
+});
+
+// -------------------------------------------------------------
+// Live Demo Request Flow Endpoint (Step 3 & Step 4 Validation, Storage & Notification)
+// -------------------------------------------------------------
+const ALLOWED_DEMO_CATALOG = {
+  'productivity-ai': {
+    id: 'productivity-ai',
+    label: 'Productivity & AI',
+    route: '/demo/ai-demo',
+    category: 'Productivity & AI'
+  },
+  'sales-crm': {
+    id: 'sales-crm',
+    label: 'Sales & CRM',
+    route: '/demo/sales-demo',
+    category: 'Sales & CRM'
+  },
+  'human-resources': {
+    id: 'human-resources',
+    label: 'Human Resources',
+    route: '/demo/hrms-demo',
+    category: 'Human Resources'
+  },
+  'finance-gst': {
+    id: 'finance-gst',
+    label: 'Finance & GST',
+    route: '/demo/finance-demo',
+    category: 'Finance & GST'
+  },
+  'supply-chain': {
+    id: 'supply-chain',
+    label: 'Supply Chain & Operations',
+    route: '/demo/supply-chain-demo',
+    category: 'Supply Chain & Operations'
+  },
+  'website-builder': {
+    id: 'website-builder',
+    label: 'Website Builder',
+    route: '/demo/website-builder-demo',
+    category: 'Website Builder'
+  }
+};
+
+const DEMO_ID_ALIASES = {
+  'productivity-ai': 'productivity-ai',
+  'ai-demo': 'productivity-ai',
+  'productivity & ai': 'productivity-ai',
+  'sales-crm': 'sales-crm',
+  'sales-demo': 'sales-crm',
+  'sales & crm': 'sales-crm',
+  'human-resources': 'human-resources',
+  'hrms-demo': 'human-resources',
+  'human resources': 'human-resources',
+  'finance-gst': 'finance-gst',
+  'finance-demo': 'finance-gst',
+  'finance & gst': 'finance-gst',
+  'supply-chain': 'supply-chain',
+  'supply-chain-demo': 'supply-chain',
+  'supply chain & operations': 'supply-chain',
+  'website-builder': 'website-builder',
+  'website-builder-demo': 'website-builder',
+  'website builder': 'website-builder'
+};
+
+const demoRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many demo requests from this IP address. Please wait a few minutes and try again.'
+  }
+});
+
+const sanitizeInputText = (val, maxLen = 250) => {
+  if (typeof val !== 'string') return '';
+  return val
+    .replace(/[<>]/g, '')
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .trim()
+    .slice(0, maxLen);
+};
+
+app.post('/api/demo-requests', demoRequestLimiter, async (req, res) => {
+  try {
+    const b = req.body || {};
+
+    // 1. Spam / Honeypot protection
+    if (b.website_url_hp || b.honeypot) {
+      return res.status(400).json({
+        success: false,
+        message: 'Spam check failed. Request rejected.'
+      });
+    }
+
+    // 2. Extract and sanitize fields
+    const fullName = sanitizeInputText(b.fullName || b.full_name || b.name || '', 120);
+    const email = sanitizeInputText(b.email || b.businessEmail || '', 160).toLowerCase();
+    const countryCode = sanitizeInputText(b.countryCode || b.country_code || '', 10);
+    const rawPhone = sanitizeInputText(b.phone || b.phoneNumber || '', 30);
+    const companyName = sanitizeInputText(b.companyName || b.company_name || b.company || '', 150);
+    const companyWebsite = sanitizeInputText(b.companyWebsite || b.company_website || '', 200);
+    const companySize = sanitizeInputText(b.companySize || b.company_size || '', 60);
+    const rawDemo = sanitizeInputText(b.interestedDemo || b.demoId || b.product || '', 80).toLowerCase();
+    const preferredDate = sanitizeInputText(b.preferredDate || b.preferred_date || '', 40);
+    const preferredTime = sanitizeInputText(b.preferredTime || b.preferred_time || '', 40);
+    const requirements = sanitizeInputText(b.requirements || b.message || '', 2000);
+    const privacyConsent = b.privacyConsent === true || b.privacyConsent === 'true' || b.consent === true;
+
+    // 3. Required field validations
+    if (!fullName || fullName.length < 2) {
+      return res.status(400).json({
+        success: false,
+        field: 'fullName',
+        message: 'Full Name is required (minimum 2 characters).'
+      });
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        field: 'email',
+        message: 'Please enter a valid business email address.'
+      });
+    }
+
+    // Combine countryCode and phone if provided separately
+    const combinedPhone = countryCode && !rawPhone.startsWith('+')
+      ? `${countryCode} ${rawPhone}`.trim()
+      : rawPhone;
+    const phoneDigitsOnly = combinedPhone.replace(/\D/g, '');
+    const phoneFormatRegex = /^\+?[0-9\s\-()]{7,22}$/;
+    if (!combinedPhone || !phoneFormatRegex.test(combinedPhone) || phoneDigitsOnly.length < 7 || phoneDigitsOnly.length > 15) {
+      return res.status(400).json({
+        success: false,
+        field: 'phone',
+        message: 'Please provide a valid phone number with country code (7 to 15 digits).'
+      });
+    }
+
+    if (!companyName || companyName.length < 2) {
+      return res.status(400).json({
+        success: false,
+        field: 'companyName',
+        message: 'Company Name is required.'
+      });
+    }
+
+    // Validate optional company website if provided
+    if (companyWebsite) {
+      const websiteRegex = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?$/;
+      if (!websiteRegex.test(companyWebsite) || companyWebsite.toLowerCase().startsWith('javascript:')) {
+        return res.status(400).json({
+          success: false,
+          field: 'companyWebsite',
+          message: 'Please enter a valid company website URL (e.g., https://yourcompany.com).'
+        });
+      }
+    }
+
+    // Validate selected demo against strict allowlist (prevents URL injection)
+    const canonicalDemoId = DEMO_ID_ALIASES[rawDemo];
+    const demoConfig = canonicalDemoId ? ALLOWED_DEMO_CATALOG[canonicalDemoId] : null;
+    if (!demoConfig) {
+      return res.status(400).json({
+        success: false,
+        field: 'interestedDemo',
+        message: 'Please select a valid OXOO.ai product demo category.'
+      });
+    }
+
+    if (!privacyConsent) {
+      return res.status(400).json({
+        success: false,
+        field: 'privacyConsent',
+        message: 'You must acknowledge the Privacy Policy to submit a demo request.'
+      });
+    }
+
+    // 4. Duplicate submission check within 2 minutes (anti-spam)
+    if (isDbConnected) {
+      const dupRes = await query(
+        `SELECT inquiry_ref FROM demo_inquiries
+         WHERE LOWER(email) = $1 AND LOWER(product_name) = $2 AND created_at > NOW() - INTERVAL '2 minutes'
+         LIMIT 1`,
+        [email, demoConfig.label.toLowerCase()]
+      );
+      if (dupRes.rows.length > 0) {
+        return res.status(429).json({
+          success: false,
+          code: 'RATE_LIMIT_DUPLICATE',
+          message: `Your demo request (${dupRes.rows[0].inquiry_ref}) was just received. Please wait a moment before submitting again.`
+        });
+      }
+    }
+
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const requestRef = `DEMO-2026-${randomNum}`;
+
+    const detailsPayload = {
+      requestRef,
+      demoId: demoConfig.id,
+      demoLabel: demoConfig.label,
+      companyWebsite: companyWebsite || null,
+      companySize: companySize || null,
+      preferredDate: preferredDate || null,
+      preferredTime: preferredTime || null,
+      requirements: requirements || null,
+      privacyConsent: true,
+      submittedAt: new Date().toISOString()
+    };
+
+    const formattedSummary = [
+      companySize ? `Company Size: ${companySize}` : null,
+      companyWebsite ? `Website: ${companyWebsite}` : null,
+      preferredDate ? `Preferred Date: ${preferredDate}` : null,
+      preferredTime ? `Preferred Time: ${preferredTime}` : null,
+      requirements ? `Requirements: ${requirements}` : null
+    ].filter(Boolean).join(' | ');
+
+    // 5. Persist to Database (demo_inquiries + leads)
+    let savedInquiry = null;
+    if (isDbConnected) {
+      const initialHistory = [{
+        date: new Date().toISOString(),
+        note: `Live Demo request submitted for ${demoConfig.label}.`
+      }];
+      const initialAudit = [{
+        action: 'Live Demo Request Created',
+        timestamp: new Date().toISOString(),
+        actor: fullName,
+        ip: req.ip,
+        details: detailsPayload
+      }];
+
+      const insInquiry = await query(
+        `INSERT INTO demo_inquiries (
+          inquiry_ref, contact_person, company_name, email, phone, category,
+          product_name, selected_plan, message, status, assigned_to, internal_notes,
+          followup_history, audit_trail, is_staging_test, ip_address, user_agent, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, 'New', 'Unassigned', '',
+          $10, $11, false, $12, $13, NOW(), NOW()
+        ) RETURNING id, inquiry_ref, created_at`,
+        [
+          requestRef,
+          fullName,
+          companyName,
+          email,
+          combinedPhone,
+          'Live Demo Request',
+          demoConfig.label,
+          companySize || 'Live Demo',
+          formattedSummary || 'Live Demo Request',
+          JSON.stringify(initialHistory),
+          JSON.stringify(initialAudit),
+          req.ip,
+          req.headers['user-agent'] || ''
+        ]
+      );
+
+      if (!insInquiry.rows || insInquiry.rows.length === 0) {
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to save your demo request at this time. Please try again.'
+        });
+      }
+      savedInquiry = insInquiry.rows[0];
+
+      // Also record in leads table for unified CRM visibility
+      await query(
+        `INSERT INTO leads (name, email, phone, company, service, message, status, source, details)
+         VALUES ($1, $2, $3, $4, $5, $6, 'new', 'live-demo-request', $7)`,
+        [
+          fullName,
+          email,
+          combinedPhone,
+          companyName,
+          demoConfig.label,
+          formattedSummary,
+          JSON.stringify(detailsPayload)
+        ]
+      );
+    }
+
+    // 6. Notify Sales/Support Team & Visitor via configured email service
+    const emailNotifyResult = await sendDemoRequestNotificationEmail({
+      requestRef,
+      fullName,
+      email,
+      phone: combinedPhone,
+      companyName,
+      companyWebsite,
+      companySize,
+      demoId: demoConfig.id,
+      demoLabel: demoConfig.label,
+      preferredDate,
+      preferredTime,
+      requirements
+    });
+
+    if (!emailNotifyResult || !emailNotifyResult.success) {
+      return res.status(502).json({
+        success: false,
+        message: 'We could not complete notification delivery for your demo request. Please try again or contact hello@oxoo.ai.'
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      requestRef,
+      demoId: demoConfig.id,
+      demoLabel: demoConfig.label,
+      demoRoute: demoConfig.route,
+      inquiryId: savedInquiry?.id || null,
+      message: `Thank you, ${fullName}! Your request for the ${demoConfig.label} demo (${requestRef}) has been confirmed.`
+    });
+  } catch (err) {
+    console.error('[DemoRequests] Error processing demo request:', err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'An unexpected error occurred while saving your demo request. Please try again.'
+    });
   }
 });
 
@@ -4500,6 +5020,13 @@ app.use('/api/admin', requireAdminAuth, adminModulesRouter);
 const agentRouter = require('./agentRoutes');
 app.use('/api/agent', agentRouter);
 
+// -------------------------------------------------------------
+// OXOO UNIFIED PROJECTS HUB & CONSULTATION ROUTERS
+// -------------------------------------------------------------
+const { publicProjectsRouter, adminProjectsRouter } = require('./projectRoutes');
+app.use('/api/projects', publicProjectsRouter);
+app.use('/api/admin/projects', requireAdminAuth, adminProjectsRouter);
+
 
 
 // Update Customer Account Status (Activate, Suspend, Close, Restore)
@@ -6112,40 +6639,78 @@ app.get('/api/geo/detect', async (req, res) => {
       try {
         const geoController = new AbortController();
         const timeoutId = setTimeout(() => geoController.abort(), 1500);
-        const geoRes = await fetch(`https://ipapi.co/${clientIp}/json/`, {
+        const geoRes = await fetch(`https://api.country.is/${clientIp}`, {
           signal: geoController.signal,
           headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
         });
         clearTimeout(timeoutId);
         if (geoRes.ok) {
           const geoData = await geoRes.json();
-          if (geoData && geoData.country_code && /^[a-zA-Z]{2}$/.test(geoData.country_code)) {
-            detectedCountry = geoData.country_code.toUpperCase();
-            source = 'ipapi';
+          if (geoData && geoData.country && /^[a-zA-Z]{2}$/.test(geoData.country)) {
+            detectedCountry = geoData.country.toUpperCase();
+            source = 'country.is';
           }
         }
-      } catch (e) {
-        // Fallback safely to default without throwing
+      } catch (e) {}
+
+      if (source === 'default') {
+        try {
+          const geoController = new AbortController();
+          const timeoutId = setTimeout(() => geoController.abort(), 1500);
+          const geoRes = await fetch(`https://ipapi.co/${clientIp}/json/`, {
+            signal: geoController.signal,
+            headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+          });
+          clearTimeout(timeoutId);
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            if (geoData && geoData.country_code && /^[a-zA-Z]{2}$/.test(geoData.country_code)) {
+              detectedCountry = geoData.country_code.toUpperCase();
+              source = 'ipapi';
+            }
+          }
+        } catch (e) {
+          // Fallback safely to default without throwing
+        }
       }
     } else {
       // For local development on loopback, attempt a quick outbound lookup to detect server country
       try {
         const geoController = new AbortController();
         const timeoutId = setTimeout(() => geoController.abort(), 1200);
-        const geoRes = await fetch('https://ipapi.co/json/', {
+        const geoRes = await fetch('https://api.country.is/', {
           signal: geoController.signal,
           headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
         });
         clearTimeout(timeoutId);
         if (geoRes.ok) {
           const geoData = await geoRes.json();
-          if (geoData && geoData.country_code && /^[a-zA-Z]{2}$/.test(geoData.country_code)) {
-            detectedCountry = geoData.country_code.toUpperCase();
+          if (geoData && geoData.country && /^[a-zA-Z]{2}$/.test(geoData.country)) {
+            detectedCountry = geoData.country.toUpperCase();
             source = 'server-public-ip';
           }
         }
-      } catch (e) {
-        // Safe fallback
+      } catch (e) {}
+
+      if (source === 'default') {
+        try {
+          const geoController = new AbortController();
+          const timeoutId = setTimeout(() => geoController.abort(), 1200);
+          const geoRes = await fetch('https://ipapi.co/json/', {
+            signal: geoController.signal,
+            headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+          });
+          clearTimeout(timeoutId);
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            if (geoData && geoData.country_code && /^[a-zA-Z]{2}$/.test(geoData.country_code)) {
+              detectedCountry = geoData.country_code.toUpperCase();
+              source = 'server-public-ip';
+            }
+          }
+        } catch (e) {
+          // Safe fallback
+        }
       }
     }
 
@@ -6331,7 +6896,19 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Company name and email are required.' });
     }
 
-    const calc = calculatePricing({ planId, selectedApps, userCount, billingCycle, country, region });
+    const effectiveCountry = country || region || resolveClientCountryFromReq(req);
+    const calc = calculatePricing({ planId, selectedApps, userCount, billingCycle, country: effectiveCountry, region: effectiveCountry });
+
+    if (calc.regionCode !== 'IN') {
+      const accountRegionInfo = await inspectAccountRegionDb(customerEmail, companyName);
+      if (accountRegionInfo.isIndianAccount) {
+        return res.status(403).json({
+          success: false,
+          code: 'INDIAN_ACCOUNT_OUTSIDE_INDIA',
+          message: 'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please use an International (USD $) account.'
+        });
+      }
+    }
 
     // Validate requested currency against authoritative regional currency
     if (requestedCurrency && requestedCurrency.toUpperCase() !== calc.currency) {
@@ -6643,13 +7220,15 @@ app.post('/api/payment/verify', async (req, res, next) => {
         const maxCustRes = await query(`SELECT COUNT(*) as count FROM customers`);
         const nextId = parseInt(maxCustRes.rows[0]?.count || 0, 10) + 1;
         const newCstId = `CST-${String(nextId).padStart(4, '0')}`;
+        const orderPricingRegion = resolvePricingRegion(order.pricing_region || req.body?.pricingRegion || req.body?.country || 'IN');
+        const resolvedCustCountry = orderPricingRegion.countryName === 'International' ? 'United States' : (orderPricingRegion.countryName || 'India');
 
         await query(
           `INSERT INTO customers (
             customer_id, company_name, contact_person, email, phone, country,
             plan, account_status, subscription_status, payment_status,
             amount, billing_cycle, selected_apps, joined_date, renewal_date
-          ) VALUES ($1, $2, $3, $4, $5, 'India', $6, 'Active', 'Active', 'Paid', $7, $8, $9, NOW(), NOW() + INTERVAL '${renewalInterval}')
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active', 'Active', 'Paid', $8, $9, $10, NOW(), NOW() + INTERVAL '${renewalInterval}')
           ON CONFLICT (customer_id) DO NOTHING`,
           [
             newCstId,
@@ -6657,6 +7236,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
             customerName || companyName || 'Customer Admin',
             normEmail,
             normPhone,
+            resolvedCustCountry,
             planName,
             safeTotalAmount,
             billingCycle,

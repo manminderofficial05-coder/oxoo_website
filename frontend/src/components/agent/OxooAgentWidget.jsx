@@ -425,31 +425,35 @@ export default function OxooAgentWidget() {
           <div className="oxoo-agent-pulse-ring" aria-hidden="true" />
 
           {/* Official OXOO Mark + Dedicated Glowing AI Badge */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img
-              src="/oxoo-logo-symbol.png"
-              alt="OXOO"
-              style={{ width: '28px', height: '28px', objectFit: 'contain' }}
-              onError={(e) => {
-                // Fallback icon if symbol is not found
-                e.target.style.display = 'none';
-              }}
-            />
+          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src="/oxoo-logo-symbol.png"
+                alt="OXOO"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', transform: 'scale(1.08)', display: 'block' }}
+                onError={(e) => {
+                  // Fallback icon if symbol is not found
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
             {/* Dedicated AI Assistant Badge */}
             <div
               style={{
                 position: 'absolute',
-                bottom: '-6px',
-                right: '-8px',
+                bottom: '-2px',
+                right: '-2px',
                 background: '#00f2fe',
                 color: '#0a192f',
                 borderRadius: '50%',
-                width: '16px',
-                height: '16px',
+                width: '18px',
+                height: '18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 6px #00f2fe'
+                boxShadow: '0 0 8px #00f2fe',
+                border: '1.5px solid #0a192f',
+                zIndex: 2
               }}
               title="AI Assistant Active"
             >
@@ -476,13 +480,14 @@ export default function OxooAgentWidget() {
           <div className="oxoo-agent-header">
             <div className="oxoo-agent-header-brand">
               <div className="oxoo-agent-avatar" aria-hidden="true">
-                <img
-                  src="/oxoo-logo-symbol.png"
-                  alt="OXOO Agent"
-                  style={{ width: '22px', height: '22px', objectFit: 'contain' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-                <Sparkles size={14} style={{ color: '#ffffff', position: 'absolute', top: '2px', right: '2px' }} />
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img
+                    src="/oxoo-logo-symbol.png"
+                    alt="OXOO Agent"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', transform: 'scale(1.08)', display: 'block' }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                </div>
               </div>
 
               <div className="oxoo-agent-title-group">
