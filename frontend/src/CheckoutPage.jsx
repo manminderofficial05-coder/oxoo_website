@@ -454,7 +454,7 @@ export default function CheckoutPage() {
     const count = selectedAppIds.length;
 
     const singleRate = isYearly
-      ? (currentRegion?.plans?.singleApp?.yearlyPrice ?? 580)
+      ? (currentRegion?.plans?.singleApp?.yearlyPrice ?? 560)
       : (currentRegion?.plans?.singleApp?.monthlyPrice ?? 740);
 
     const customBaseRate = isYearly
@@ -462,7 +462,7 @@ export default function CheckoutPage() {
       : (currentRegion?.plans?.customApps?.monthlyBasePrice ?? 1280);
 
     const extraRate = isYearly
-      ? (currentRegion?.plans?.customApps?.yearlyAdditionalAppPrice ?? 580)
+      ? (currentRegion?.plans?.customApps?.yearlyAdditionalAppPrice ?? 560)
       : (currentRegion?.plans?.customApps?.monthlyAdditionalAppPrice ?? 740);
 
     if (count <= 1) {
@@ -880,13 +880,13 @@ export default function CheckoutPage() {
                   </div>
                   <div className="checkout-pill-price" style={{ color: '#16a34a' }}>
                     {selectedAppIds.length <= 1
-                      ? `${totals.symbol}${currentRegion?.plans?.singleApp?.yearly?.price ?? 580}`
+                      ? `${totals.symbol}${currentRegion?.plans?.singleApp?.yearly?.price ?? 560}`
                       : `${totals.symbol}${currentRegion?.plans?.customApps?.yearly?.price ?? 980}`}
                     <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#475569' }}> / user / mo</span>
                   </div>
                   <div className="checkout-pill-sub">
                     {selectedAppIds.length <= 1
-                      ? `Billed annually: ${totals.symbol}${((currentRegion?.plans?.singleApp?.yearly?.price ?? 580) * 12).toLocaleString()} / user (12 months payment)`
+                      ? `Billed annually: ${totals.symbol}${((currentRegion?.plans?.singleApp?.yearly?.price ?? 560) * 12).toLocaleString()} / user (12 months payment)`
                       : `Billed annually for ${selectedAppIds.length} softwares (12 months payment)`}
                   </div>
                 </div>

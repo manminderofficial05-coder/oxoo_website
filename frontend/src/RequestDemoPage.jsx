@@ -184,11 +184,10 @@ export default function RequestDemoPage() {
     }
 
     const digitsOnly = trimmedPhone.replace(/\D/g, '');
-    const phoneAllowedChars = /^[0-9\s\-()]{6,18}$/;
     if (!trimmedPhone) {
-      errors.phone = 'Phone number is required.';
-    } else if (!phoneAllowedChars.test(trimmedPhone) || digitsOnly.length < 7 || digitsOnly.length > 15) {
-      errors.phone = 'Please enter a valid phone number (7 to 15 digits).';
+      errors.phone = 'Mobile number is required.';
+    } else if (digitsOnly.length !== 10) {
+      errors.phone = 'Please enter a valid 10-digit mobile number.';
     }
 
     if (!trimmedCompany || trimmedCompany.length < 2) {
@@ -590,11 +589,14 @@ export default function RequestDemoPage() {
                             id="demo-phone"
                             name="phone"
                             type="tel"
+                            inputMode="numeric"
+                            maxLength={10}
                             required
-                            placeholder="98765 43210"
+                            placeholder="10-digit mobile number"
                             value={phone}
                             onChange={(e) => {
-                              setPhone(e.target.value);
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                              setPhone(val);
                               if (fieldErrors.phone) setFieldErrors((p) => ({ ...p, phone: '' }));
                             }}
                             className={fieldErrors.phone ? 'has-error' : ''}

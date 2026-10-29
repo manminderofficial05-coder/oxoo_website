@@ -83,6 +83,11 @@ export default function CustomerLoginPage() {
         setErrorMsg('Please enter your full name, email address, and password.');
         return;
       }
+      const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!EMAIL_REGEX.test(cleanEmail)) {
+        setErrorMsg('Please enter a valid email address (e.g. name@company.com).');
+        return;
+      }
       if (isOutsideIndia && cleanEmail.endsWith('.in')) {
         setErrorMsg(
           `Access Restricted: Indian (.in / INR) accounts cannot be used outside India (${currentRegion.countryName}). Please register with an international business email.`

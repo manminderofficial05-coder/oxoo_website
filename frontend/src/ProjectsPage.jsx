@@ -265,12 +265,14 @@ export default function ProjectsPage() {
         setProjectError('Please enter your Full Name.');
         return false;
       }
-      if (!projectForm.businessEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(projectForm.businessEmail.trim())) {
-        setProjectError('Please enter a valid Email address.');
+      const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!projectForm.businessEmail.trim() || !EMAIL_REGEX.test(projectForm.businessEmail.trim())) {
+        setProjectError('Please enter a valid email address (e.g. name@company.com).');
         return false;
       }
-      if (!projectForm.phone.trim() || projectForm.phone.trim().length < 6) {
-        setProjectError('Please enter your Phone Number with country code.');
+      const cleanPhone = (projectForm.phone || '').replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        setProjectError('Please enter a valid 10-digit mobile number.');
         return false;
       }
       if (!projectForm.country.trim()) {
@@ -358,12 +360,14 @@ export default function ProjectsPage() {
       setConsultError('Full Name is required.');
       return;
     }
-    if (!consultForm.businessEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(consultForm.businessEmail.trim())) {
-      setConsultError('Please enter a valid Email address.');
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!consultForm.businessEmail.trim() || !EMAIL_REGEX.test(consultForm.businessEmail.trim())) {
+      setConsultError('Please enter a valid email address (e.g. name@company.com).');
       return;
     }
-    if (!consultForm.phone.trim() || consultForm.phone.trim().length < 6) {
-      setConsultError('Please enter a valid Phone Number with country code.');
+    const cleanPhone = (consultForm.phone || '').replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setConsultError('Please enter a valid 10-digit mobile number.');
       return;
     }
     if (!consultForm.country.trim()) {
@@ -1002,13 +1006,15 @@ export default function ProjectsPage() {
                         </div>
 
                         <div className="oxoo-projects-form-group">
-                          <label>Phone Number (with country code) <span className="req">*</span></label>
+                          <label>Mobile Number (10 digits) <span className="req">*</span></label>
                           <input
                             type="tel"
+                            inputMode="numeric"
+                            maxLength={10}
                             className="oxoo-projects-input"
-                            placeholder="e.g. +91 98765 43210"
+                            placeholder="10-digit mobile number"
                             value={projectForm.phone}
-                            onChange={(e) => setProjectForm({ ...projectForm, phone: e.target.value })}
+                            onChange={(e) => setProjectForm({ ...projectForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                             required
                           />
                         </div>
@@ -1690,13 +1696,15 @@ export default function ProjectsPage() {
                     </div>
 
                     <div className="oxoo-projects-form-group">
-                      <label>Phone Number (with country code) <span className="req">*</span></label>
+                      <label>Mobile Number (10 digits) <span className="req">*</span></label>
                       <input
                         type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
                         className="oxoo-projects-input"
-                        placeholder="+91 98765 43210"
+                        placeholder="10-digit mobile number"
                         value={consultForm.phone}
-                        onChange={(e) => setConsultForm({ ...consultForm, phone: e.target.value })}
+                        onChange={(e) => setConsultForm({ ...consultForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                         required
                       />
                     </div>

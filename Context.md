@@ -531,3 +531,10 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
 4. **Project Form Date Removal & Location-Aware Single-Currency Budget (`frontend/src/ProjectsPage.jsx`, `frontend/src/projectsConfig.js`):**
    - Removed "Preferred Project Start Date" and "Expected Completion Date (if known)" date input fields from Option B project wizard.
    - Connected the Estimated Budget Range dropdown to `useRegionPricing()`: visitors located in India see only Indian Rupees (`₹`), while visitors located outside India see only US Dollars (`$`), without displaying combined currency pairs (`$ / ₹`).
+5. **Universal 10-Digit Mobile & Strict Email Validation & Responsive Viewport Optimizations (`frontend/src/ProjectsPage.jsx`, `frontend/src/RequestDemoPage.jsx`, `frontend/src/CheckoutPage.jsx`, `frontend/src/HelpPage.jsx`, `frontend/src/CustomerLoginPage.jsx`, `backend/src/projectRoutes.js`, `backend/src/server.js`, `frontend/src/projects.css`):**
+   - Enforced exactly 10-digit mobile number validation and sanitization (`inputMode="numeric"`, `maxLength={10}`, stripping non-digits) across all website forms and backend REST endpoints.
+   - Enforced RFC-compliant email regex (`/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/`) across all forms.
+   - Enhanced responsive layouts across mobile (320px–480px), tablet (481px–1024px), and desktop (>1024px) with generous touch targets (min 44px), readable typography, clean spacing, and 16px mobile input font sizes to prevent device zoom glitches.
+6. **Universal Price Standardization (₹580 to ₹560) (`frontend/src/pricingConfig.js`, `backend/src/pricingConfig.js`, `frontend/src/PricingPage.jsx`, `frontend/src/CheckoutPage.jsx`):**
+   - Updated the authoritative annual pricing and additional app rate from ₹580 to ₹560 across frontend and backend single-source-of-truth pricing configurations.
+   - Updated module package items and fallback defaults on `PricingPage.jsx` and `CheckoutPage.jsx` so all yearly prices and checkout totals reflect ₹560/mo (billed annually as ₹6,720 + GST).

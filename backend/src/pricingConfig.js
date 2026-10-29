@@ -40,11 +40,11 @@ const INR_PLANS_CONFIG = {
     id: 'single-app',
     name: 'Standard Pack',
     monthlyPrice: 740,
-    yearlyPrice: 580,
+    yearlyPrice: 560,
     monthlyStrikethroughPrice: 975,
     yearlyStrikethroughPrice: 740,
     discountPercentMonthly: 24,
-    discountPercentYearly: 22
+    discountPercentYearly: 24
   },
   customApps: {
     id: 'custom-apps',
@@ -52,7 +52,7 @@ const INR_PLANS_CONFIG = {
     monthlyBasePrice: 1280,
     yearlyBasePrice: 980,
     monthlyAdditionalAppPrice: 740,
-    yearlyAdditionalAppPrice: 580,
+    yearlyAdditionalAppPrice: 560,
     monthlyStrikethroughBasePrice: 1660,
     yearlyStrikethroughBasePrice: 1280,
     discountPercentMonthly: 23,

@@ -720,32 +720,111 @@
   font-size: 13.5px;
 }
 
-/* Responsive Breakpoints */
+/* Responsive Breakpoints & Enhanced Mobile Viewability */
 @media (max-width: 1024px) {
   .oxoo-projects-hero-inner {
     grid-template-columns: 1fr;
+    gap: 36px;
   }
   .oxoo-projects-services-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
   .oxoo-projects-stepper {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
+  .oxoo-projects-hero {
+    padding: 38px 16px 46px;
+  }
+  .oxoo-projects-hero-title {
+    font-size: 2.1rem;
+    line-height: 1.18;
+  }
+  .oxoo-projects-hero-desc {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .oxoo-projects-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .oxoo-projects-hero-actions .oxoo-projects-btn-primary,
+  .oxoo-projects-hero-actions .oxoo-projects-btn-secondary {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 20px;
+    font-size: 15px;
+  }
   .oxoo-projects-services-grid,
   .oxoo-projects-mode-switcher,
   .oxoo-projects-form-grid,
   .oxoo-projects-review-grid,
   .oxoo-projects-showcase-body {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
   .oxoo-projects-stepper {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
   .oxoo-projects-form-shell {
-    padding: 22px 18px;
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+  .oxoo-projects-mode-card {
+    padding: 18px 16px;
+    gap: 14px;
+  }
+  .oxoo-projects-mode-icon {
+    width: 44px;
+    height: 44px;
+  }
+  .oxoo-projects-selection-bar {
+    top: 60px;
+    padding: 0 12px;
+    margin: -10px auto 18px;
+  }
+  .oxoo-projects-selection-inner {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .oxoo-projects-selection-inner > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .oxoo-projects-input,
+  .oxoo-projects-select,
+  .oxoo-projects-textarea {
+    font-size: 16px; /* Prevents auto-zoom on mobile safari/chrome */
+    min-height: 44px;
+  }
+  .oxoo-projects-engagement-section {
+    padding: 0 16px 40px;
+  }
+  .oxoo-projects-catalogue {
+    padding: 32px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .oxoo-projects-hero-title {
+    font-size: 1.85rem;
+  }
+  .oxoo-projects-section-header h2 {
+    font-size: 1.65rem;
+  }
+  .oxoo-projects-category-header h3 {
+    font-size: 1.35rem;
+  }
+  .oxoo-project-service-card {
+    padding: 18px 16px;
   }
 }
 

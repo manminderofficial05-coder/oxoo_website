@@ -21,7 +21,7 @@ export const SOFTWARE_MODULES = [
     color: '#2563eb',
     bgColor: '#eff6ff',
     priceMonthly: 740,
-    priceYearly: 580
+    priceYearly: 560
   },
   {
     id: 'sales',
@@ -33,7 +33,7 @@ export const SOFTWARE_MODULES = [
     color: '#ec4899',
     bgColor: '#fdf2f8',
     priceMonthly: 740,
-    priceYearly: 580
+    priceYearly: 560
   },
   {
     id: 'supply-chain',
@@ -45,7 +45,7 @@ export const SOFTWARE_MODULES = [
     color: '#ea580c',
     bgColor: '#fff7ed',
     priceMonthly: 740,
-    priceYearly: 580
+    priceYearly: 560
   },
   {
     id: 'human-resources',
@@ -57,7 +57,7 @@ export const SOFTWARE_MODULES = [
     color: '#7c3aed',
     bgColor: '#f5f3ff',
     priceMonthly: 740,
-    priceYearly: 580
+    priceYearly: 560
   },
   {
     id: 'productivity',
@@ -69,7 +69,7 @@ export const SOFTWARE_MODULES = [
     color: '#6d28d9',
     bgColor: '#faf5ff',
     priceMonthly: 740,
-    priceYearly: 580
+    priceYearly: 560
   }
 ];
 
@@ -115,9 +115,9 @@ export default function PricingPage() {
   const custom = currentRegion?.plans?.customApps || {};
 
   const singlePlan = {
-    price: isYearly ? (single.yearlyPrice ?? 580) : (single.monthlyPrice ?? 740),
+    price: isYearly ? (single.yearlyPrice ?? 560) : (single.monthlyPrice ?? 740),
     originalPrice: isYearly ? (single.yearlyStrikethroughPrice ?? 740) : (single.monthlyStrikethroughPrice ?? 975),
-    discountPercent: isYearly ? (single.discountPercentYearly ?? 22) : (single.discountPercentMonthly ?? 24)
+    discountPercent: isYearly ? (single.discountPercentYearly ?? 24) : (single.discountPercentMonthly ?? 24)
   };
 
   const customPlan = {
@@ -127,7 +127,7 @@ export default function PricingPage() {
   };
 
   const addlPlan = {
-    price: isYearly ? (custom.yearlyAdditionalAppPrice ?? 580) : (custom.monthlyAdditionalAppPrice ?? 740)
+    price: isYearly ? (custom.yearlyAdditionalAppPrice ?? 560) : (custom.monthlyAdditionalAppPrice ?? 740)
   };
 
   const singleDiscount = singlePlan.originalPrice > singlePlan.price

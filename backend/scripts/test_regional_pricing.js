@@ -74,10 +74,10 @@ async function runTests() {
     });
     assert(
       calcIN_Basic.data.currency === 'INR' &&
-      calcIN_Basic.data.perUserPerMonth === 580 &&
-      calcIN_Basic.data.subtotal === 6960 &&
-      calcIN_Basic.data.totalAmount === 8212.8,
-      'India Basic Yearly: ₹580/mo (Billed ₹6,960 + 18% GST = ₹8,212.80)',
+      calcIN_Basic.data.perUserPerMonth === 560 &&
+      calcIN_Basic.data.subtotal === 6720 &&
+      calcIN_Basic.data.totalAmount === 7929.6,
+      'India Basic Yearly: ₹560/mo (Billed ₹6,720 + 18% GST = ₹7,929.60)',
       JSON.stringify(calcIN_Basic.data)
     );
 
@@ -217,8 +217,8 @@ async function runTests() {
     const inSingleAnnual = inRegion.plans.singleApp;
     const inDiscount = Math.round(((inSingleAnnual.yearlyStrikethroughPrice - inSingleAnnual.yearlyPrice) / inSingleAnnual.yearlyStrikethroughPrice) * 100);
     assert(
-      inSingleAnnual.yearlyStrikethroughPrice === 740 && inSingleAnnual.yearlyPrice === 580 && inDiscount === 22,
-      `India Single Annual discount: ₹740 -> ₹580 (${inDiscount}% OFF)`
+      inSingleAnnual.yearlyStrikethroughPrice === 740 && inSingleAnnual.yearlyPrice === 560 && inDiscount === 24,
+      `India Single Annual discount: ₹740 -> ₹560 (${inDiscount}% OFF)`
     );
 
     const formattedINR = formatRegionalCurrency(8212.8, 'IN');

@@ -271,6 +271,10 @@ app.post('/api/auth/register', async (req, res, next) => {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
     }
     const emailNorm = String(email).trim().toLowerCase();
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!EMAIL_REGEX.test(emailNorm)) {
+      return res.status(400).json({ message: 'Please enter a valid email address.' });
+    }
     const clientCountryCode = resolveClientCountryFromReq(req);
     const outsideIndia = clientCountryCode !== 'IN';
     const pricingRegion = resolvePricingRegion(clientCountryCode);
@@ -3102,19 +3106,17 @@ app.post('/api/demo-requests', demoRequestLimiter, async (req, res) => {
       });
     }
 
-    // Combine countryCode and phone if provided separately
-    const combinedPhone = countryCode && !rawPhone.startsWith('+')
-      ? `${countryCode} ${rawPhone}`.trim()
-      : rawPhone;
-    const phoneDigitsOnly = combinedPhone.replace(/\D/g, '');
-    const phoneFormatRegex = /^\+?[0-9\s\-()]{7,22}$/;
-    if (!combinedPhone || !phoneFormatRegex.test(combinedPhone) || phoneDigitsOnly.length < 7 || phoneDigitsOnly.length > 15) {
+    const phoneDigitsOnly = (rawPhone || '').replace(/\D/g, '');
+    if (!rawPhone || phoneDigitsOnly.length !== 10) {
       return res.status(400).json({
         success: false,
         field: 'phone',
-        message: 'Please provide a valid phone number with country code (7 to 15 digits).'
+        message: 'Please provide a valid 10-digit mobile number.'
       });
     }
+    const combinedPhone = countryCode && !rawPhone.startsWith('+')
+      ? `${countryCode} ${rawPhone}`.trim()
+      : rawPhone;
 
     if (!companyName || companyName.length < 2) {
       return res.status(400).json({

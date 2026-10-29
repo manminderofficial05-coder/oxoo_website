@@ -293,11 +293,11 @@ publicProjectsRouter.post('/requests', projectSubmissionLimiter, async (req, res
     }
 
     const phoneDigits = phoneNumber.replace(/\D/g, '');
-    if (!phoneNumber || phoneDigits.length < 7 || phoneDigits.length > 15) {
+    if (!phoneNumber || phoneDigits.length !== 10) {
       return res.status(400).json({
         success: false,
         field: 'phoneNumber',
-        message: 'Please enter a valid phone number with country code (7 to 15 digits).'
+        message: 'Please enter a valid 10-digit mobile number.'
       });
     }
 
@@ -631,11 +631,11 @@ publicProjectsRouter.post('/consultations', projectSubmissionLimiter, async (req
     }
 
     const phoneDigits = phoneNumber.replace(/\D/g, '');
-    if (!phoneNumber || phoneDigits.length < 7 || phoneDigits.length > 15) {
+    if (!phoneNumber || phoneDigits.length !== 10) {
       return res.status(400).json({
         success: false,
         field: 'phoneNumber',
-        message: 'Please enter a valid phone number with country code (7 to 15 digits).'
+        message: 'Please enter a valid 10-digit mobile number.'
       });
     }
 

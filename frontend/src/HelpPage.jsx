@@ -313,9 +313,17 @@ export default function HelpPage() {
       setFormError('Please enter your full name.');
       return;
     }
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      setFormError('Please provide a valid business email address.');
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!formData.email.trim() || !EMAIL_REGEX.test(formData.email.trim())) {
+      setFormError('Please enter a valid email address.');
       return;
+    }
+    if (formData.phone && formData.phone.trim()) {
+      const cleanPhone = formData.phone.replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        setFormError('Please enter a valid 10-digit mobile number.');
+        return;
+      }
     }
     if (!formData.topic) {
       setFormError('Please select a topic for your support ticket.');
@@ -688,9 +696,12 @@ export default function HelpPage() {
                   <input
                     id="ticket-phone"
                     type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="10-digit mobile number"
                     className="ticket-form-input"
                     value={formData.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
+                    onChange={(e) => handleChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                   />
                 </div>
               </div>
