@@ -550,3 +550,23 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
    - Preserved identical video container styling, curved squircle border (`12px`), drop shadows, play/pause toggle, and timeline scrubber slider.
    - Added an integrated Audio On/Off toggle button (`Volume2` / `VolumeX` from `lucide-react`) positioned beside the timeline scrubber.
    - Videos autoplay muted (`muted={isMuted}`) in compliance with browser autoplay security policies, allowing users to toggle audio on or off with a single click.
+
+---
+
+## 17. "Optimized for Productivity" Collage Images Update
+
+1. **New Asset Integration (`frontend/public/home/`):**
+   - Replaced old placeholder images with user-provided production assets:
+     - **Left Floating Card (`/home/oxoo_supplychain.png`):** SupplyChain 360 enterprise operations platform showing master dashboard navigation and warehouse KPIs.
+     - **Center Main Card (`/home/oxoo_hrms.jpg`):** Workforce Pulse & HRMS dashboard featuring team attendance overview and department breakdown charts.
+     - **Right Floating Card (`/home/oxoo_chat_assistant.png`):** AI Chat 
+   Assistant showing real-time appointment booking and conversational workflows.
+2. **Visual Hierarchy & Styling (`frontend/src/styles.css` & `frontend/src/App.jsx`):**
+   - Updated `.prod-card-activities`, `.prod-card-kanban`, and `.prod-card-ai` with refined proportions, subtle border outlines, and layered drop shadows (`box-shadow: 0 24px 50px rgba(15, 23, 42, 0.22)`), ensuring seamless mobile responsiveness and desktop alignment.
+
+---
+
+## 18. KPMG Testimonial & Unleash Growth CTA Removal
+
+- Removed `kpmg-quote-section` (Harry Van Donink / KPMG Belgium testimonial block) from `frontend/src/App.jsx`.
+- Removed `unleash-bottom-cta-section` ("Unleash your growth potential" CTA button and subtitle) from `frontend/src/App.jsx`.

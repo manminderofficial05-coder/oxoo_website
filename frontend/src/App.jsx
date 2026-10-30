@@ -75,7 +75,7 @@ const HERO_APP_CARDS = [
   { id: 'field-service', label: 'Field Service', iconSrc: '/apps/logo-field-service.png?v=clean', link: '/apps/field-service' },
   { id: 'planning', label: 'Planning', iconSrc: '/apps/logo-planning.png?v=clean', link: '/apps/planning' },
   { id: 'helpdesk', label: 'Helpdesk', iconSrc: '/apps/logo-helpdesk.png?v=clean', link: '/apps/helpdesk' },
-   { id: 'documents', label: 'Documents', iconSrc: '/apps/logo-documents.png?v=clean', link: '/apps/documents' },
+  { id: 'documents', label: 'Documents', iconSrc: '/apps/logo-documents.png?v=clean', link: '/apps/documents' },
   { id: 'sign', label: 'Sign', iconSrc: '/apps/logo-sign.png?v=clean', link: '/apps/sign' },
   { id: 'email-marketing', label: 'Email Marketing', iconSrc: '/apps/logo-email-marketing.png?v=clean', link: '/apps/email-marketing' },
 
@@ -437,13 +437,13 @@ function Home() {
             </h2>
             <p className="vast-collection-lead">
               OXOO.ai brings HRMS, Finance, CRM, Sales, Inventory, Supply Chain, AI Agents, and  <br /> Website & App Builder together in one connected ecosystem.
-             
+
             </p>
 
             <p className="vast-collection-sub">
               Discover the power of connected business applications — built to simplify today, designed to scale tomorrow.
               <br />
-              
+
             </p>
 
             {/* Quote Persona Callout (Bill McDermott) */}
@@ -544,7 +544,7 @@ function Home() {
 
             {/* Layered Showcase: Tasks, Notifications & Ask AI */}
             <div className="productivity-showcase-grid">
-              {/* Left Floating Card: Activities / Notifications */}
+              {/* Left Floating Card: SupplyChain 360 platform view */}
               <motion.div
                 className="prod-card-activities"
                 initial={{ opacity: 0, x: -20 }}
@@ -553,13 +553,13 @@ function Home() {
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
                 <img
-                  src="/home/speed_4.webp"
-                  alt="Activities and notification tasks"
+                  src="/home/oxoo_supplychain.png"
+                  alt="SupplyChain 360 enterprise operations"
                   loading="lazy"
                 />
               </motion.div>
 
-              {/* Central Card: Kanban Floorplan & Kitchen Architecture Tasks */}
+              {/* Central Card: Workforce Pulse & HRMS attendance overview */}
               <motion.div
                 className="prod-card-kanban"
                 initial={{ opacity: 0, y: 16 }}
@@ -568,13 +568,13 @@ function Home() {
                 transition={{ duration: 0.5 }}
               >
                 <img
-                  src="/home/speed_1.webp"
-                  alt="Project Kanban and Floorplan tasks"
+                  src="/home/oxoo_hrms.jpg"
+                  alt="OXOO Workforce Pulse and HRMS attendance dashboard"
                   loading="lazy"
                 />
               </motion.div>
 
-              {/* Right Floating Card: Ask AI Chat */}
+              {/* Right Floating Card: AI Chat Assistant */}
               <motion.div
                 className="prod-card-ai"
                 initial={{ opacity: 0, x: 20 }}
@@ -583,8 +583,8 @@ function Home() {
                 transition={{ duration: 0.5, delay: 0.15 }}
               >
                 <img
-                  src="/home/speed_3.webp"
-                  alt="Ask AI real-time intelligence assistant"
+                  src="/home/oxoo_chat_assistant.png"
+                  alt="OXOO AI Assistant booking and customer conversation"
                   loading="lazy"
                 />
               </motion.div>
@@ -816,62 +816,7 @@ function Home() {
           </div>
         </section>}
 
-        {/* KPMG TESTIMONIAL SECTION (Image 4) */}
-        <section className="kpmg-quote-section">
-          <div className="kpmg-quote-container">
-            <div className="kpmg-quote-mark" aria-hidden="true">
-              <svg viewBox="0 0 40 32" width="36" height="28" fill="#d97706">
-                <path d="M0 18 C0 8 6 2 16 0 L18 5 C11 7 8 11 8 15 L16 15 L16 32 L0 32 Z M22 18 C22 8 28 2 38 0 L40 5 C33 7 30 11 30 15 L38 15 L38 32 L22 32 Z" />
-              </svg>
-            </div>
-            <div className="kpmg-quote-content">
-              <p className="kpmg-quote-text">
-                The processing time for accounting documents has been noticeably reduced, in certain cases even from 2 days to only 5 hours. As a result we can now focus on what matters: reporting and advising the client.
-              </p>
-              <div className="kpmg-author-row">
-                <div className="kpmg-author-meta">
-                  <b className="kpmg-author-name">Harry Van Donink</b>
-                  <span className="kpmg-author-role">CEO KPMG Belgium</span>
-                </div>
-                <img src="/home/van_donink.webp" alt="Harry Van Donink" className="kpmg-author-photo" />
-                <img src="/home/kpmg_logo.svg" alt="KPMG" className="kpmg-logo-img" />
-              </div>
-            </div>
-          </div>
-        </section>
 
-        {/* UNLEASH YOUR GROWTH POTENTIAL CTA (Image 4) */}
-        <section className="unleash-bottom-cta-section">
-          <div className="unleash-sunburst-doodle" aria-hidden="true">
-            <svg viewBox="0 0 160 80" width="130" height="65" fill="none">
-              <line x1="80" y1="75" x2="80" y2="15" stroke="#f59e0b" strokeWidth="2.8" strokeLinecap="round" />
-              <line x1="55" y1="75" x2="30" y2="25" stroke="#f59e0b" strokeWidth="2.8" strokeLinecap="round" />
-              <line x1="105" y1="75" x2="130" y2="25" stroke="#f59e0b" strokeWidth="2.8" strokeLinecap="round" />
-              <line x1="35" y1="78" x2="10" y2="48" stroke="#f59e0b" strokeWidth="2.8" strokeLinecap="round" />
-              <line x1="125" y1="78" x2="150" y2="48" stroke="#f59e0b" strokeWidth="2.8" strokeLinecap="round" />
-            </svg>
-          </div>
-
-          <h2 className="bottom-cta-title">
-            Unleash
-            <br />
-            <span className="cursive-growth-text">your growth potential</span>
-          </h2>
-
-          <div className="unleash-action-wrap">
-            <button
-              type="button"
-              className="unleash-start-btn"
-              onClick={handleStartNow}
-            >
-              Start now - It's free
-            </button>
-            <div className="unleash-micro-note">
-              <span className="arrow-up-teal">↑</span>
-              <span>No credit card required • Instant access</span>
-            </div>
-          </div>
-        </section>
       </main>
 
       <Footer />
