@@ -1753,3 +1753,6 @@ export function VideoModal({ isOpen, onClose }) {
     </div>
   );
 }
+
+export { default as GlobalOffices } from './components/GlobalOffices';
+

@@ -570,3 +570,22 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
 
 - Removed `kpmg-quote-section` (Harry Van Donink / KPMG Belgium testimonial block) from `frontend/src/App.jsx`.
 - Removed `unleash-bottom-cta-section` ("Unleash your growth potential" CTA button and subtitle) from `frontend/src/App.jsx`.
+
+---
+
+## 19. "Our Global Offices" Section (Immediately Above Footer)
+
+1. **Configurable Office Data Repository (`frontend/src/globalOfficesConfig.js`):**
+   - Stores header metadata (`eyebrow: "OUR GLOBAL OFFICES"`, `title: "Connecting Businesses Across Borders."`, `description`) and array of office records.
+   - **Card 1 (Bengaluru HQ):** India (`IN`), `OXOO.ai`, `Bengaluru, Karnataka, India`, `+91 79 4050 0100`, green `Head Office` badge, and departments `Global Operations` (blue), `Product Development` (teal), `Customer Support` (purple).
+   - **Card 2 (Hyderabad Office):** India (`IN`), `OXOO.ai`, `Hyderabad, Telangana, India`, `+91 80 4060 0100`, and departments `Engineering` (blue), `Technology` (amber), `Business Operations` (purple).
+   - **Card 3 (United States Office):** United States (`US`), `OXOO.ai`, `United States`, `+1 415 800 0200`, and departments `International Business` (blue), `Sales` (teal), `Client Partnerships` (purple).
+2. **Component Architecture (`frontend/src/components/GlobalOffices.jsx`):**
+   - High-fidelity vector SVG world map with connected flight/network arcs and glowing location pins.
+   - Country flag integration via `https://flagcdn.com/` with graceful fallback to `Globe2`.
+   - 3 equal-width cards in one row on desktop, collapsing to 2 on tablet, and 1 on mobile.
+   - Clean white background (`#ffffff`), rounded corners (`16px`), subtle borders (`#e2e8f0`), colored department pills, location pin (`MapPin`), clickable telephone links (`Phone`), and hover elevation.
+3. **Placement & Styling (`frontend/src/App.jsx` & `frontend/src/styles.css`):**
+   - Placed directly between `</main>` and `<Footer />` (`Page content → Our Global Offices → Existing OXOO.ai Footer`).
+   - Seamlessly transitions into the footer's blue-gray gradient background without modifying existing footer columns.
+

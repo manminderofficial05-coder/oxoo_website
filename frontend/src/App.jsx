@@ -11,7 +11,7 @@ import {
   HelpCircle, ChevronDown, CheckCheck, Headphones, LogIn,
   Volume2, VolumeX
 } from 'lucide-react';
-import { Header, Footer, SectionHeading, ServiceCard, CTA, Logo, PartnerLogos, VideoModal, AnimatedHeroTitle } from './components';
+import { Header, Footer, SectionHeading, ServiceCard, CTA, Logo, PartnerLogos, VideoModal, AnimatedHeroTitle, GlobalOffices } from './components';
 import { categories, services, industries } from './data';
 import { getServices, submitLead, loginUser } from './api';
 import { APPS_DATA, CATEGORIES_LIST } from './appsData';
@@ -818,6 +818,9 @@ function Home() {
 
 
       </main>
+
+      {/* OUR GLOBAL OFFICES SECTION (Immediately above Footer) */}
+      <GlobalOffices />
 
       <Footer />
       <VideoModal isOpen={videoOpen} onClose={() => setVideoOpen(false)} />
