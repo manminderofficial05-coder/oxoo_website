@@ -296,7 +296,7 @@ export default function CheckoutPage() {
       const resp = await sendEmailOtp({
         email: cleanEmail,
         phone: cleanPhone,
-        purpose: 'OXOO Software Purchase Verification',
+        purpose: 'PrimePro Software Purchase Verification',
         customerName: (formData.yourName || '').trim()
       });
       setOtpValue('');
@@ -565,7 +565,7 @@ export default function CheckoutPage() {
         selectedApps: selectedAppsNames,
         userCount,
         billingCycle: isYearly ? 'yearly' : 'monthly',
-        companyName: formData.companyName || formData.yourName || 'OXOO Workspace',
+        companyName: formData.companyName || formData.yourName || 'PrimePro Workspace',
         customerName: formData.yourName,
         customerEmail: formData.email,
         customerPhone: formData.phone,
@@ -575,7 +575,7 @@ export default function CheckoutPage() {
       });
 
       const curYear = new Date().getFullYear();
-      const orderNumber = orderRes.order?.orderNumber || `OXOO-ORD-${curYear}-${Date.now().toString().slice(-6)}`;
+      const orderNumber = orderRes.order?.orderNumber || `PrimePro-ORD-${curYear}-${Date.now().toString().slice(-6)}`;
       const invoiceNumber = `INV-${curYear}-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
 
       const finalizeOrder = async (realPaymentId, rzpOrderId, rzpSignature) => {
@@ -717,9 +717,9 @@ export default function CheckoutPage() {
           key: rzpKey,
           amount: orderRes.amountSmallestUnit || orderRes.amountPaise || Math.round(totals.totalAmount * 100),
           currency: orderRes.currency || totals.currency || 'INR',
-          name: 'OXOO Multiix',
+          name: 'PrimePro Multiix',
           description: `${planNameFormatted} (${isYearly ? 'Annual' : 'Monthly'})`,
-          image: '/oxoo-icon.png',
+          image: '/primepro-icon.png',
           order_id: orderRes.razorpayOrderId || undefined,
           prefill: {
             name: formData.yourName || '',
@@ -1161,7 +1161,7 @@ export default function CheckoutPage() {
               <div className="checkout-view-header">
                 <h1 className="checkout-view-title">Company & Account Details</h1>
                 <p className="checkout-view-sub">
-                  Enter your contact and organization details to create your OXOO business workspace.
+                  Enter your contact and organization details to create your PrimePro business workspace.
                 </p>
               </div>
 
@@ -1183,7 +1183,7 @@ export default function CheckoutPage() {
                 }}
               >
                 <span>
-                  Already have an OXOO customer or enterprise account?
+                  Already have an PrimePro customer or enterprise account?
                 </span>
                 <Link
                   to="/customer/login"
@@ -1697,7 +1697,7 @@ export default function CheckoutPage() {
               <div className="checkout-view-header">
                 <h1 className="checkout-view-title">Complete Your Payment</h1>
                 <p className="checkout-view-sub">
-                  Select your payment method and pay securely to activate your OXOO subscription.
+                  Select your payment method and pay securely to activate your PrimePro subscription.
                 </p>
               </div>
 
@@ -1857,7 +1857,7 @@ export default function CheckoutPage() {
                         Payment Verified — Software Activated!
                       </h3>
                       <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#334155' }}>
-                        Your purchase has been associated with your existing OXOO account (<strong>{formData.email}</strong>). Your tax invoice has been emailed to you.
+                        Your purchase has been associated with your existing PrimePro account (<strong>{formData.email}</strong>). Your tax invoice has been emailed to you.
                       </p>
                     </div>
                   </div>
@@ -2228,7 +2228,7 @@ export default function CheckoutPage() {
                         <div className="invoice-meta-row">
                           <span>Invoice No</span>
                           <span>:</span>
-                          <b>{paymentSuccessData?.invoiceNumber || 'OXOO-INV-2025-000123'}</b>
+                          <b>{paymentSuccessData?.invoiceNumber || 'PrimePro-INV-2025-000123'}</b>
                         </div>
                         <div className="invoice-meta-row">
                           <span>Invoice Date</span>
@@ -2383,9 +2383,9 @@ export default function CheckoutPage() {
                       <ol className="notes-list-ol">
                         <li>This is a computer generated invoice.</li>
                         <li>Payment has been received and verified.</li>
-                        <li>Subscription access is subject to applicable OXOO terms and conditions.</li>
+                        <li>Subscription access is subject to applicable PrimePro terms and conditions.</li>
                         <li>Renewal and cancellation are governed by the selected billing plan.</li>
-                        <li>For support, contact support@oxoo.com.</li>
+                        <li>For support, contact support@primepro.ai.</li>
                       </ol>
                     </div>
 
@@ -2396,12 +2396,12 @@ export default function CheckoutPage() {
                         <span>Company Details</span>
                       </div>
                       <div style={{ lineHeight: 1.5 }}>
-                        <b>OXOO Technologies Pvt Ltd</b><br />
+                        <b>PrimePro Technologies Pvt Ltd</b><br />
                         #123, Tech Park, MG Road,<br />
                         Bengaluru - 560001, Karnataka, India<br />
                         GSTIN: 29ABCDE1234F1Z5<br />
                         CIN: U72900KA2020PTC123456<br />
-                        <span style={{ color: '#2563eb' }}>www.oxoo.com</span>
+                        <span style={{ color: '#2563eb' }}>www.primepro.ai</span>
                       </div>
                     </div>
                   </div>
@@ -2413,10 +2413,10 @@ export default function CheckoutPage() {
                         Authorized Signatory
                       </span>
                       <div className="signature-script-mock">
-                        OxooSign
+                        PrimeProSign
                       </div>
                       <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
-                        OXOO Technologies Pvt Ltd
+                        PrimePro Technologies Pvt Ltd
                       </span>
                     </div>
 
@@ -2442,7 +2442,7 @@ export default function CheckoutPage() {
                       </div>
                       <div className="qr-text-meta">
                         <span>Scan to verify invoice</span>
-                        <b>{paymentSuccessData?.invoiceNumber || 'OXOO-INV-2025-000123'}</b>
+                        <b>{paymentSuccessData?.invoiceNumber || 'PrimePro-INV-2025-000123'}</b>
                       </div>
                     </div>
                   </div>

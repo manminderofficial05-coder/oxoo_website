@@ -100,14 +100,14 @@ async function runSeed() {
     console.log(`✓ Seeded ${APPS.length} applications.`);
 
     // 4. Seed Root Administrator
-    const adminEmail = 'admin@oxoo.ai';
+    const adminEmail = 'admin@primepro.ai';
     const adminPass = 'admin123';
     const salt = await bcrypt.genSalt(10);
     const hashedPass = await bcrypt.hash(adminPass, salt);
 
     await query(`
       INSERT INTO users (name, email, password, role, organization, active)
-      VALUES ($1, $2, $3, 'admin', 'Oxoo.ai Core Corp', true)
+      VALUES ($1, $2, $3, 'admin', 'PrimePro.ai Core Corp', true)
       ON CONFLICT (email) DO UPDATE SET
         name = EXCLUDED.name,
         password = EXCLUDED.password,
@@ -118,7 +118,7 @@ async function runSeed() {
     // 5. Seed Demo Organization
     await query(`
       INSERT INTO organizations (name, plan, active_apps, member_count, status)
-      SELECT 'Oxoo.ai Enterprise', 'Enterprise', $1, 24, 'Active'
+      SELECT 'PrimePro.ai Enterprise', 'Enterprise', $1, 24, 'Active'
       WHERE NOT EXISTS (SELECT 1 FROM organizations LIMIT 1);
     `, [JSON.stringify(APPS.map(a => a.name))]);
     console.log('✓ Seeded initial organization.');

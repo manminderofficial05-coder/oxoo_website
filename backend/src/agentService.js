@@ -161,8 +161,8 @@ async function getCustomerContext(userEmail) {
 async function getAgentSettings() {
   let settings = {
     enabled: true,
-    agentName: 'OXOO Agent',
-    welcomeMessage: "Hi! I'm OXOO Agent. How can I help you today? Ask me about our software applications, pricing plans, custom development services, or account subscriptions.",
+    agentName: 'PrimePro Agent',
+    welcomeMessage: "Hi! I'm PrimePro Agent. How can I help you today? Ask me about our software applications, pricing plans, custom development services, or account subscriptions.",
     suggestedQuestions: [
       'Browse all software applications',
       'Compare official pricing plans',
@@ -175,7 +175,7 @@ async function getAgentSettings() {
     aiApiKey: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '',
     rateLimitPerMinute: 60,
     retentionDays: 90,
-    supportEscalationEmail: 'support@oxoo.ai',
+    supportEscalationEmail: 'support@primepro.ai',
     allowCustomerActions: true
   };
 
@@ -236,7 +236,7 @@ async function callExternalAI(userMessage, conversationHistory, knowledge, custo
   const categoriesText = (knowledge.categories || []).map(c => `- ${c.name} (${c.slug}): ${c.description || ''}`).join('\n');
 
   // Prepare system prompt with STRICT live website database grounding
-  const systemPrompt = `You are "OXOO Agent", the official AI assistant for the OXOO cloud business platform (https://oxoo.ai).
+  const systemPrompt = `You are "PrimePro Agent", the official AI assistant for the PrimePro cloud business platform (https://primepro.ai).
 You assist users using ONLY the live official website database provided below.
 
 CRITICAL RULES:
@@ -437,12 +437,12 @@ function generateDatabaseGroundedResponse(userQuery, knowledge, customerContext,
   let reply = '';
 
   // 1. GREETING & PLATFORM OVERVIEW (Live DB Counts)
-  if (/^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|who are you|what is oxoo)/i.test(query)) {
+  if (/^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|who are you|what is primepro|what is oxoo)/i.test(query)) {
     const appCount = knowledge.applications ? knowledge.applications.length : 55;
     const planCount = knowledge.plans ? knowledge.plans.length : 24;
     const servCount = knowledge.services ? knowledge.services.length : 87;
 
-    reply = `Hello! I'm **OXOO Agent**, your official assistant for the **OXOO** business operating system.
+    reply = `Hello! I'm **PrimePro Agent**, your official assistant for the **PrimePro** business operating system.
 
 I source all information live from our official catalog:
 - **Applications:** We currently offer **${appCount} enterprise cloud applications** (Accounting, CRM, HRMS, Invoicing, POS, Website Builder, and more).
@@ -461,7 +461,7 @@ How can I help you today?`;
   if (/(pricing|price|cost|plan|subscription rate|how much|package|compare|monthly|yearly|annual)/i.test(query)) {
     const plans = knowledge.plans || [];
     if (plans.length > 0) {
-      reply = `### OXOO Official Pricing Plans (Live Catalog)\n\nAll plans include cloud hosting, SSL, and a **14-day free trial**:\n\n`;
+      reply = `### PrimePro Official Pricing Plans (Live Catalog)\n\nAll plans include cloud hosting, SSL, and a **14-day free trial**:\n\n`;
       plans.slice(0, 8).forEach(p => {
         const disc = p.discount_percent ? ` (${p.discount_percent}% off yearly)` : '';
         const included = Array.isArray(p.included_apps) && p.included_apps.length > 0 ? p.included_apps.join(', ') : 'Core Suite Apps';
@@ -500,9 +500,9 @@ How can I help you today?`;
       ? matchedApp.features.slice(0, 6).map(f => `  * ${f}`).join('\n')
       : '  * Cloud-native automation & multi-device ready\n  * Enterprise grade security & automatic backups';
 
-    reply = `### **OXOO ${matchedApp.name}**\n\n`;
+    reply = `### **PrimePro ${matchedApp.name}**\n\n`;
     if (matchedApp.tagline) reply += `*${matchedApp.tagline}*\n\n`;
-    reply += `${matchedApp.description || 'Enterprise module built into the OXOO cloud operating system.'}\n\n`;
+    reply += `${matchedApp.description || 'Enterprise module built into the PrimePro cloud operating system.'}\n\n`;
     reply += `**Key Capabilities (from Database):**\n${featuresList}\n\n`;
     reply += `**Category:** ${matchedApp.category || 'Business Productivity'}\n`;
 
@@ -527,7 +527,7 @@ How can I help you today?`;
   });
 
   if (matchedServices.length > 0) {
-    reply = `### OXOO Custom Development & Services (Live Database)\n\nHere are matching services from our published catalog:\n\n`;
+    reply = `### PrimePro Custom Development & Services (Live Database)\n\nHere are matching services from our published catalog:\n\n`;
     matchedServices.slice(0, 4).forEach(s => {
       reply += `* **${s.name}** (*Category: ${s.category}*)\n`;
       if (s.description) reply += `  - ${s.description}\n`;
@@ -586,9 +586,9 @@ To view your active subscription, upcoming renewal dates, invoices, and authoriz
         reply += `* **Ticket #${t.ticket_number || t.id}**: *${t.subject}* — Status: **${t.status}** (Priority: ${t.priority})\n`;
       });
     } else {
-      reply = `### OXOO Customer Support
+      reply = `### PrimePro Customer Support
 You can open a support ticket or contact our team directly:
-- **Email:** support@oxoo.ai
+- **Email:** support@primepro.ai
 - **Direct Link:** [Visit Help Center](/help) or [Submit an Inquiry](/contact)`;
     }
 
@@ -635,7 +635,7 @@ async function processAgentChat({ message, conversationId, userEmail, userAuthTo
 
   if (!settings.enabled) {
     return {
-      reply: 'OXOO Agent is currently offline. You can contact our support team at support@oxoo.ai or visit our Help Center.',
+      reply: 'PrimePro Agent is currently offline. You can contact our support team at support@primepro.ai or visit our Help Center.',
       links: [{ label: 'Visit Help Center', url: '/help' }, { label: 'Contact Us', url: '/contact' }],
       action: null,
       suggestedQuestions: []
@@ -708,7 +708,7 @@ async function processAgentChat({ message, conversationId, userEmail, userAuthTo
     links: groundedResult.links || [],
     action: groundedResult.action || null,
     suggestedQuestions: settings.suggestedQuestions || [],
-    provider: 'oxoo-database-rag',
+    provider: 'primepro-database-rag',
     grounded: true
   };
 }
@@ -730,7 +730,7 @@ async function executeConfirmedAction(actionPayload, userEmail, userName = 'Cust
       throw new Error('Subject and description are required to create a ticket.');
     }
 
-    const email = userEmail || data.email || 'customer@oxoo.ai';
+    const email = userEmail || data.email || 'customer@primepro.ai';
     const name = userName || data.name || 'Valued Customer';
     const ticketNumber = `TK-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -759,14 +759,14 @@ async function executeConfirmedAction(actionPayload, userEmail, userName = 'Cust
     const res = await query(`
       INSERT INTO leads (
         name, email, phone, company, service, message, status, source, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'New', 'oxoo-agent', NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'New', 'primepro-agent', NOW())
       RETURNING *
     `, [name, email, phone, company, service, message]);
 
     return {
       success: true,
       lead: res.rows[0],
-      message: 'Your inquiry has been submitted! An OXOO solution specialist will contact you shortly.'
+      message: 'Your inquiry has been submitted! An PrimePro solution specialist will contact you shortly.'
     };
   }
 

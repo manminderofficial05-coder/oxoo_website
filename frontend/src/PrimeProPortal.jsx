@@ -20,8 +20,8 @@ export default function PrimeProPortal() {
   const companyFromQuery = queryParams.get('company');
   const companyFromState = location.state?.companyName;
   const companyFromStorage = typeof window !== 'undefined' ? localStorage.getItem('oxoo_demo_company') : null;
-  const rawCompany = companyFromQuery || companyFromState || companyFromStorage || 'abcd.oxoo';
-  const companyDomain = rawCompany.endsWith('.oxoo') ? rawCompany : `${rawCompany}.oxoo`;
+  const rawCompany = companyFromQuery || companyFromState || companyFromStorage || 'abcd.primepro.ai';
+  const companyDomain = rawCompany.endsWith('.primepro.ai') ? rawCompany : `${rawCompany}.primepro.ai`;
 
   // Detect whether this is for Human Resources or Billing/Finance
   const isHRBySlugOrCategory =
@@ -107,7 +107,7 @@ export default function PrimeProPortal() {
                     <Users size={20} className="hr-users-icon" />
                   </div>
                   <div className="hr-brand-text">
-                    <h2 className="hr-brand-title">Oxoo</h2>
+                    <h2 className="hr-brand-title">PrimePro</h2>
                     <p className="hr-brand-subtitle">HUMAN RESOURCE MANAGEMENT SYSTEM</p>
                   </div>
                 </div>
@@ -125,7 +125,7 @@ export default function PrimeProPortal() {
 
                 {/* Subtitle */}
                 <p className="hr-main-desc">
-                  From attendance and leave to payroll and performance — Oxoo helps you manage your people, simplify HR operations and focus on what matters most: your business.
+                  From attendance and leave to payroll and performance — PrimePro helps you manage your people, simplify HR operations and focus on what matters most: your business.
                 </p>
 
                 {/* 2x2 Feature Cards Grid */}
@@ -199,7 +199,7 @@ export default function PrimeProPortal() {
                       <div className="tablet-sidebar">
                         <div className="tablet-sidebar-logo">
                           <Users size={14} color="#38bdf8" />
-                          <span>Oxoo</span>
+                          <span>PrimePro</span>
                         </div>
                         <div className="tablet-nav-item active">Dashboard</div>
                         <div className="tablet-nav-item">Employees</div>
@@ -273,7 +273,7 @@ export default function PrimeProPortal() {
                       </div>
 
                       <div className="phone-app-header">
-                        <span className="phone-brand">Oxoo</span>
+                        <span className="phone-brand">PrimePro</span>
                         <div className="phone-avatar-thumb">
                           <Users size={12} color="#0284c7" />
                         </div>
@@ -333,10 +333,10 @@ export default function PrimeProPortal() {
               <div className="hr-right-headline-wrap">
                 <h2 className="hr-right-heading">
                   Get Started with<br />
-                  <span className="oxoo-brand-gradient">Oxoo</span> Today
+                  <span className="oxoo-brand-gradient">PrimePro</span> Today
                 </h2>
                 <p className="hr-right-description">
-                  See how Oxoo can simplify your HR operations, improve productivity and support your growing workforce.
+                  See how PrimePro can simplify your HR operations, improve productivity and support your growing workforce.
                 </p>
               </div>
 
@@ -355,7 +355,7 @@ export default function PrimeProPortal() {
                     <div className="cta-text-group">
                       <span className="cta-eyebrow-blue">EXPLORE FIRST</span>
                       <h3 className="cta-main-title">Book a Free Demo</h3>
-                      <p className="cta-sub-title">See Oxoo in action with a personalized walkthrough.</p>
+                      <p className="cta-sub-title">See PrimePro in action with a personalized walkthrough.</p>
                     </div>
                   </div>
                   <div className="cta-arrow-group">
@@ -376,7 +376,7 @@ export default function PrimeProPortal() {
                     <div className="cta-text-group">
                       <span className="cta-eyebrow-mint">READY TO GET STARTED</span>
                       <h3 className="cta-main-title white">Purchase Now</h3>
-                      <p className="cta-sub-title white-soft">Choose a plan and start using Oxoo today.</p>
+                      <p className="cta-sub-title white-soft">Choose a plan and start using PrimePro today.</p>
                     </div>
                   </div>
                   <div className="cta-arrow-group">
@@ -438,7 +438,7 @@ export default function PrimeProPortal() {
                 </div>
                 <div className="portal-brand-text">
                   <h3 className="portal-brand-title">PrimePro x Fuelo</h3>
-                  <p className="portal-brand-subtitle">Oxoo Management System</p>
+                  <p className="portal-brand-subtitle">PrimePro Management System</p>
                 </div>
               </div>
 
@@ -450,7 +450,7 @@ export default function PrimeProPortal() {
                   Intelligence.
                 </h1>
                 <p className="portal-main-desc">
-                  A unified financial command centre — manage oxoo, track payments and reconcile accounts seamlessly.
+                  A unified financial command centre — manage finances, track payments and reconcile accounts seamlessly.
                 </p>
               </div>
 
@@ -461,7 +461,7 @@ export default function PrimeProPortal() {
                     <FileText size={19} />
                   </div>
                   <div className="feature-card-text">
-                    <div className="feature-card-title">Auto-tracked Oxoo</div>
+                    <div className="feature-card-title">Auto-tracked PrimePro</div>
                     <div className="feature-card-sub">Create, send and track invoices automatically.</div>
                   </div>
                 </div>
@@ -511,7 +511,7 @@ export default function PrimeProPortal() {
                 <h2 className="portal-right-title">
                   Manage Your<br />
                   <span className="oxoo-ease-word">
-                    Oxoo with Ease
+                    PrimePro with Ease
                     <svg className="brush-underline-svg" viewBox="0 0 260 20" fill="none">
                       <path d="M4 14C60 6 180 4 256 12" stroke="#059669" strokeWidth="5" strokeLinecap="round" />
                     </svg>
@@ -535,7 +535,7 @@ export default function PrimeProPortal() {
                     <div className="action-info">
                       <h3 className="action-title">Free Demo</h3>
                       <p className="action-desc">
-                        See how PrimePro x Fuelo can simplify your oxoo process.
+                        See how PrimePro x Fuelo can simplify your business process.
                       </p>
                     </div>
                   </div>

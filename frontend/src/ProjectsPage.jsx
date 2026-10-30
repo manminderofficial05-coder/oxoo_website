@@ -415,13 +415,13 @@ export default function ProjectsPage() {
             >
               <div className="oxoo-projects-eyebrow">
                 <Sparkles size={14} />
-                <span>OXOO.ai Digital Projects & Solutions Hub</span>
+                <span>PrimePro.ai Digital Projects & Solutions Hub</span>
               </div>
               <h1 className="oxoo-projects-hero-title">
                 Turn Your Ideas Into <span>Powerful Digital Solutions.</span>
               </h1>
               <p className="oxoo-projects-hero-desc">
-                From AI-powered websites and mobile applications to digital marketing and WhatsApp automation, OXOO.ai helps you plan, build and grow your digital presence.
+                From AI-powered websites and mobile applications to digital marketing and WhatsApp automation, PrimePro.ai helps you plan, build and grow your digital presence.
               </p>
 
               <div className="oxoo-projects-hero-actions">
@@ -475,7 +475,7 @@ export default function ProjectsPage() {
                       <span style={{ background: '#f59e0b' }} />
                       <span style={{ background: '#10b981' }} />
                     </div>
-                    <div className="oxoo-projects-showcase-url">oxoo.ai/projects/studio-workspace</div>
+                    <div className="oxoo-projects-showcase-url">primepro.ai/projects/studio-workspace</div>
                     <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 700 }}>LIVE STUDIO</span>
                   </div>
 
@@ -763,7 +763,7 @@ export default function ProjectsPage() {
             </div>
             <h2>How Would You Like to Start Your Project?</h2>
             <p>
-              Submit a comprehensive project brief for a tailored proposal, or request a discovery consultation call with an OXOO.ai solution architect.
+              Submit a comprehensive project brief for a tailored proposal, or request a discovery consultation call with an PrimePro.ai solution architect.
             </p>
           </div>
 
@@ -791,7 +791,7 @@ export default function ProjectsPage() {
                   Request a Consultation Call (Talk to Our Team)
                 </div>
                 <div style={{ fontSize: '13.5px', color: '#475569', lineHeight: 1.5 }}>
-                  Prefer to speak with an OXOO.ai specialist first? Pick a preferred contact method and time slot for a discovery session.
+                  Prefer to speak with an PrimePro.ai specialist first? Pick a preferred contact method and time slot for a discovery session.
                 </div>
               </div>
             </button>
@@ -1517,9 +1517,9 @@ export default function ProjectsPage() {
                           style={{ marginTop: '3px', width: '16px', height: '16px' }}
                         />
                         <span>
-                          I consent to OXOO.ai storing and processing my project requirements and contact details to prepare a tailored proposal and contact me regarding this enquiry, in accordance with the{' '}
+                          I consent to PrimePro.ai storing and processing my project requirements and contact details to prepare a tailored proposal and contact me regarding this enquiry, in accordance with the{' '}
                           <Link to="/privacy-policy" style={{ color: '#2563eb', fontWeight: 700 }}>
-                            OXOO.ai Privacy Policy
+                            PrimePro.ai Privacy Policy
                           </Link>.
                         </span>
                       </label>
@@ -1638,7 +1638,7 @@ export default function ProjectsPage() {
                         Request a Consultation Call (Talk to Our Team)
                       </h3>
                       <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0 }}>
-                        Speak directly with an OXOO.ai solution specialist before filling out a detailed brief.
+                        Speak directly with an PrimePro.ai solution specialist before filling out a detailed brief.
                       </p>
                     </div>
                     <a

@@ -10,7 +10,7 @@ export default function DemoInquiryModal({
   isOpen,
   onClose,
   category = 'Website & Apps',
-  productName = 'OXOO Website Builder & Digital Studio',
+  productName = 'PrimePro Website Builder & Digital Studio',
   defaultPlan = 'Growth Plan',
   availablePlans = ['Starter Plan', 'Growth Plan', 'Business Pro Plan', 'Enterprise Solution']
 }) {
@@ -316,7 +316,7 @@ export default function DemoInquiryModal({
                       style={{ marginTop: '2px' }}
                     />
                     <span>
-                      I authorize OXOO to contact me regarding this inquiry and understand that this submission creates a sales consultation record, not an immediate recurring charge.
+                      I authorize PrimePro to contact me regarding this inquiry and understand that this submission creates a sales consultation record, not an immediate recurring charge.
                     </span>
                   </label>
                 </div>

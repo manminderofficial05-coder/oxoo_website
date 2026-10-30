@@ -1,5 +1,5 @@
 /**
- * OXOO Global Country & Multi-Currency Pricing Configuration (Backend Authoritative Source)
+ * PrimePro Global Country & Multi-Currency Pricing Configuration (Backend Authoritative Source)
  * Synchronized with frontend/src/pricingConfig.js
  *
  * RULE:

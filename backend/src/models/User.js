@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 254 },
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'member', 'guest'], default: 'member' },
-  organization: { type: String, default: 'Oxoo.ai Tenant' },
+  organization: { type: String, default: 'PrimePro.ai Tenant' },
   active: { type: Boolean, default: true },
   avatar: { type: String, default: '' },
   lastLogin: { type: Date, default: null }

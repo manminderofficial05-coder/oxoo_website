@@ -573,7 +573,7 @@ export default function AppShowcase() {
                 <img
                   src={rel.icon}
                   alt={rel.name}
-                  onError={(e) => { e.currentTarget.src = '/oxoo-icon.png'; }}
+                  onError={(e) => { e.currentTarget.src = '/primepro-icon.png'; }}
                 />
               </div>
               <div className="five-card-text">

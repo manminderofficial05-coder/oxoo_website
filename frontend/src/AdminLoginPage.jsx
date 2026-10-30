@@ -118,7 +118,7 @@ export default function AdminLoginPage({ onLoginSuccess }) {
                 🛡️ Demo Admin Account
               </div>
               <div style={{ fontSize: '11px', color: '#64748b' }}>
-                Root Administrator (Oxoo Core)
+                Root Administrator (PrimePro Core)
               </div>
             </div>
             <button
@@ -181,7 +181,7 @@ export default function AdminLoginPage({ onLoginSuccess }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@oxoo.ai"
+                placeholder="admin@primepro.ai"
                 style={{
                   width: '100%',
                   marginTop: '5px',

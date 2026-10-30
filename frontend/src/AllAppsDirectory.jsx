@@ -244,7 +244,7 @@ export default function AllAppsDirectory() {
                           className="one-need-icon-img"
                           loading="lazy"
                           onError={(e) => {
-                            e.currentTarget.src = '/oxoo-icon.png';
+                            e.currentTarget.src = '/primepro-icon.png';
                           }}
                         />
                       </div>

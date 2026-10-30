@@ -9,7 +9,7 @@ import { Header, Footer } from './components';
 import { submitSupportTicket } from './api';
 import './help.css';
 
-// Authoritative global office data matching Oxoo reference specifications
+// Authoritative global office data matching PrimePro reference specifications
 const OFFICE_REGIONS = [
   {
     region: 'Europe, Middle East and Africa',
@@ -263,7 +263,7 @@ export default function HelpPage() {
     }
   }, [location]);
 
-  // Handle Ask Oxoo AI Search
+  // Handle Ask PrimePro AI Search
   const handleAiSearch = (e) => {
     e.preventDefault();
     if (!aiQuery.trim()) return;
@@ -272,18 +272,18 @@ export default function HelpPage() {
     setTimeout(() => {
       setIsAiLoading(false);
       const q = aiQuery.toLowerCase();
-      let answer = "Oxoo AI analyzed your request across all platform documentation and configurations:";
+      let answer = "PrimePro AI analyzed your request across all platform documentation and configurations:";
 
       if (q.includes('bill') || q.includes('price') || q.includes('payment') || q.includes('subscription')) {
         answer = "To manage your subscription, download GST invoices, or update payment methods, visit your Customer Portal under 'Billing & Subscriptions'. Invoices are automatically generated and sent upon renewal.";
       } else if (q.includes('login') || q.includes('password') || q.includes('access')) {
         answer = "For secure login, visit /login for Client accounts or /employee/login for Staff. If you forgot your password, use the Reset Password option to receive an instant verification link.";
       } else if (q.includes('api') || q.includes('webhook') || q.includes('integrate')) {
-        answer = "Oxoo provides full REST and GraphQL APIs. You can generate API keys and configure webhooks in Admin Governance > Integrations & Connectors.";
+        answer = "PrimePro provides full REST and GraphQL APIs. You can generate API keys and configure webhooks in Admin Governance > Integrations & Connectors.";
       } else if (q.includes('whatsapp')) {
-        answer = "Oxoo WhatsApp Chat AI connects directly via Meta Cloud API. Configure templates, automate interactive chatbots, and manage multi-agent shared inboxes from WhatsApp Chat AI suite.";
+        answer = "PrimePro WhatsApp Chat AI connects directly via Meta Cloud API. Configure templates, automate interactive chatbots, and manage multi-agent shared inboxes from WhatsApp Chat AI suite.";
       } else {
-        answer = `Regarding "${aiQuery}": Oxoo's unified workspace handles workflows seamlessly. If you are experiencing technical difficulties, submit a ticket below to connect directly with certified engineers.`;
+        answer = `Regarding "${aiQuery}": PrimePro's unified workspace handles workflows seamlessly. If you are experiencing technical difficulties, submit a ticket below to connect directly with certified engineers.`;
       }
 
       setAiAnswer(answer);
@@ -408,17 +408,17 @@ export default function HelpPage() {
             </h1>
           </div>
 
-          {/* Search bar: "Ask Oxoo AI" or "Ask a Human" */}
+          {/* Search bar: "Ask PrimePro AI" or "Ask a Human" */}
           <form className="help-search-row" onSubmit={handleAiSearch}>
             <div className="help-ai-search-box">
               <input
                 type="text"
                 className="help-ai-search-input"
-                placeholder="Ask Oxoo AI"
+                placeholder="Ask PrimePro AI"
                 value={aiQuery}
                 onChange={(e) => setAiQuery(e.target.value)}
               />
-              <button type="submit" className="help-ai-send-btn" title="Send question to Oxoo AI">
+              <button type="submit" className="help-ai-send-btn" title="Send question to PrimePro AI">
                 <Send size={16} />
               </button>
             </div>
@@ -437,7 +437,7 @@ export default function HelpPage() {
           {/* AI Interactive Answer Display */}
           {isAiLoading && (
             <div style={{ marginTop: 20, color: '#64748b', fontSize: 14 }}>
-              Oxoo AI is analyzing your query across official knowledge bases...
+              PrimePro AI is analyzing your query across official knowledge bases...
             </div>
           )}
 
@@ -445,7 +445,7 @@ export default function HelpPage() {
             <div className="help-ai-answer-card">
               <div className="help-ai-answer-header">
                 <Bot size={18} />
-                <span>Oxoo AI Assistant Response</span>
+                <span>PrimePro AI Assistant Response</span>
               </div>
               <p style={{ margin: '0 0 14px', fontSize: 14, lineHeight: 1.6, color: '#334155' }}>
                 {aiAnswer}
@@ -504,7 +504,7 @@ export default function HelpPage() {
                 onClick={() => scrollToHumanTicket('Support question')}
               >
                 <h4>Meet an advisor</h4>
-                <p>Schedule a 1-on-1 strategy call with an Oxoo solution architect.</p>
+                <p>Schedule a 1-on-1 strategy call with an PrimePro solution architect.</p>
               </div>
 
               <div
@@ -520,7 +520,7 @@ export default function HelpPage() {
                 onClick={() => scrollToHumanTicket('Support question')}
               >
                 <h4>Become a partner</h4>
-                <p>Join the official Oxoo Partner & Implementation Agency network.</p>
+                <p>Join the official PrimePro Partner & Implementation Agency network.</p>
               </div>
 
               <div
@@ -609,7 +609,7 @@ export default function HelpPage() {
                 Your ticket reference number is <strong>{submittedTicket.ticket_number}</strong>.
               </p>
               <p style={{ fontSize: 13.5, color: '#047857', maxWidth: 540, margin: '0 auto 24px', lineHeight: 1.5 }}>
-                A confirmation has been dispatched to <strong>{formData.email}</strong>. An Oxoo support specialist will review your details and respond with a resolution within 2 hours.
+                A confirmation has been dispatched to <strong>{formData.email}</strong>. An PrimePro support specialist will review your details and respond with a resolution within 2 hours.
               </p>
               <button
                 type="button"
@@ -759,7 +759,7 @@ export default function HelpPage() {
                   <input
                     type="text"
                     className="ticket-form-input"
-                    placeholder={formData.identifyType === 'Subscription Code' ? 'M1234567891011 or SO2023/123456' : 'yourcompany.oxoo.ai or custom domain'}
+                    placeholder={formData.identifyType === 'Subscription Code' ? 'M1234567891011 or SO2023/123456' : 'yourcompany.primepro.ai or custom domain'}
                     value={formData.identifyValue}
                     onChange={(e) => handleChange('identifyValue', e.target.value)}
                   />
@@ -900,12 +900,12 @@ export default function HelpPage() {
         </section>
 
         {/* =========================================================
-            SECTION 4: OXOO OFFICES GLOBAL DIRECTORY (SCREENSHOT 2)
+            SECTION 4: PrimePro OFFICES GLOBAL DIRECTORY (SCREENSHOT 2)
             ========================================================= */}
         <section className="offices-section">
           <div className="hand-heading-wrap">
             <h2 className="hand-heading-title" style={{ fontSize: 36 }}>
-              Oxoo <span style={{ position: 'relative', display: 'inline-block' }}>
+              PrimePro <span style={{ position: 'relative', display: 'inline-block' }}>
                 Offices
                 {/* Wavy blue brush stroke under "Offices" matching Screenshot 2 */}
                 <svg

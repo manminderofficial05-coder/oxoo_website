@@ -89,7 +89,7 @@ router.get('/config', async (_req, res, next) => {
     res.json({
       success: true,
       enabled: settings.enabled !== false,
-      agentName: settings.agentName || 'OXOO Agent',
+      agentName: settings.agentName || 'PrimePro Agent',
       welcomeMessage: settings.welcomeMessage,
       suggestedQuestions: settings.suggestedQuestions || [],
       provider: settings.aiProvider || 'gemini',
@@ -348,7 +348,7 @@ router.put('/admin/settings', requireAdminAuth, async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'OXOO Agent settings updated successfully.',
+      message: 'PrimePro Agent settings updated successfully.',
       settings: {
         ...updated,
         aiApiKey: effectiveKey ? '••••••••••••••••' : '',
@@ -394,8 +394,8 @@ router.get('/admin/analytics', requireAdminAuth, async (_req, res, next) => {
       query(`SELECT COUNT(*) as count FROM agent_conversations`),
       query(`SELECT COUNT(*) as count FROM agent_messages`),
       query(`SELECT COUNT(*) as count FROM agent_events`),
-      query(`SELECT COUNT(*) as count FROM support_tickets WHERE user_email = 'customer@oxoo.ai' OR description LIKE '%OXOO Agent%'`),
-      query(`SELECT COUNT(*) as count FROM leads WHERE source = 'oxoo-agent'`)
+      query(`SELECT COUNT(*) as count FROM support_tickets WHERE user_email = 'customer@primepro.ai' OR description LIKE '%PrimePro Agent%'`),
+      query(`SELECT COUNT(*) as count FROM leads WHERE source IN ('primepro-agent', 'oxoo-agent')`)
     ]);
 
     // Fetch recent 10 events

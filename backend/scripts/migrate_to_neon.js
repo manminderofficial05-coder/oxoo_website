@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 
 async function runNeonMigration() {
   console.log('\n======================================================');
-  console.log('🚀 MULTIIX / OXOO — NEON POSTGRESQL MIGRATION');
+  console.log('🚀 MULTIIX / PrimePro — NEON POSTGRESQL MIGRATION');
   console.log('======================================================\n');
 
   const connectionString = process.env.DATABASE_URL;
@@ -131,14 +131,14 @@ async function runNeonMigration() {
     await query(`
       INSERT INTO users (name, email, password, role, organization, active)
       VALUES 
-        ('Manminder Singh', 'manminder.singh@primepro.ai', $1, 'super_admin', 'Oxoo.ai Core Corp', true),
-        ('Root Administrator', 'admin@oxoo.ai', $1, 'admin', 'Oxoo.ai Core Corp', true)
+        ('Manminder Singh', 'manminder.singh@primepro.ai', $1, 'super_admin', 'PrimePro.ai Core Corp', true),
+        ('Root Administrator', 'admin@primepro.ai', $1, 'admin', 'PrimePro.ai Core Corp', true)
       ON CONFLICT (email) DO UPDATE
       SET password = EXCLUDED.password,
           role = EXCLUDED.role,
           active = true;
     `, [hashedPass]);
-    console.log('✓ Created/updated Root Admin users (manminder.singh@primepro.ai, admin@oxoo.ai).');
+    console.log('✓ Created/updated Root Admin users (manminder.singh@primepro.ai, admin@primepro.ai).');
 
     // 4. Verify Database Tables & Row Counts
     console.log('\nStep 4: Verifying migrated database tables and row counts in Neon...');

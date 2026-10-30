@@ -1,5 +1,5 @@
 /**
- * OXOO.ai — Tab-Isolated Authentication Storage Helper
+ * PrimePro.ai — Tab-Isolated Authentication Storage Helper
  * 
  * Enforces strict per-tab session isolation using sessionStorage.
  * In compliance with browser security specifications:
@@ -26,7 +26,7 @@ export const authStorage = {
   // -------------------------------------------------------------
   getCustomerToken: () => {
     try {
-      return sessionStorage.getItem('oxoo_token') || '';
+      return (sessionStorage.getItem('primepro_token') || sessionStorage.getItem('oxoo_token')) || '';
     } catch (e) {
       return '';
     }
@@ -34,7 +34,7 @@ export const authStorage = {
 
   getCustomerUser: () => {
     try {
-      const raw = sessionStorage.getItem('oxoo_user');
+      const raw = (sessionStorage.getItem('primepro_user') || sessionStorage.getItem('oxoo_user'));
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
@@ -43,10 +43,10 @@ export const authStorage = {
 
   setCustomerSession: (token, user) => {
     try {
-      if (token) sessionStorage.setItem('oxoo_token', token);
+      if (token) sessionStorage.setItem('primepro_token', token); sessionStorage.setItem('oxoo_token', token);
       if (user) {
         const str = typeof user === 'string' ? user : JSON.stringify(user);
-        sessionStorage.setItem('oxoo_user', str);
+        sessionStorage.setItem('primepro_user', str); sessionStorage.setItem('oxoo_user', str);
       }
       // Purge any localStorage remnants
       localStorage.removeItem('oxoo_token');
@@ -68,7 +68,7 @@ export const authStorage = {
   // -------------------------------------------------------------
   getAdminToken: () => {
     try {
-      return sessionStorage.getItem('oxoo_admin_token') || '';
+      return (sessionStorage.getItem('primepro_admin_token') || sessionStorage.getItem('oxoo_admin_token')) || '';
     } catch (e) {
       return '';
     }
@@ -76,7 +76,7 @@ export const authStorage = {
 
   getAdminUser: () => {
     try {
-      const raw = sessionStorage.getItem('oxoo_admin_user');
+      const raw = (sessionStorage.getItem('primepro_admin_user') || sessionStorage.getItem('oxoo_admin_user'));
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
@@ -85,10 +85,10 @@ export const authStorage = {
 
   setAdminSession: (token, user) => {
     try {
-      if (token) sessionStorage.setItem('oxoo_admin_token', token);
+      if (token) sessionStorage.setItem('primepro_admin_token', token); sessionStorage.setItem('oxoo_admin_token', token);
       if (user) {
         const str = typeof user === 'string' ? user : JSON.stringify(user);
-        sessionStorage.setItem('oxoo_admin_user', str);
+        sessionStorage.setItem('primepro_admin_user', str); sessionStorage.setItem('oxoo_admin_user', str);
       }
       // Purge any localStorage remnants
       localStorage.removeItem('oxoo_admin_token');

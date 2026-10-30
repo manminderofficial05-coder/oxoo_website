@@ -1,5 +1,5 @@
 /**
- * OXOO Global Country & Multi-Currency Pricing Configuration
+ * PrimePro Global Country & Multi-Currency Pricing Configuration
  * Single source of truth for regional pricing across Homepage, PricingPage, CheckoutPage, and App Directories.
  *
  * RULE:

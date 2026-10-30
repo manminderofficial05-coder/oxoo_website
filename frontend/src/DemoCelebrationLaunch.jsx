@@ -8,7 +8,7 @@ export default function DemoCelebrationLaunch({
   onComplete
 }) {
   // Animation Phases:
-  // 1: Black BG + Fireworks + "WELCOME TO OXOO DEMO"
+  // 1: Black BG + Fireworks + "WELCOME TO PrimePro DEMO"
   // 2: Black BG + Fireworks + "The one platform you will ever need to transform all your activities."
   // 3: White BG + "Building your {appName}"
   const [phase, setPhase] = useState(1);
@@ -207,7 +207,7 @@ export default function DemoCelebrationLaunch({
     let charIndex = 0;
 
     const fullTexts = {
-      1: 'WELCOME TO OXOO DEMO',
+      1: 'WELCOME TO PrimePro DEMO',
       2: 'The one platform you will ever need\nto transform all your activities.',
       3: `Building your ${appName}`
     };
@@ -478,7 +478,7 @@ export default function DemoCelebrationLaunch({
                   fontWeight: '500'
                 }}
               >
-                Configuring modules for <strong style={{ color: '#e2e8f0' }}>{companyName}.oxoo.com</strong>...
+                Configuring modules for <strong style={{ color: '#e2e8f0' }}>{companyName}.primepro.ai</strong>...
               </p>
 
               <button

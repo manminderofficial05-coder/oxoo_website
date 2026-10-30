@@ -153,14 +153,15 @@ app.get('/api/health', async (_req, res) => {
   res.json({
     status: 'ok',
     database: healthy ? 'connected (Neon PostgreSQL)' : 'demo-mode',
-    service: 'Oxoo.ai Enterprise API Gateway',
+    service: 'PrimePro.ai Enterprise API Gateway',
     timestamp: new Date().toISOString()
   });
 });
 
 // -------------------------------------------------------------
-// OXOO CENTRAL AUTHORITATIVE CONTROL PLANE ROUTES
+// PrimePro CENTRAL AUTHORITATIVE CONTROL PLANE ROUTES
 // -------------------------------------------------------------
+app.use('/api/v1/primepro', oxooCentralRouter);
 app.use('/api/v1/oxoo', oxooCentralRouter);
 
 // -------------------------------------------------------------
@@ -298,7 +299,7 @@ app.post('/api/auth/register', async (req, res, next) => {
           name,
           email: emailNorm,
           role: 'member',
-          organization: organization || 'Oxoo.ai Tenant',
+          organization: organization || 'PrimePro.ai Tenant',
           country: resolvedCountryName,
           countryCode: clientCountryCode,
           currency: outsideIndia ? 'USD' : 'INR',
@@ -389,7 +390,7 @@ app.post('/api/auth/login', async (req, res, next) => {
     const outsideIndia = isClientOutsideIndia(req);
 
     // Default admin shortcut (Super Admin is never geo-blocked)
-    if ((emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io') &&
+    if ((emailNorm === 'admin@primepro.ai' || emailNorm === 'admin@multiix.io') &&
         (password === 'oxoo123' || password === 'admin123' || password === 'multiix123')) {
       let adminId = 1;
       if (isDbConnected) {
@@ -402,12 +403,12 @@ app.post('/api/auth/login', async (req, res, next) => {
       return res.json({
         message: 'Authenticated as Administrator.',
         token,
-        user: { id: adminId, name: 'Root Administrator', email: emailNorm, role: 'admin', organization: 'Oxoo.ai Core Corp' }
+        user: { id: adminId, name: 'Root Administrator', email: emailNorm, role: 'admin', organization: 'PrimePro.ai Core Corp' }
       });
     }
 
     // Default Indian demo customer shortcut — blocked outside India
-    if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@oxoo.ai' || emailNorm === 'demo@oxoo.ai' || emailNorm === 'user@oxoo.ai') &&
+    if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@primepro.ai' || emailNorm === 'demo@primepro.ai' || emailNorm === 'user@primepro.ai') &&
         (password === 'oxoo123' || password === 'demo123' || password === 'customer123')) {
       if (outsideIndia && emailNorm === 'priya@retailmart.in') {
         return res.status(403).json({
@@ -446,7 +447,7 @@ app.post('/api/auth/login', async (req, res, next) => {
       return res.json({
         message: 'Login successful (Demo Mode).',
         token,
-        user: { id: 'user-guest', name: 'Demo User', email: emailNorm, role: 'member', organization: 'Oxoo.ai Workspace' }
+        user: { id: 'user-guest', name: 'Demo User', email: emailNorm, role: 'member', organization: 'PrimePro.ai Workspace' }
       });
     }
 
@@ -538,14 +539,14 @@ app.post('/api/auth/login', async (req, res, next) => {
   }
 });
 
-// Shared Finance Service Key across all OXOO multi-app software
-const OXOO_FINANCE_SERVICE_KEY = process.env.OXOO_FINANCE_SERVICE_KEY || 'OXOO-FIN-2026-SECURE-KEY';
+// Shared Finance Service Key across all PrimePro multi-app software
+const PrimePro_FINANCE_SERVICE_KEY = process.env.PrimePro_FINANCE_SERVICE_KEY || process.env.OXOO_FINANCE_SERVICE_KEY || 'OXOO-FIN-2026-SECURE-KEY';
 
 // Verify Service Key across all software
 app.get('/api/service-key/verify', (req, res) => {
   const key = req.query.service_key || req.headers['x-service-key'];
-  if (key === OXOO_FINANCE_SERVICE_KEY) {
-    return res.json({ valid: true, service_key: OXOO_FINANCE_SERVICE_KEY, status: 'Active', platform: 'OXOO Multi-App Suite' });
+  if (key === PrimePro_FINANCE_SERVICE_KEY || key === 'OXOO-FIN-2026-SECURE-KEY' || key === 'PrimePro-FIN-2026-SECURE-KEY') {
+    return res.json({ valid: true, service_key: PrimePro_FINANCE_SERVICE_KEY, status: 'Active', platform: 'PrimePro Multi-App Suite' });
   }
   return res.status(401).json({ valid: false, message: 'Invalid or missing service key' });
 });
@@ -568,7 +569,7 @@ app.post('/api/auth/employee-login', async (req, res, next) => {
       employeeId: input.toUpperCase(),
       department: 'Operations & HR',
       organization: 'RetailMart Solutions',
-      service_key: OXOO_FINANCE_SERVICE_KEY
+      service_key: PrimePro_FINANCE_SERVICE_KEY
     };
 
     const token = jwt.sign(empUser, JWT_SECRET, { expiresIn: '7d' });
@@ -576,8 +577,8 @@ app.post('/api/auth/employee-login', async (req, res, next) => {
       message: 'Employee authentication successful.',
       token,
       user: empUser,
-      service_key: OXOO_FINANCE_SERVICE_KEY,
-      redirectUrl: `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&role=employee&user=${encodeURIComponent(empUser.email)}&name=${encodeURIComponent(empUser.name)}&auto_login=true`
+      service_key: PrimePro_FINANCE_SERVICE_KEY,
+      redirectUrl: `https://oxoo-finance.onrender.com/?service_key=${PrimePro_FINANCE_SERVICE_KEY}&role=employee&user=${encodeURIComponent(empUser.email)}&name=${encodeURIComponent(empUser.name)}&auto_login=true`
     });
   } catch (err) {
     next(err);
@@ -595,7 +596,7 @@ app.post('/api/auth/admin-login', adminLoginLimiter, async (req, res, next) => {
 
     // Built-in Super Admin accounts
     const isRootAdmin = (
-      (emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io' || emailNorm === 'manminder.singh@primepro.ai') &&
+      (emailNorm === 'admin@primepro.ai' || emailNorm === 'admin@multiix.io' || emailNorm === 'manminder.singh@primepro.ai') &&
       (password === 'oxoo123' || password === 'admin123' || password === 'multiix123' || password === 'primepro123')
     );
 
@@ -616,7 +617,7 @@ app.post('/api/auth/admin-login', adminLoginLimiter, async (req, res, next) => {
       return res.json({
         message: 'Admin authorization successful.',
         token,
-        user: { id: adminId, name: adminName, email: emailNorm, role: 'super_admin', organization: 'OXOO Core Governance' }
+        user: { id: adminId, name: adminName, email: emailNorm, role: 'super_admin', organization: 'PrimePro Core Governance' }
       });
     }
 
@@ -681,7 +682,7 @@ app.post('/api/auth/check-email', async (req, res, next) => {
     const normEmail = String(email).trim().toLowerCase();
 
     if (!isDbConnected) {
-      const isKnownDemo = normEmail === 'priya@retailmart.in' || normEmail === 'customer@oxoo.ai';
+      const isKnownDemo = normEmail === 'priya@retailmart.in' || normEmail === 'customer@primepro.ai';
       return res.json({
         exists: isKnownDemo,
         email: normEmail,
@@ -1253,7 +1254,7 @@ app.post('/api/customer/renew-order', async (req, res, next) => {
     }
 
     const curYear = new Date().getFullYear();
-    const orderNumber = `OXOO-RNW-${curYear}-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    const orderNumber = `PrimePro-RNW-${curYear}-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     const isYearly = billingCycle === 'yearly';
     const basePrice = isYearly ? 560 * 12 : 740;
@@ -1299,8 +1300,8 @@ app.post('/api/customer/renew-order', async (req, res, next) => {
       }
     }
 
-    const effectiveOrderId = razorpayOrderId || `order_oxoo_${orderNumber}`;
-    const directPaymentId = `pay_oxoo_${Date.now().toString().slice(-8)}${Math.floor(10 + Math.random() * 90)}`;
+    const effectiveOrderId = razorpayOrderId || `order_primepro_${orderNumber}`;
+    const directPaymentId = `pay_primepro_${Date.now().toString().slice(-8)}${Math.floor(10 + Math.random() * 90)}`;
     const directSignature = crypto
       .createHmac('sha256', RAZORPAY_KEY_SECRET)
       .update(`${effectiveOrderId}|${directPaymentId}`)
@@ -1411,7 +1412,7 @@ app.post('/api/customer/renew-subscription', async (req, res, next) => {
     const renewalInterval = billingCycle === 'yearly' ? '1 year' : '1 month';
     const curYear = new Date().getFullYear();
     const invoiceNumber = `INV-${curYear}-RNW-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
-    const orderNumber = clientOrderNumber || `OXOO-RNW-${curYear}-${Date.now().toString().slice(-6)}`;
+    const orderNumber = clientOrderNumber || `PrimePro-RNW-${curYear}-${Date.now().toString().slice(-6)}`;
     const safeAmount = parseFloat(Number(amount || 0).toFixed(2));
 
     let updatedRenewalDate = new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 86400000);
@@ -1803,7 +1804,7 @@ app.get('/api/admin/users', requireAdminAuth, async (_req, res, next) => {
   try {
     if (!isDbConnected) {
       return res.json([
-        { id: 1, name: 'Root Administrator', email: 'admin@oxoo.ai', role: 'admin', organization: 'Oxoo.ai Core Corp' }
+        { id: 1, name: 'Root Administrator', email: 'admin@primepro.ai', role: 'admin', organization: 'PrimePro.ai Core Corp' }
       ]);
     }
     const result = await query(
@@ -2052,7 +2053,7 @@ async function resolveCustomerContext(req) {
   }
 
   return {
-    userEmail: userEmail || 'customer@oxoo.ai',
+    userEmail: userEmail || 'customer@primepro.ai',
     userCompany: userCompany,
     userId,
     userName: userName || (userEmail ? userEmail.split('@')[0] : 'Customer'),
@@ -2315,7 +2316,7 @@ app.get('/api/customer/overview', verifyToken, async (req, res, next) => {
       openTicketsCount: openTicketsCount,
       purchasedApps,
       recentActivity,
-      service_key: OXOO_FINANCE_SERVICE_KEY
+      service_key: PrimePro_FINANCE_SERVICE_KEY
     });
   } catch (e) {
     next(e);
@@ -2455,10 +2456,10 @@ app.get('/api/customer/invoices/:invoiceNumber/pdf', verifyToken, async (req, re
       orderNumber: order?.order_number || invoice.invoice_number,
       companyName: invoice.company_name || 'Valued Customer',
       customerName: order?.customer_name || invoice.company_name || 'Customer Admin',
-      customerEmail: order?.customer_email || 'billing@oxoo.ai',
+      customerEmail: order?.customer_email || 'billing@primepro.ai',
       customerPhone: order?.customer_phone || '+91 98765 43210',
       storageId: order?.storage_id || 'STG-08643413',
-      planName: invoice.plan || 'OXOO Software Suite',
+      planName: invoice.plan || 'PrimePro Software Suite',
       billingCycle: order?.billing_cycle || 'monthly',
       paymentMethod: invoice.payment_method || 'Online Razorpay (UPI / Card)',
       paymentId: order?.payment_id || 'pay_verified',
@@ -2581,7 +2582,7 @@ app.post('/api/customer/team', verifyToken, async (req, res, next) => {
       );
       newMember = insRes.rows[0];
 
-      // Sync to users table so team member can log in via existing OXOO login!
+      // Sync to users table so team member can log in via existing PrimePro login!
       const userCheck = await query(`SELECT id FROM users WHERE LOWER(email) = LOWER($1)`, [normEmail]);
       if (userCheck.rows.length === 0) {
         // Securely hash a random initial password setup
@@ -2760,21 +2761,21 @@ app.get('/api/customer/tickets', verifyToken, async (req, res, next) => {
 });
 
 // -------------------------------------------------------------
-// Workspace Hostname Resolver (abc.oxoo.ai, maan.oxoo.ai, etc.)
+// Workspace Hostname Resolver (abc.primepro.ai, maan.primepro.ai, etc.)
 // -------------------------------------------------------------
 app.get('/api/workspace/resolve', async (req, res, next) => {
   try {
     const rawHost = req.query.host || req.query.hostname || req.headers['x-forwarded-host'] || req.headers.host || '';
     const cleanHost = String(rawHost).trim().toLowerCase().split(':')[0];
 
-    let subdomain = (req.query.subdomain || req.query.company || '').trim().toLowerCase().replace(/\.(oxoo|ai|in|com)$/i, '');
+    let subdomain = (req.query.subdomain || req.query.company || '').trim().toLowerCase().replace(/\.(primepro\.ai|primepro|oxoo|ai|in|com)$/i, '');
 
     if (!subdomain && cleanHost) {
-      if (cleanHost.includes('.oxoo.') || cleanHost.includes('.localhost')) {
+      if (cleanHost.includes('.primepro.') || cleanHost.includes('.oxoo.') || cleanHost.includes('.localhost')) {
         subdomain = cleanHost.split('.')[0];
-      } else if (cleanHost.startsWith('abc.') || cleanHost === 'abc.oxoo.ai') {
+      } else if (cleanHost.startsWith('abc.') || cleanHost === 'abc.primepro.ai') {
         subdomain = 'abc';
-      } else if (cleanHost.startsWith('maan.') || cleanHost === 'maan.oxoo.ai') {
+      } else if (cleanHost.startsWith('maan.') || cleanHost === 'maan.primepro.ai') {
         subdomain = 'maan';
       } else if (cleanHost.includes('.')) {
         subdomain = cleanHost.split('.')[0];
@@ -2800,7 +2801,7 @@ app.get('/api/workspace/resolve', async (req, res, next) => {
             OR LOWER(name) LIKE $2 
             OR LOWER(custom_domain) = $3
          LIMIT 1`,
-        [subdomain, `%${subdomain}%`, `${subdomain}.oxoo.ai`]
+        [subdomain, `%${subdomain}%`, `${subdomain}.primepro.ai`]
       );
       if (orgRes.rows.length > 0) org = orgRes.rows[0];
 
@@ -2810,7 +2811,7 @@ app.get('/api/workspace/resolve', async (req, res, next) => {
             OR LOWER(company_name) LIKE $2 
             OR LOWER(workspace_domain) = $3
          LIMIT 1`,
-        [subdomain, `%${subdomain}%`, `${subdomain}.oxoo.ai`]
+        [subdomain, `%${subdomain}%`, `${subdomain}.primepro.ai`]
       );
       if (custRes.rows.length > 0) cust = custRes.rows[0];
     }
@@ -2819,7 +2820,7 @@ app.get('/api/workspace/resolve', async (req, res, next) => {
       return res.status(404).json({
         success: false,
         code: 'WORKSPACE_NOT_FOUND',
-        message: `Workspace "${subdomain}.oxoo.ai" is not registered. Please verify your company URL or contact OXOO support.`
+        message: `Workspace "${subdomain}.primepro.ai" is not registered. Please verify your company URL or contact PrimePro support.`
       });
     }
 
@@ -2832,8 +2833,8 @@ app.get('/api/workspace/resolve', async (req, res, next) => {
       success: true,
       workspace: {
         subdomain,
-        hostname: `${subdomain}.oxoo.ai`,
-        workspace_domain: `${subdomain}.oxoo.ai`,
+        hostname: `${subdomain}.primepro.ai`,
+        workspace_domain: `${subdomain}.primepro.ai`,
         companyName,
         company_name: companyName,
         plan: planName,
@@ -3145,7 +3146,7 @@ app.post('/api/demo-requests', demoRequestLimiter, async (req, res) => {
       return res.status(400).json({
         success: false,
         field: 'interestedDemo',
-        message: 'Please select a valid OXOO.ai product demo category.'
+        message: 'Please select a valid PrimePro.ai product demo category.'
       });
     }
 
@@ -3283,7 +3284,7 @@ app.post('/api/demo-requests', demoRequestLimiter, async (req, res) => {
     if (!emailNotifyResult || !emailNotifyResult.success) {
       return res.status(502).json({
         success: false,
-        message: 'We could not complete notification delivery for your demo request. Please try again or contact hello@oxoo.ai.'
+        message: 'We could not complete notification delivery for your demo request. Please try again or contact hello@primepro.ai.'
       });
     }
 
@@ -3382,7 +3383,7 @@ app.post('/api/customer/tickets', verifyToken, async (req, res, next) => {
     const ctx = await resolveCustomerContext(req);
     const { subject, description, priority = 'Medium', category = 'Technical', attachments = [] } = req.body || {};
 
-    const reqEmail = (req.body?.customerEmail || req.body?.email || ctx.userEmail || 'customer@oxoo.ai').trim().toLowerCase();
+    const reqEmail = (req.body?.customerEmail || req.body?.email || ctx.userEmail || 'customer@primepro.ai').trim().toLowerCase();
     const reqName = (req.body?.customerName || req.body?.name || ctx.userName || 'Customer').trim();
     const reqCompany = (req.body?.company || req.body?.companyName || ctx.userCompany || 'Customer Company').trim();
 
@@ -3510,7 +3511,7 @@ app.post('/api/customer/tickets', verifyToken, async (req, res, next) => {
       try {
         await query(
           `INSERT INTO notification_logs (event_id, recipient, template_key, subject, channel, customer_name, status, created_at)
-           VALUES ($1, $2, 'ticket_ack', 'We’ve Received Your OXOO Support Request', 'Email', $3, 'Sent', NOW())`,
+           VALUES ($1, $2, 'ticket_ack', 'We’ve Received Your PrimePro Support Request', 'Email', $3, 'Sent', NOW())`,
           [`TICKET-ACK-${ticketNumber}`, reqEmail, reqName]
         );
       } catch (nErr) {}
@@ -3737,7 +3738,7 @@ app.post('/api/help/tickets', async (req, res, next) => {
 
     const ticketSubject = summary || subject || topic || 'General Support Inquiry';
     const contactName = name || 'Valued Customer';
-    const contactEmail = email || 'support@oxoo.ai';
+    const contactEmail = email || 'support@primepro.ai';
     const ticketTopic = topic || 'Support question';
     const ticketNumber = `TK-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -3794,7 +3795,7 @@ app.post('/api/help/tickets', async (req, res, next) => {
     res.status(201).json({
       success: true,
       ticket_number: ticketNumber,
-      message: `Support ticket ${ticketNumber} created successfully. An Oxoo support specialist will respond shortly.`,
+      message: `Support ticket ${ticketNumber} created successfully. An PrimePro support specialist will respond shortly.`,
       ticket: createdTicket
     });
   } catch (e) {
@@ -4543,7 +4544,7 @@ app.post('/api/demo/event', async (req, res) => {
         session_id || `sess_${Date.now()}`,
         user_name || 'Demo Visitor',
         String(user_email).trim().toLowerCase(),
-        company_name || 'demo.oxoo',
+        company_name || 'demo.primepro.ai',
         app_slug || 'accounting',
         parseInt(duration_seconds, 10) || 300
       ]);
@@ -4573,16 +4574,16 @@ app.get('/api/admin/demo-events', requireAdminAuth, async (req, res, next) => {
     `);
 
     const appNameMap = {
-      finance: 'OXOO Finance Hub',
-      accounting: 'OXOO Finance Hub',
-      hrms: 'OXOO HRMS Pro',
-      sales: 'OXOO Sales CRM',
-      websites: 'OXOO Website Builder',
-      website: 'OXOO Website Builder',
-      inventory: 'OXOO Supply Chain',
-      marketing: 'OXOO Marketing Pro',
-      ai: 'OXOO AI Agent Studio',
-      studio: 'OXOO AI Agent Studio'
+      finance: 'PrimePro Finance Hub',
+      accounting: 'PrimePro Finance Hub',
+      hrms: 'PrimePro HRMS Pro',
+      sales: 'PrimePro Sales CRM',
+      websites: 'PrimePro Website Builder',
+      website: 'PrimePro Website Builder',
+      inventory: 'PrimePro Supply Chain',
+      marketing: 'PrimePro Marketing Pro',
+      ai: 'PrimePro AI Agent Studio',
+      studio: 'PrimePro AI Agent Studio'
     };
 
     const now = Date.now();
@@ -5017,13 +5018,13 @@ const adminModulesRouter = require('./adminModulesRoutes');
 app.use('/api/admin', requireAdminAuth, adminModulesRouter);
 
 // -------------------------------------------------------------
-// OXOO AGENT: AI CUSTOMER ASSISTANT ROUTER
+// PrimePro AGENT: AI CUSTOMER ASSISTANT ROUTER
 // -------------------------------------------------------------
 const agentRouter = require('./agentRoutes');
 app.use('/api/agent', agentRouter);
 
 // -------------------------------------------------------------
-// OXOO UNIFIED PROJECTS HUB & CONSULTATION ROUTERS
+// PrimePro UNIFIED PROJECTS HUB & CONSULTATION ROUTERS
 // -------------------------------------------------------------
 const { publicProjectsRouter, adminProjectsRouter } = require('./projectRoutes');
 app.use('/api/projects', publicProjectsRouter);
@@ -5137,11 +5138,11 @@ function generateRenewalReminderEmail({ customer_name, plan_name, subscription_i
   return `
     <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
       <div style="background: #0f172a; padding: 24px; text-align: center;">
-        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.5px;">OXOO</h1>
+        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.5px;">PrimePro</h1>
         <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">Billing & Renewal Notification</p>
       </div>
       <div style="padding: 32px 24px; color: #1e293b;">
-        <h2 style="font-size: 18px; color: #0f172a; margin-top: 0;">Your OXOO subscription renews soon</h2>
+        <h2 style="font-size: 18px; color: #0f172a; margin-top: 0;">Your PrimePro subscription renews soon</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #475569;">Hello <strong>${customer_name}</strong>,</p>
         <p style="font-size: 14px; line-height: 1.6; color: #475569;">Your <strong>${plan_name}</strong> subscription is approaching its renewal date. Here are the details:</p>
         
@@ -5155,11 +5156,11 @@ function generateRenewalReminderEmail({ customer_name, plan_name, subscription_i
           </table>
         </div>
 
-        <p style="font-size: 14px; line-height: 1.6; color: #475569;">Please renew your subscription before the due date to avoid interruption to your OXOO services.</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569;">Please renew your subscription before the due date to avoid interruption to your PrimePro services.</p>
         <div style="text-align: center; margin: 28px 0;">
           <a href="${renewal_url}" style="background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">Renew My Subscription</a>
         </div>
-        <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">If you have already completed your payment, please disregard this reminder.<br/>Regards,<br/><strong>OXOO Billing Team</strong></p>
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">If you have already completed your payment, please disregard this reminder.<br/>Regards,<br/><strong>PrimePro Billing Team</strong></p>
       </div>
     </div>
   `;
@@ -5169,18 +5170,18 @@ function generateDueTodayEmail({ customer_name, plan_name, renewal_url }) {
   return `
     <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
       <div style="background: #0f172a; padding: 24px; text-align: center;">
-        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">OXOO</h1>
+        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">PrimePro</h1>
         <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">Subscription Due Today</p>
       </div>
       <div style="padding: 32px 24px; color: #1e293b;">
-        <h2 style="font-size: 18px; color: #0f172a; margin-top: 0;">Your OXOO subscription is due today</h2>
+        <h2 style="font-size: 18px; color: #0f172a; margin-top: 0;">Your PrimePro subscription is due today</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #475569;">Hello <strong>${customer_name}</strong>,</p>
         <p style="font-size: 14px; line-height: 1.6; color: #475569;">Your <strong>${plan_name}</strong> subscription is due for renewal today.</p>
         <p style="font-size: 14px; line-height: 1.6; color: #475569;">Please complete your payment using the secure renewal link below.</p>
         <div style="text-align: center; margin: 28px 0;">
           <a href="${renewal_url}" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">Complete Renewal</a>
         </div>
-        <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">If your payment has already been completed, your subscription status will update after payment verification.<br/>Regards,<br/><strong>OXOO Billing Team</strong></p>
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">If your payment has already been completed, your subscription status will update after payment verification.<br/>Regards,<br/><strong>PrimePro Billing Team</strong></p>
       </div>
     </div>
   `;
@@ -5190,11 +5191,11 @@ function generatePaymentOverdueEmail({ customer_name, subscription_id, amount_du
   return `
     <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #fee2e2; border-radius: 12px; overflow: hidden;">
       <div style="background: #991b1b; padding: 24px; text-align: center;">
-        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">OXOO</h1>
+        <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 700;">PrimePro</h1>
         <p style="color: #fca5a5; font-size: 13px; margin: 4px 0 0;">Payment Overdue Notice</p>
       </div>
       <div style="padding: 32px 24px; color: #1e293b;">
-        <h2 style="font-size: 18px; color: #991b1b; margin-top: 0;">Action required: OXOO subscription payment overdue</h2>
+        <h2 style="font-size: 18px; color: #991b1b; margin-top: 0;">Action required: PrimePro subscription payment overdue</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #475569;">Hello <strong>${customer_name}</strong>,</p>
         <p style="font-size: 14px; line-height: 1.6; color: #475569;">We have not yet confirmed payment for your subscription.</p>
         
@@ -5211,7 +5212,7 @@ function generatePaymentOverdueEmail({ customer_name, subscription_id, amount_du
         <div style="text-align: center; margin: 28px 0;">
           <a href="${invoice_url}" style="background: #dc2626; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">View Invoice and Pay</a>
         </div>
-        <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Your access will be managed according to the published billing and grace-period policy.<br/>Regards,<br/><strong>OXOO Billing Team</strong></p>
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Your access will be managed according to the published billing and grace-period policy.<br/>Regards,<br/><strong>PrimePro Billing Team</strong></p>
       </div>
     </div>
   `;
@@ -5250,7 +5251,7 @@ async function runRenewalWarningScheduler() {
             ) VALUES ($1, $2, $3, $4, $5, $6, 'Sent', $7, NOW(), NOW())
           `, [
             sub.subscription_id || `SUB-2026-${sub.id}`, sub.customer_id || '', sub.company_name, email,
-            'renewal_reminder_5day', 'Your OXOO subscription renews soon', idempKey
+            'renewal_reminder_5day', 'Your PrimePro subscription renews soon', idempKey
           ]);
           await query(`
             UPDATE subscriptions
@@ -5295,7 +5296,7 @@ async function runRenewalWarningScheduler() {
               ) VALUES ($1, $2, $3, $4, $5, $6, 'Sent', $7, NOW(), NOW())
             `, [
               sub.subscription_id || `SUB-2026-${sub.id}`, sub.customer_id || '', sub.company_name, email,
-              'payment_overdue', 'Action required: OXOO subscription payment overdue', idempKey
+              'payment_overdue', 'Action required: PrimePro subscription payment overdue', idempKey
             ]);
             await query(`
               UPDATE subscriptions
@@ -5832,7 +5833,7 @@ app.post('/api/admin/subscriptions/:id/send-reminder', requireAdminAuth, async (
     await query(`
       INSERT INTO subscription_reminders (
         subscription_id, customer_id, company_name, recipient_email, email_type, subject, status, sent_at
-      ) VALUES ($1, $2, $3, $4, 'manual_renewal_reminder', 'Action required: Your OXOO subscription renews soon', 'Sent', NOW())
+      ) VALUES ($1, $2, $3, $4, 'manual_renewal_reminder', 'Action required: Your PrimePro subscription renews soon', 'Sent', NOW())
     `, [sub.subscription_id, sub.customer_id, sub.company_name, email]);
 
     await query(`
@@ -5882,7 +5883,7 @@ app.post('/api/admin/subscriptions/:id/notes', requireAdminAuth, async (req, res
 });
 
 // -------------------------------------------------------------
-// 8.5. OXOO PRODUCTS & PLANS MANAGEMENT ENDPOINTS
+// 8.5. PrimePro PRODUCTS & PLANS MANAGEMENT ENDPOINTS
 // -------------------------------------------------------------
 
 // 1. GET /api/admin/products-plans/summary
@@ -6521,7 +6522,7 @@ const PRICING_CONFIG = {
   freeDemo: {
     id: 'free-demo',
     name: 'Free Demo',
-    tagline: 'Experience OXOO with live demo',
+    tagline: 'Experience PrimePro with live demo',
     price: 0,
     priceFormatted: '₹0',
     maxApps: 1,
@@ -6545,7 +6546,7 @@ const PRICING_CONFIG = {
     discountPercent: 24,
     maxApps: 1,
     features: [
-      'Select any one available OXOO software',
+      'Select any one available PrimePro software',
       'Access the purchased software\'s included features',
       'Application-specific dashboard',
       'User and role management',
@@ -6643,7 +6644,7 @@ app.get('/api/geo/detect', async (req, res) => {
         const timeoutId = setTimeout(() => geoController.abort(), 1500);
         const geoRes = await fetch(`https://api.country.is/${clientIp}`, {
           signal: geoController.signal,
-          headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+          headers: { 'User-Agent': 'PrimePro-GeoIP/1.0' }
         });
         clearTimeout(timeoutId);
         if (geoRes.ok) {
@@ -6661,7 +6662,7 @@ app.get('/api/geo/detect', async (req, res) => {
           const timeoutId = setTimeout(() => geoController.abort(), 1500);
           const geoRes = await fetch(`https://ipapi.co/${clientIp}/json/`, {
             signal: geoController.signal,
-            headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+            headers: { 'User-Agent': 'PrimePro-GeoIP/1.0' }
           });
           clearTimeout(timeoutId);
           if (geoRes.ok) {
@@ -6682,7 +6683,7 @@ app.get('/api/geo/detect', async (req, res) => {
         const timeoutId = setTimeout(() => geoController.abort(), 1200);
         const geoRes = await fetch('https://api.country.is/', {
           signal: geoController.signal,
-          headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+          headers: { 'User-Agent': 'PrimePro-GeoIP/1.0' }
         });
         clearTimeout(timeoutId);
         if (geoRes.ok) {
@@ -6700,7 +6701,7 @@ app.get('/api/geo/detect', async (req, res) => {
           const timeoutId = setTimeout(() => geoController.abort(), 1200);
           const geoRes = await fetch('https://ipapi.co/json/', {
             signal: geoController.signal,
-            headers: { 'User-Agent': 'OXOO-GeoIP/1.0' }
+            headers: { 'User-Agent': 'PrimePro-GeoIP/1.0' }
           });
           clearTimeout(timeoutId);
           if (geoRes.ok) {
@@ -6921,7 +6922,7 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       });
     }
 
-    const orderNumber = `OXOO-ORD-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    const orderNumber = `PrimePro-ORD-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
     const safeSubtotal = parseFloat(Number(calc.subtotal || 0).toFixed(2));
     const safeTax = parseFloat(Number(calc.taxAmount || 0).toFixed(2));
@@ -7011,8 +7012,8 @@ app.post('/api/payment/create-order', async (req, res, next) => {
       }
     }
 
-    const effectiveOrderId = razorpayOrderId || `order_oxoo_${orderNumber}`;
-    const directPaymentId = `pay_oxoo_${Date.now().toString().slice(-8)}${Math.floor(10 + Math.random() * 90)}`;
+    const effectiveOrderId = razorpayOrderId || `order_primepro_${orderNumber}`;
+    const directPaymentId = `pay_primepro_${Date.now().toString().slice(-8)}${Math.floor(10 + Math.random() * 90)}`;
     const directSignature = crypto
       .createHmac('sha256', RAZORPAY_KEY_SECRET)
       .update(`${effectiveOrderId}|${directPaymentId}`)
@@ -7441,7 +7442,7 @@ async function start() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Oxoo.ai API server listening on port ${PORT} (0.0.0.0) with Neon PostgreSQL backend`);
+    console.log(`PrimePro.ai API server listening on port ${PORT} (0.0.0.0) with Neon PostgreSQL backend`);
   });
 }
 

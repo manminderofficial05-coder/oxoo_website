@@ -7,8 +7,8 @@ import { Link } from 'react-router-dom';
  * Matches user reference mockup (Screenshot 1 & 2):
  *  1. Top-right sweeping cyan swoosh arc
  *  2. Bold deep-navy company name lettering
- *  3. Cyan glowing horizontal separator line with centered oxoo mark
- *  4. Clean rounded pill badge with {companyName}.oxoo
+ *  3. Cyan glowing horizontal separator line with centered PrimePro mark
+ *  4. Clean rounded pill badge with {companyName}.primepro.ai
  */
 export default function CompanyBrandLogo({
   companyName = 'maan',
@@ -21,7 +21,7 @@ export default function CompanyBrandLogo({
   const cleanName = (companyName || 'maan')
     .toString()
     .trim()
-    .replace(/\.(oxoo|odoo\.com|com|ai|io)$/i, '')
+    .replace(/\.(primepro\.ai|primepro|oxoo|odoo\.com|com|ai|io)$/i, '')
     .trim() || 'maan';
 
   // Subdomain handle
@@ -120,7 +120,7 @@ export default function CompanyBrandLogo({
         </span>
       </div>
 
-      {/* 2. Cyan Glowing Horizontal Separator with Centered Oxoo Mark */}
+      {/* 2. Cyan Glowing Horizontal Separator with Centered PrimePro Mark */}
       <div
         className="company-logo-divider-row"
         style={{
@@ -145,7 +145,7 @@ export default function CompanyBrandLogo({
           }}
         />
 
-        {/* Stylized Oxoo Cursive Mark in Center */}
+        {/* Stylized PrimePro Cursive Mark in Center */}
         <div
           className="company-logo-oxoo-badge"
           style={{
@@ -157,8 +157,8 @@ export default function CompanyBrandLogo({
           }}
         >
           <img
-            src="/oxoo-logo.png"
-            alt="Oxoo"
+            src="/primepro-logo.png"
+            alt="PrimePro"
             style={{
               height: logoHeight,
               width: 'auto',
@@ -200,7 +200,7 @@ export default function CompanyBrandLogo({
             boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
           }}
         >
-          <span>{subdomainHandle}.oxoo</span>
+          <span>{subdomainHandle}.primepro.ai</span>
         </div>
       )}
     </div>

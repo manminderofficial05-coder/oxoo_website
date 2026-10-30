@@ -45,7 +45,7 @@ async function initDb() {
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         role VARCHAR(50) DEFAULT 'member',
-        organization VARCHAR(255) DEFAULT 'Oxoo.ai Tenant',
+        organization VARCHAR(255) DEFAULT 'PrimePro.ai Tenant',
         active BOOLEAN DEFAULT true,
         avatar VARCHAR(255) DEFAULT '',
         last_login TIMESTAMPTZ DEFAULT NULL,
@@ -431,7 +431,7 @@ async function initDb() {
       `);
       console.log('PostgreSQL subscription & lifecycle migrations applied successfully.');
 
-      // Oxoo Central Authoritative Control Plane Additive Migration
+      // PrimePro Central Authoritative Control Plane Additive Migration
       await client.query(`
         CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -522,7 +522,7 @@ async function initDb() {
         CREATE INDEX IF NOT EXISTS oxoo_identity_link_events_tenant_idx
           ON public.oxoo_identity_link_events(oxoo_organization_uuid, product_code, created_at DESC);
       `);
-      console.log('PostgreSQL Oxoo Central authoritative control plane migrations applied successfully.');
+      console.log('PostgreSQL PrimePro Central authoritative control plane migrations applied successfully.');
     } catch (migErr) {
       console.log('Migration check note:', migErr.message);
     }
@@ -541,7 +541,7 @@ async function initDb() {
             'login',
             CONCAT('sess_', MD5(CONCAT(id::text, email, created_at::text))),
             COALESCE(name, 'Demo User'),
-            COALESCE(email, 'user@oxoo.ai'),
+            COALESCE(email, 'user@primepro.ai'),
             COALESCE(company, 'demo.oxoo'),
             COALESCE(NULLIF(service, ''), 'accounting'),
             FLOOR(180 + (RANDOM() * 600))::int,
@@ -590,10 +590,10 @@ async function initDb() {
         await client.query(`
           INSERT INTO products_plans (product_name, category, monthly_price, annual_price, revenue, revenue_percent, active_subscriptions, status, features)
           VALUES
-            ('OXOO Business Suite', 'Suite', 740, 560, 48200, 49, 14, 'Operational', '["All Core Apps", "Standard Support"]'::jsonb),
-            ('OXOO Finance Pro', 'Finance', 740, 560, 24800, 25, 8, 'Operational', '["Accounting", "Invoicing", "Expenses"]'::jsonb),
-            ('OXOO HRMS Pro', 'Human Resources', 740, 560, 15600, 16, 5, 'Operational', '["Employee Management", "Payroll", "Attendance"]'::jsonb),
-            ('OXOO Website & Commerce', 'Websites', 740, 560, 9500, 10, 3, 'Operational', '["Storefront", "CMS", "SEO Tools"]'::jsonb);
+            ('PrimePro Business Suite', 'Suite', 740, 560, 48200, 49, 14, 'Operational', '["All Core Apps", "Standard Support"]'::jsonb),
+            ('PrimePro Finance Pro', 'Finance', 740, 560, 24800, 25, 8, 'Operational', '["Accounting", "Invoicing", "Expenses"]'::jsonb),
+            ('PrimePro HRMS Pro', 'Human Resources', 740, 560, 15600, 16, 5, 'Operational', '["Employee Management", "Payroll", "Attendance"]'::jsonb),
+            ('PrimePro Website & Commerce', 'Websites', 740, 560, 9500, 10, 3, 'Operational', '["Storefront", "CMS", "SEO Tools"]'::jsonb);
         `);
       }
     } catch (e) {
@@ -1077,10 +1077,10 @@ async function initDb() {
       await client.query(`
         INSERT INTO subscription_reminders (subscription_id, customer_id, company_name, recipient_email, email_type, subject, status, idempotency_key, scheduled_at, sent_at)
         VALUES 
-          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'renewal_reminder_5day', 'Your OXOO subscription renews soon', 'Sent', 'SUB-2026-001-2026-rem-1', NOW() - INTERVAL '3 hours', NOW() - INTERVAL '3 hours'),
-          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'renewal_reminder_10h_retry', 'Follow-up: Your OXOO subscription renews soon', 'Scheduled', 'SUB-2026-001-2026-rem-2', NOW() + INTERVAL '7 hours', NULL),
-          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'renewal_due_today', 'Your OXOO subscription is due today', 'Scheduled', 'SUB-2026-001-2026-rem-3', '2026-11-01T09:00:00Z', NULL),
-          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'payment_overdue', 'Action required: OXOO subscription payment overdue', 'Scheduled', 'SUB-2026-001-2026-rem-4', '2026-11-02T09:00:00Z', NULL)
+          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'renewal_reminder_5day', 'Your PrimePro subscription renews soon', 'Sent', 'SUB-2026-001-2026-rem-1', NOW() - INTERVAL '3 hours', NOW() - INTERVAL '3 hours'),
+          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'renewal_reminder_10h_retry', 'Follow-up: Your PrimePro subscription renews soon', 'Scheduled', 'SUB-2026-001-2026-rem-2', NOW() + INTERVAL '7 hours', NULL),
+          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'renewal_due_today', 'Your PrimePro subscription is due today', 'Scheduled', 'SUB-2026-001-2026-rem-3', '2026-11-01T09:00:00Z', NULL),
+          ('SUB-2026-001', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'rahul@techsol.com', 'payment_overdue', 'Action required: PrimePro subscription payment overdue', 'Scheduled', 'SUB-2026-001-2026-rem-4', '2026-11-02T09:00:00Z', NULL)
         ON CONFLICT (idempotency_key) DO NOTHING;
       `);
 
@@ -1177,7 +1177,7 @@ async function initDb() {
       await client.query(`
         INSERT INTO products (product_id, name, slug, icon, icon_bg, short_description, detailed_description, category, included_modules, features, total_plans, status, visibility, updated_at)
         VALUES
-          ('PRD-001', 'OXOO Business Suite', 'business-suite', 'Layers', '#0284c7', 'Complete business management platform', 'All-in-one unified enterprise ERP and business operating system integrating finance, HRMS, CRM, inventory, and operations.', 'Business Management', '["Finance", "HRMS", "Sales", "Inventory", "Marketing", "Studio"]'::jsonb, '["Multi-Company ERP", "Unified Single Sign-On", "Enterprise Access Control", "Automated Workflows", "API Integrations"]'::jsonb, 8, 'Active', 'Public', '2026-10-24T10:30:00Z'),
+          ('PRD-001', 'PrimePro Business Suite', 'business-suite', 'Layers', '#0284c7', 'Complete business management platform', 'All-in-one unified enterprise ERP and business operating system integrating finance, HRMS, CRM, inventory, and operations.', 'Business Management', '["Finance", "HRMS", "Sales", "Inventory", "Marketing", "Studio"]'::jsonb, '["Multi-Company ERP", "Unified Single Sign-On", "Enterprise Access Control", "Automated Workflows", "API Integrations"]'::jsonb, 8, 'Active', 'Public', '2026-10-24T10:30:00Z'),
           ('PRD-002', 'Finance Pro', 'finance-pro', 'CreditCard', '#059669', 'Advanced finance and accounting', 'Automated double-entry bookkeeping, GST invoicing, cashflow forecasts, automated bank reconciliations, and expense management.', 'Finance', '["Accounting", "Invoicing", "Payroll", "Cashflow", "Taxation"]'::jsonb, '["Automated Bank Feeds", "Multi-Currency Ledgers", "E-Invoicing \u0026 GST Filing", "Audit-Ready Reports", "Expense OCR Scanning"]'::jsonb, 4, 'Active', 'Public', '2026-10-22T16:12:00Z'),
           ('PRD-003', 'HRMS Pro', 'hrms-pro', 'Users', '#7c3aed', 'Complete human resource management', 'Employee self-service, automated attendance with geo-fencing, payroll processing, performance reviews, and leave management.', 'Human Resources', '["Employee", "Payroll", "Attendance", "Leaves", "Recruitment"]'::jsonb, '["Biometric \u0026 Geo Attendance", "Automated Tax Calculation", "Direct Salary Bank Transfers", "Performance Appraisals", "Employee Self Service"]'::jsonb, 4, 'Active', 'Public', '2026-10-21T11:45:00Z'),
           ('PRD-004', 'Sales Pro', 'sales-pro', 'TrendingUp', '#ea580c', 'Boost your sales and CRM', 'Comprehensive lead scoring, visual sales pipeline, deal tracking, automated follow-up sequences, and quote-to-cash workflows.', 'Sales & CRM', '["Leads", "Pipeline", "Customers", "Quotes", "Analytics"]'::jsonb, '["Kanban Deal Pipeline", "Email \u0026 Call Tracking", "Quote PDF Generator", "Lead Scoring AI", "Revenue Forecasting"]'::jsonb, 3, 'Active', 'Public', '2026-10-20T14:18:00Z'),
@@ -1204,20 +1204,20 @@ async function initDb() {
       await client.query(`
         INSERT INTO plans (plan_id, name, plan_code, category, plan_type, description, monthly_price, yearly_price, billing_cycle, currency, setup_fee, discount_percent, trial_days, active_subscriptions, status, visibility, included_products, included_apps, entitlements, subscription_rules, customer_access, created_at, updated_at)
         VALUES
-          ('PLAN-001', 'Business Plan', 'BUSINESS', 'Business Management', 'Bundle Plan', 'A complete solution for growing businesses with finance, HRMS, sales, inventory and marketing tools.', 24999.00, 249999.00, 'Yearly', 'INR', 0, 17, 14, 482, 'Active', 'Public', '["OXOO Business Suite", "Finance Pro", "HRMS Pro", "Sales Pro"]'::jsonb, '["Finance", "HRMS", "Sales", "Inventory"]'::jsonb, '{"user_limit": 50, "storage_gb": 100, "org_limit": 5, "support_level": "Priority 24/7"}'::jsonb, '{"grace_period_days": 10, "auto_renew_default": true}'::jsonb, '{"apps": ["finance", "hrms", "sales"]}'::jsonb, '2025-09-12T10:25:00Z', '2026-10-24T15:40:00Z'),
-          ('PLAN-002', 'Enterprise Plan', 'ENTERPRISE', 'Enterprise Management', 'Bundle Plan', 'Full enterprise tier with unlimited users, AI automation, custom integrations and dedicated support.', 49999.00, 499999.00, 'Yearly', 'INR', 0, 17, 30, 216, 'Active', 'Public', '["OXOO Business Suite", "Finance Pro", "HRMS Pro", "Sales Pro", "Inventory & Supply Chain", "Marketing Pro", "Website Builder", "Productivity Suite", "AI Tools"]'::jsonb, '["All Applications"]'::jsonb, '{"user_limit": 250, "storage_gb": 1000, "org_limit": 25, "support_level": "Dedicated Account Manager"}'::jsonb, '{"grace_period_days": 15, "auto_renew_default": true}'::jsonb, '{"apps": ["all"]}'::jsonb, '2025-08-10T11:00:00Z', '2026-10-23T12:00:00Z'),
+          ('PLAN-001', 'Business Plan', 'BUSINESS', 'Business Management', 'Bundle Plan', 'A complete solution for growing businesses with finance, HRMS, sales, inventory and marketing tools.', 24999.00, 249999.00, 'Yearly', 'INR', 0, 17, 14, 482, 'Active', 'Public', '["PrimePro Business Suite", "Finance Pro", "HRMS Pro", "Sales Pro"]'::jsonb, '["Finance", "HRMS", "Sales", "Inventory"]'::jsonb, '{"user_limit": 50, "storage_gb": 100, "org_limit": 5, "support_level": "Priority 24/7"}'::jsonb, '{"grace_period_days": 10, "auto_renew_default": true}'::jsonb, '{"apps": ["finance", "hrms", "sales"]}'::jsonb, '2025-09-12T10:25:00Z', '2026-10-24T15:40:00Z'),
+          ('PLAN-002', 'Enterprise Plan', 'ENTERPRISE', 'Enterprise Management', 'Bundle Plan', 'Full enterprise tier with unlimited users, AI automation, custom integrations and dedicated support.', 49999.00, 499999.00, 'Yearly', 'INR', 0, 17, 30, 216, 'Active', 'Public', '["PrimePro Business Suite", "Finance Pro", "HRMS Pro", "Sales Pro", "Inventory & Supply Chain", "Marketing Pro", "Website Builder", "Productivity Suite", "AI Tools"]'::jsonb, '["All Applications"]'::jsonb, '{"user_limit": 250, "storage_gb": 1000, "org_limit": 25, "support_level": "Dedicated Account Manager"}'::jsonb, '{"grace_period_days": 15, "auto_renew_default": true}'::jsonb, '{"apps": ["all"]}'::jsonb, '2025-08-10T11:00:00Z', '2026-10-23T12:00:00Z'),
           ('PLAN-003', 'Starter Plan', 'STARTER', 'Finance & Ops', 'Bundle Plan', 'Essential tools for small teams needing reliable finance, invoicing and task collaboration.', 4999.00, 49990.00, 'Monthly', 'INR', 0, 16, 14, 142, 'Active', 'Public', '["Finance Pro", "Productivity Suite"]'::jsonb, '["Finance", "Productivity"]'::jsonb, '{"user_limit": 10, "storage_gb": 20, "org_limit": 1, "support_level": "Standard Email"}'::jsonb, '{"grace_period_days": 7, "auto_renew_default": true}'::jsonb, '{"apps": ["finance", "productivity"]}'::jsonb, '2025-10-01T09:00:00Z', '2026-10-20T10:15:00Z'),
           ('PLAN-004', 'Professional Plan', 'PRO', 'Business Growth', 'Bundle Plan', 'Ideal for growing companies with active sales pipelines, employee management, and financial ledgers.', 9499.00, 94990.00, 'Monthly', 'INR', 0, 16, 14, 88, 'Active', 'Public', '["Finance Pro", "Sales Pro", "HRMS Pro"]'::jsonb, '["Finance", "Sales", "HRMS"]'::jsonb, '{"user_limit": 25, "storage_gb": 50, "org_limit": 2, "support_level": "Priority Chat"}'::jsonb, '{"grace_period_days": 10, "auto_renew_default": true}'::jsonb, '{"apps": ["finance", "sales", "hrms"]}'::jsonb, '2025-10-05T14:30:00Z', '2026-10-18T16:00:00Z'),
           ('PLAN-005', 'Single Software', 'SINGLE', 'Standalone Apps', 'Single Product Plan', 'Flexible individual module subscription for standalone accounting, HRMS or marketing.', 660.80, 7929.00, 'Monthly', 'INR', 0, 0, 7, 34, 'Active', 'Public', '["Finance Pro"]'::jsonb, '["Finance"]'::jsonb, '{"user_limit": 2, "storage_gb": 5, "org_limit": 1, "support_level": "Standard"}'::jsonb, '{"grace_period_days": 5, "auto_renew_default": true}'::jsonb, '{"apps": ["single"]}'::jsonb, '2025-11-01T08:00:00Z', '2026-10-15T09:30:00Z'),
           ('PLAN-006', 'HRMS Plan', 'HRMS', 'Human Resources', 'Single Product Plan', 'Dedicated human capital management, attendance tracking, payroll and biometric integrations.', 12999.00, 129990.00, 'Yearly', 'INR', 0, 17, 14, 16, 'Active', 'Public', '["HRMS Pro"]'::jsonb, '["HRMS"]'::jsonb, '{"user_limit": 100, "storage_gb": 50, "org_limit": 3, "support_level": "Priority"}'::jsonb, '{"grace_period_days": 10, "auto_renew_default": true}'::jsonb, '{"apps": ["hrms"]}'::jsonb, '2025-11-10T10:00:00Z', '2026-10-14T11:20:00Z'),
           ('PLAN-007', 'Finance Plan', 'FINANCE', 'Finance', 'Single Product Plan', 'Complete enterprise financial control, advanced taxation, multi-currency ledgers, and e-invoicing.', 18999.00, 189990.00, 'Yearly', 'INR', 0, 17, 14, 12, 'Active', 'Public', '["Finance Pro"]'::jsonb, '["Finance"]'::jsonb, '{"user_limit": 30, "storage_gb": 40, "org_limit": 2, "support_level": "Priority"}'::jsonb, '{"grace_period_days": 10, "auto_renew_default": true}'::jsonb, '{"apps": ["finance"]}'::jsonb, '2025-11-15T12:00:00Z', '2026-10-12T14:45:00Z'),
-          ('PLAN-008', 'Custom Plan', 'CUSTOM', 'Custom Enterprise', 'Bundle Plan', 'Tailored software configuration configured specifically for unique business operations.', 27500.00, 275000.00, 'Yearly', 'INR', 0, 17, 30, 6, 'Active', 'Public', '["OXOO Business Suite", "AI Tools"]'::jsonb, '["Custom Modules"]'::jsonb, '{"user_limit": 75, "storage_gb": 200, "org_limit": 5, "support_level": "Dedicated"}'::jsonb, '{"grace_period_days": 14, "auto_renew_default": true}'::jsonb, '{"apps": ["custom"]}'::jsonb, '2025-12-01T15:00:00Z', '2026-10-10T16:00:00Z'),
+          ('PLAN-008', 'Custom Plan', 'CUSTOM', 'Custom Enterprise', 'Bundle Plan', 'Tailored software configuration configured specifically for unique business operations.', 27500.00, 275000.00, 'Yearly', 'INR', 0, 17, 30, 6, 'Active', 'Public', '["PrimePro Business Suite", "AI Tools"]'::jsonb, '["Custom Modules"]'::jsonb, '{"user_limit": 75, "storage_gb": 200, "org_limit": 5, "support_level": "Dedicated"}'::jsonb, '{"grace_period_days": 14, "auto_renew_default": true}'::jsonb, '{"apps": ["custom"]}'::jsonb, '2025-12-01T15:00:00Z', '2026-10-10T16:00:00Z'),
           ('PLAN-009', 'Supply Chain Specialist', 'SUPPLY_CHAIN_DRAFT', 'Supply Chain', 'Single Product Plan', 'Comprehensive inventory, multi-warehouse and procurement logistics package.', 15000.00, 150000.00, 'Monthly', 'INR', 0, 16, 14, 0, 'Draft', 'Private', '["Inventory & Supply Chain"]'::jsonb, '["Inventory"]'::jsonb, '{"user_limit": 15, "storage_gb": 30, "org_limit": 2, "support_level": "Standard"}'::jsonb, '{"grace_period_days": 7, "auto_renew_default": true}'::jsonb, '{"apps": ["supply-chain"]}'::jsonb, '2026-10-01T10:00:00Z', '2026-10-24T18:00:00Z'),
           ('PLAN-010', 'AI Growth Suite', 'AI_GROWTH_DRAFT', 'AI & Automation', 'Bundle Plan', 'Advanced autonomous AI workflows, marketing automation, predictive forecasting.', 29999.00, 299990.00, 'Yearly', 'INR', 0, 17, 14, 0, 'Draft', 'Private', '["AI Tools", "Marketing Pro"]'::jsonb, '["AI", "Marketing"]'::jsonb, '{"user_limit": 40, "storage_gb": 100, "org_limit": 3, "support_level": "Priority"}'::jsonb, '{"grace_period_days": 10, "auto_renew_default": true}'::jsonb, '{"apps": ["ai", "marketing"]}'::jsonb, '2026-10-05T11:00:00Z', '2026-10-25T14:00:00Z'),
           ('PLAN-011', 'Global Commerce Suite', 'COMMERCE_DRAFT', 'E-Commerce', 'Bundle Plan', 'Unified digital storefront, multi-currency payments, supply chain inventory synchronization.', 34999.00, 349990.00, 'Yearly', 'INR', 0, 17, 14, 0, 'Draft', 'Private', '["Website Builder", "Inventory & Supply Chain"]'::jsonb, '["Website", "Inventory"]'::jsonb, '{"user_limit": 50, "storage_gb": 150, "org_limit": 4, "support_level": "Priority"}'::jsonb, '{"grace_period_days": 10, "auto_renew_default": true}'::jsonb, '{"apps": ["website", "inventory"]}'::jsonb, '2026-10-10T12:00:00Z', '2026-10-25T15:30:00Z'),
           ('PLAN-012', 'Legacy Single Software', 'LEGACY_SINGLE', 'Standalone Apps', 'Single Product Plan', 'Archived individual product tier for legacy customers.', 599.00, 5990.00, 'Monthly', 'INR', 0, 0, 0, 2, 'Inactive', 'Private', '["Finance Pro"]'::jsonb, '["Finance"]'::jsonb, '{"user_limit": 1, "storage_gb": 2, "org_limit": 1, "support_level": "Community"}'::jsonb, '{"grace_period_days": 3, "auto_renew_default": false}'::jsonb, '{"apps": ["legacy"]}'::jsonb, '2024-01-01T00:00:00Z', '2025-06-01T00:00:00Z'),
-          ('PLAN-013', 'Legacy Basic Suite', 'LEGACY_BASIC', 'Business Management', 'Bundle Plan', 'Previous generation business starter bundle.', 3999.00, 39990.00, 'Monthly', 'INR', 0, 0, 0, 1, 'Inactive', 'Private', '["OXOO Business Suite"]'::jsonb, '["Business"]'::jsonb, '{"user_limit": 5, "storage_gb": 10, "org_limit": 1, "support_level": "Community"}'::jsonb, '{"grace_period_days": 3, "auto_renew_default": false}'::jsonb, '{"apps": ["legacy"]}'::jsonb, '2024-03-01T00:00:00Z', '2025-08-01T00:00:00Z'),
-          ('PLAN-014', 'Legacy Enterprise 2024', 'LEGACY_ENT_24', 'Enterprise Management', 'Bundle Plan', 'Grandfathered 2024 enterprise contract tier.', 39999.00, 399990.00, 'Yearly', 'INR', 0, 0, 0, 1, 'Inactive', 'Private', '["OXOO Business Suite", "Finance Pro"]'::jsonb, '["All 2024"]'::jsonb, '{"user_limit": 100, "storage_gb": 500, "org_limit": 10, "support_level": "Standard"}'::jsonb, '{"grace_period_days": 7, "auto_renew_default": true}'::jsonb, '{"apps": ["legacy"]}'::jsonb, '2024-06-01T00:00:00Z', '2025-09-01T00:00:00Z'),
+          ('PLAN-013', 'Legacy Basic Suite', 'LEGACY_BASIC', 'Business Management', 'Bundle Plan', 'Previous generation business starter bundle.', 3999.00, 39990.00, 'Monthly', 'INR', 0, 0, 0, 1, 'Inactive', 'Private', '["PrimePro Business Suite"]'::jsonb, '["Business"]'::jsonb, '{"user_limit": 5, "storage_gb": 10, "org_limit": 1, "support_level": "Community"}'::jsonb, '{"grace_period_days": 3, "auto_renew_default": false}'::jsonb, '{"apps": ["legacy"]}'::jsonb, '2024-03-01T00:00:00Z', '2025-08-01T00:00:00Z'),
+          ('PLAN-014', 'Legacy Enterprise 2024', 'LEGACY_ENT_24', 'Enterprise Management', 'Bundle Plan', 'Grandfathered 2024 enterprise contract tier.', 39999.00, 399990.00, 'Yearly', 'INR', 0, 0, 0, 1, 'Inactive', 'Private', '["PrimePro Business Suite", "Finance Pro"]'::jsonb, '["All 2024"]'::jsonb, '{"user_limit": 100, "storage_gb": 500, "org_limit": 10, "support_level": "Standard"}'::jsonb, '{"grace_period_days": 7, "auto_renew_default": true}'::jsonb, '{"apps": ["legacy"]}'::jsonb, '2024-06-01T00:00:00Z', '2025-09-01T00:00:00Z'),
           ('PLAN-015', 'Sales Accelerator', 'SALES_ACCEL', 'Sales & CRM', 'Single Product Plan', 'Specialized CRM tier for high-velocity outbound sales teams.', 7999.00, 79990.00, 'Monthly', 'INR', 0, 16, 14, 18, 'Active', 'Public', '["Sales Pro"]'::jsonb, '["Sales"]'::jsonb, '{"user_limit": 15, "storage_gb": 25, "org_limit": 1, "support_level": "Standard"}'::jsonb, '{"grace_period_days": 7, "auto_renew_default": true}'::jsonb, '{"apps": ["sales"]}'::jsonb, '2026-01-15T09:00:00Z', '2026-10-15T10:00:00Z'),
           ('PLAN-016', 'Digital Marketing Hub', 'MKTG_HUB', 'Marketing', 'Single Product Plan', 'End-to-end campaign automation, audience segmentation, and lead generation.', 14999.00, 149990.00, 'Monthly', 'INR', 0, 16, 14, 14, 'Active', 'Public', '["Marketing Pro"]'::jsonb, '["Marketing"]'::jsonb, '{"user_limit": 20, "storage_gb": 40, "org_limit": 2, "support_level": "Standard"}'::jsonb, '{"grace_period_days": 7, "auto_renew_default": true}'::jsonb, '{"apps": ["marketing"]}'::jsonb, '2026-02-01T10:00:00Z', '2026-10-16T11:00:00Z'),
           ('PLAN-017', 'Web & Portal Engine', 'WEB_PORTAL', 'Website & Portals', 'Single Product Plan', 'Full website and customer portal creation platform with SSL hosting.', 9999.00, 99990.00, 'Monthly', 'INR', 0, 16, 14, 12, 'Active', 'Public', '["Website Builder"]'::jsonb, '["Websites"]'::jsonb, '{"user_limit": 10, "storage_gb": 30, "org_limit": 1, "support_level": "Standard"}'::jsonb, '{"grace_period_days": 7, "auto_renew_default": true}'::jsonb, '{"apps": ["websites"]}'::jsonb, '2026-03-01T11:00:00Z', '2026-10-17T12:00:00Z'),
@@ -1272,16 +1272,16 @@ async function initDb() {
           health_url VARCHAR(255) DEFAULT '/health',
           app_type VARCHAR(50) DEFAULT 'Cloud Web App',
           access_mode VARCHAR(50) DEFAULT 'SSO Protected',
-          auth_method VARCHAR(50) DEFAULT 'OXOO OAuth2 / JWT',
+          auth_method VARCHAR(50) DEFAULT 'PrimePro OAuth2 / JWT',
           service_key VARCHAR(255) DEFAULT 'sk_live_9f8d7e6c5b4a3e2d',
           access_protection BOOLEAN DEFAULT true,
-          warning_page_url VARCHAR(255) DEFAULT 'https://oxoo.in/access-denied',
+          warning_page_url VARCHAR(255) DEFAULT 'https://primepro.ai/access-denied',
           subscription_required VARCHAR(100) DEFAULT 'Business Plan',
           status VARCHAR(50) DEFAULT 'Active',
           health_status VARCHAR(50) DEFAULT 'Operational',
           health_response_ms INT DEFAULT 35,
           last_health_check TIMESTAMPTZ DEFAULT NOW(),
-          allowed_domains JSONB DEFAULT '["*.oxoo.in", "localhost"]'::jsonb,
+          allowed_domains JSONB DEFAULT '["*.primepro.ai", "localhost"]'::jsonb,
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
@@ -1295,15 +1295,15 @@ async function initDb() {
           app_type, access_mode, auth_method, service_key, access_protection, warning_page_url,
           subscription_required, status, health_status, health_response_ms, allowed_domains, updated_at
         ) VALUES
-          ('APP-HRMS', 'Employee Pro HRMS', 'employee-pro-hrms', 'HR', 'Users', '#7c3aed', 'Complete HR and employee-management solution.', 'Manage employees, attendance, payroll, leave, performance and more with Employee Pro HRMS.', 'https://hrms.oxoo.in', '/employee', '/admin', 'https://hrms.oxoo.in/customer', 'https://hrms.oxoo.in/logout', 'https://hrms.oxoo.in/health', 'HRMS', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_9f8d7e6c5b4a3e2d', true, 'https://oxoo.in/access-denied', 'HRMS Plan', 'Active', 'Operational', 32, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-FIN', 'OXOO Finance', 'oxoo-finance', 'Finance', 'CreditCard', '#059669', 'Enterprise accounting, ledgers and GST invoicing.', 'Automated bookkeeping, invoice creation, multi-currency accounts and financial reports.', 'https://finance.oxoo.in', '/portal', '/admin', 'https://finance.oxoo.in/customer', 'https://finance.oxoo.in/logout', 'https://finance.oxoo.in/health', 'Finance', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_8a7b6c5d4e3f2a1b', true, 'https://oxoo.in/access-denied', 'Finance Plan', 'Active', 'Operational', 28, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-SALES', 'Sales Pro', 'sales-pro-app', 'Sales', 'TrendingUp', '#ea580c', 'Pipeline tracking, CRM and deals closing.', 'Complete visual pipeline, deal progress tracking, automated follow-up sequences and customer intelligence.', 'https://sales.oxoo.in', '/login', '/admin', 'https://sales.oxoo.in/pipeline', 'https://sales.oxoo.in/logout', 'https://sales.oxoo.in/health', 'Sales', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_7c6d5e4f3a2b1c9d', true, 'https://oxoo.in/access-denied', 'Business Plan', 'Active', 'Operational', 45, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-INVENTORY', 'Inventory & SCM', 'inventory-scm', 'Inventory', 'Package', '#0d9488', 'Multi-warehouse stock and supply chain tracking.', 'Real-time multi-warehouse inventory levels, reorder alerts, supplier tracking and shipments.', 'https://inventory.oxoo.in', '/staff', '/admin', 'https://inventory.oxoo.in/warehouse', 'https://inventory.oxoo.in/logout', 'https://inventory.oxoo.in/health', 'Inventory', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_6b5a4f3e2d1c9b8a', true, 'https://oxoo.in/access-denied', 'Enterprise Plan', 'Maintenance', 'Degraded', 120, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-MKTG', 'Marketing Pro', 'marketing-pro-app', 'Marketing', 'Send', '#db2777', 'Multi-channel marketing campaigns and newsletters.', 'Broadcast drip emails, SMS automations, audience segmentation and tracking conversion analytics.', 'https://marketing.oxoo.in', '/login', '/admin', 'https://marketing.oxoo.in/campaigns', 'https://marketing.oxoo.in/logout', 'https://marketing.oxoo.in/health', 'Marketing', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_5a4b3c2d1e9f8a7b', true, 'https://oxoo.in/access-denied', 'Business Plan', 'Active', 'Operational', 38, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-WEB', 'Website Builder', 'website-builder-app', 'Web', 'Globe', '#4f46e5', 'Drag-and-drop website and customer portal builder.', 'Build high-converting landing pages, e-commerce storefronts and client portals with CDN hosting.', 'https://web.oxoo.in', '/login', '/admin', 'https://web.oxoo.in/editor', 'https://web.oxoo.in/logout', 'https://web.oxoo.in/health', 'Website Builder', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_4f3e2d1c9b8a7f6e', true, 'https://oxoo.in/access-denied', 'Starter Plan', 'Active', 'Operational', 25, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-PROD', 'Productivity Suite', 'productivity-suite-app', 'Productivity', 'Zap', '#06b6d4', 'Team collaboration, kanban tasks, notes and calendar.', 'Collaborative documents, shared team calendar, sprint boards and internal messaging channels.', 'https://productivity.oxoo.in', '/login', '/admin', 'https://productivity.oxoo.in/tasks', 'https://productivity.oxoo.in/logout', 'https://productivity.oxoo.in/health', 'Productivity', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_3e2d1c9b8a7f6e5d', true, 'https://oxoo.in/access-denied', 'Starter Plan', 'Active', 'Operational', 30, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-AI', 'AI Tools & Studio', 'ai-tools-app', 'AI', 'Sparkles', '#9333ea', 'Autonomous AI copilot and prompt automation.', 'Intelligent document extraction, generative responses, predictive forecasting and smart bots.', 'https://ai.oxoo.in', '/chat', '/admin', 'https://ai.oxoo.in/agents', 'https://ai.oxoo.in/logout', 'https://ai.oxoo.in/health', 'AI', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_2d1c9b8a7f6e5d4c', true, 'https://oxoo.in/access-denied', 'Enterprise Plan', 'Active', 'Operational', 55, '["*.oxoo.in", "localhost"]'::jsonb, NOW()),
-          ('APP-BIZ', 'OXOO Business Suite', 'oxoo-business-suite-app', 'Business Management', 'Layers', '#0284c7', 'Unified business ERP and operating system.', 'Unified single sign-on access to all enterprise modules and cross-organization operations.', 'https://suite.oxoo.in', '/portal', '/admin', 'https://suite.oxoo.in/dashboard', 'https://suite.oxoo.in/logout', 'https://suite.oxoo.in/health', 'Business Suite', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_1c9b8a7f6e5d4c3b', true, 'https://oxoo.in/access-denied', 'Business Plan', 'Active', 'Operational', 22, '["*.oxoo.in", "localhost"]'::jsonb, NOW())
+          ('APP-HRMS', 'Employee Pro HRMS', 'employee-pro-hrms', 'HR', 'Users', '#7c3aed', 'Complete HR and employee-management solution.', 'Manage employees, attendance, payroll, leave, performance and more with Employee Pro HRMS.', 'https://hrms.oxoo.in', '/employee', '/admin', 'https://hrms.oxoo.in/customer', 'https://hrms.oxoo.in/logout', 'https://hrms.oxoo.in/health', 'HRMS', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_9f8d7e6c5b4a3e2d', true, 'https://primepro.ai/access-denied', 'HRMS Plan', 'Active', 'Operational', 32, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-FIN', 'PrimePro Finance', 'oxoo-finance', 'Finance', 'CreditCard', '#059669', 'Enterprise accounting, ledgers and GST invoicing.', 'Automated bookkeeping, invoice creation, multi-currency accounts and financial reports.', 'https://finance.oxoo.in', '/portal', '/admin', 'https://finance.oxoo.in/customer', 'https://finance.oxoo.in/logout', 'https://finance.oxoo.in/health', 'Finance', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_8a7b6c5d4e3f2a1b', true, 'https://primepro.ai/access-denied', 'Finance Plan', 'Active', 'Operational', 28, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-SALES', 'Sales Pro', 'sales-pro-app', 'Sales', 'TrendingUp', '#ea580c', 'Pipeline tracking, CRM and deals closing.', 'Complete visual pipeline, deal progress tracking, automated follow-up sequences and customer intelligence.', 'https://sales.oxoo.in', '/login', '/admin', 'https://sales.oxoo.in/pipeline', 'https://sales.oxoo.in/logout', 'https://sales.oxoo.in/health', 'Sales', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_7c6d5e4f3a2b1c9d', true, 'https://primepro.ai/access-denied', 'Business Plan', 'Active', 'Operational', 45, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-INVENTORY', 'Inventory & SCM', 'inventory-scm', 'Inventory', 'Package', '#0d9488', 'Multi-warehouse stock and supply chain tracking.', 'Real-time multi-warehouse inventory levels, reorder alerts, supplier tracking and shipments.', 'https://inventory.oxoo.in', '/staff', '/admin', 'https://inventory.oxoo.in/warehouse', 'https://inventory.oxoo.in/logout', 'https://inventory.oxoo.in/health', 'Inventory', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_6b5a4f3e2d1c9b8a', true, 'https://primepro.ai/access-denied', 'Enterprise Plan', 'Maintenance', 'Degraded', 120, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-MKTG', 'Marketing Pro', 'marketing-pro-app', 'Marketing', 'Send', '#db2777', 'Multi-channel marketing campaigns and newsletters.', 'Broadcast drip emails, SMS automations, audience segmentation and tracking conversion analytics.', 'https://marketing.oxoo.in', '/login', '/admin', 'https://marketing.oxoo.in/campaigns', 'https://marketing.oxoo.in/logout', 'https://marketing.oxoo.in/health', 'Marketing', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_5a4b3c2d1e9f8a7b', true, 'https://primepro.ai/access-denied', 'Business Plan', 'Active', 'Operational', 38, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-WEB', 'Website Builder', 'website-builder-app', 'Web', 'Globe', '#4f46e5', 'Drag-and-drop website and customer portal builder.', 'Build high-converting landing pages, e-commerce storefronts and client portals with CDN hosting.', 'https://web.oxoo.in', '/login', '/admin', 'https://web.oxoo.in/editor', 'https://web.oxoo.in/logout', 'https://web.oxoo.in/health', 'Website Builder', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_4f3e2d1c9b8a7f6e', true, 'https://primepro.ai/access-denied', 'Starter Plan', 'Active', 'Operational', 25, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-PROD', 'Productivity Suite', 'productivity-suite-app', 'Productivity', 'Zap', '#06b6d4', 'Team collaboration, kanban tasks, notes and calendar.', 'Collaborative documents, shared team calendar, sprint boards and internal messaging channels.', 'https://productivity.oxoo.in', '/login', '/admin', 'https://productivity.oxoo.in/tasks', 'https://productivity.oxoo.in/logout', 'https://productivity.oxoo.in/health', 'Productivity', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_3e2d1c9b8a7f6e5d', true, 'https://primepro.ai/access-denied', 'Starter Plan', 'Active', 'Operational', 30, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-AI', 'AI Tools & Studio', 'ai-tools-app', 'AI', 'Sparkles', '#9333ea', 'Autonomous AI copilot and prompt automation.', 'Intelligent document extraction, generative responses, predictive forecasting and smart bots.', 'https://ai.oxoo.in', '/chat', '/admin', 'https://ai.oxoo.in/agents', 'https://ai.oxoo.in/logout', 'https://ai.oxoo.in/health', 'AI', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_2d1c9b8a7f6e5d4c', true, 'https://primepro.ai/access-denied', 'Enterprise Plan', 'Active', 'Operational', 55, '["*.primepro.ai", "localhost"]'::jsonb, NOW()),
+          ('APP-BIZ', 'PrimePro Business Suite', 'oxoo-business-suite-app', 'Business Management', 'Layers', '#0284c7', 'Unified business ERP and operating system.', 'Unified single sign-on access to all enterprise modules and cross-organization operations.', 'https://suite.oxoo.in', '/portal', '/admin', 'https://suite.oxoo.in/dashboard', 'https://suite.oxoo.in/logout', 'https://suite.oxoo.in/health', 'Business Suite', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_1c9b8a7f6e5d4c3b', true, 'https://primepro.ai/access-denied', 'Business Plan', 'Active', 'Operational', 22, '["*.primepro.ai", "localhost"]'::jsonb, NOW())
         ON CONFLICT (app_id) DO UPDATE
         SET name = EXCLUDED.name,
             category = EXCLUDED.category,
@@ -1373,7 +1373,7 @@ async function initDb() {
               'INV-2026-1016', 'TXN2276509814', 'CST-0005', 'Brightway Retail', 'james@brightway.com', '+44 7700 900123',
               'Finance Plan', 'Finance Plan', 'Monthly', 8499.00, 1529.82, 10028.82, 'INR', 'Credit Card',
               'Failed', '2026-10-18T09:00:00Z', NULL, '2026-10-18T09:00:00Z',
-              '["OXOO Finance", "Invoicing"]'::jsonb,
+              '["PrimePro Finance", "Invoicing"]'::jsonb,
               '[{"step": "Invoice Created", "time": "18 Oct 2026, 09:00 AM", "completed": true}, {"step": "Payment Initiated", "time": "18 Oct 2026, 09:01 AM", "completed": true}, {"step": "Payment Failed", "time": "18 Oct 2026, 09:02 AM", "completed": false}, {"step": "Invoice Paid", "time": null, "completed": false}]'::jsonb
             )
           ON CONFLICT (invoice_number) DO UPDATE
@@ -1408,14 +1408,14 @@ async function initDb() {
           permissions JSONB DEFAULT '[]'::jsonb,
           assigned_software JSONB DEFAULT '["all"]'::jsonb,
           employee_id VARCHAR(50),
-          created_by VARCHAR(150) DEFAULT 'admin@oxoo.ai',
+          created_by VARCHAR(150) DEFAULT 'admin@primepro.ai',
           joined_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
 
         ALTER TABLE platform_staff ADD COLUMN IF NOT EXISTS assigned_software JSONB DEFAULT '["all"]'::jsonb;
         ALTER TABLE platform_staff ADD COLUMN IF NOT EXISTS employee_id VARCHAR(50);
-        ALTER TABLE platform_staff ADD COLUMN IF NOT EXISTS created_by VARCHAR(150) DEFAULT 'admin@oxoo.ai';
+        ALTER TABLE platform_staff ADD COLUMN IF NOT EXISTS created_by VARCHAR(150) DEFAULT 'admin@primepro.ai';
       `);
 
       // Ensure Super Administrator platform_staff record exists for console authorization
@@ -1433,29 +1433,29 @@ async function initDb() {
         await client.query(`
           INSERT INTO platform_staff (name, email, phone, role, department, status, access_level, permissions, joined_at)
           VALUES
-            ('Rohit Sharma', 'rohit@oxoo.in', '+91 98765 43211', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read", "invoices.download", "reports.finance.read"]'::jsonb, '2026-10-10T10:00:00Z'),
-            ('Priya Mehta', 'support@oxoo.in', '+91 98765 43212', 'Support Staff', 'Support', 'Active', 'Module Specific', '["customers.read", "subscriptions.read", "support_tickets.read", "support_tickets.reply", "support_tickets.resolve"]'::jsonb, '2026-10-12T11:00:00Z'),
-            ('Amit Kumar', 'sales@oxoo.in', '+91 98765 43213', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "subscriptions.read", "products.read", "reports.sales.read"]'::jsonb, '2026-10-15T12:00:00Z'),
-            ('Vikram Malhotra', 'vikram@oxoo.in', '+91 98765 43214', 'Super Admin', 'Administration', 'Active', 'Full Platform', '["*"]'::jsonb, '2026-09-15T09:00:00Z'),
-            ('Neha Singhal', 'neha.finance@oxoo.in', '+91 98765 43215', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read"]'::jsonb, '2026-09-20T10:00:00Z'),
-            ('Kunal Verma', 'kunal.finance@oxoo.in', '+91 98765 43216', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read"]'::jsonb, '2026-09-25T10:00:00Z'),
-            ('Anjali Gupta', 'anjali.finance@oxoo.in', '+91 98765 43217', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read"]'::jsonb, '2026-10-02T10:00:00Z'),
-            ('Deepak Joshi', 'deepak.support@oxoo.in', '+91 98765 43218', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-09-18T11:00:00Z'),
-            ('Sonia Roy', 'sonia.support@oxoo.in', '+91 98765 43219', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-09-22T11:00:00Z'),
-            ('Rajesh Iyer', 'rajesh.support@oxoo.in', '+91 98765 43220', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-04T11:00:00Z'),
-            ('Sneha Nair', 'sneha.support@oxoo.in', '+91 98765 43221', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-06T11:00:00Z'),
-            ('Arjun Rao', 'arjun.support@oxoo.in', '+91 98765 43222', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-08T11:00:00Z'),
-            ('Divya Kapoor', 'divya.support@oxoo.in', '+91 98765 43223', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-11T11:00:00Z'),
-            ('Manoj Pandey', 'manoj.support@oxoo.in', '+91 98765 43224', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-14T11:00:00Z'),
-            ('Simran Kaur', 'simran.sales@oxoo.in', '+91 98765 43225', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-09-28T12:00:00Z'),
-            ('Varun Bajaj', 'varun.sales@oxoo.in', '+91 98765 43226', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-10-03T12:00:00Z'),
-            ('Tanvi Saxena', 'tanvi.sales@oxoo.in', '+91 98765 43227', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-10-07T12:00:00Z'),
-            ('Gaurav Sen', 'gaurav.sales@oxoo.in', '+91 98765 43228', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-10-12T12:00:00Z'),
-            ('Ritu Bhatia', 'ritu.tech@oxoo.in', '+91 98765 43229', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-01T14:00:00Z'),
-            ('Alok Mishra', 'alok.ops@oxoo.in', '+91 98765 43230', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-05T14:00:00Z'),
-            ('Meera Reddy', 'meera.ops@oxoo.in', '+91 98765 43231', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-09T14:00:00Z'),
-            ('Sanjay Dutt', 'sanjay.ops@oxoo.in', '+91 98765 43232', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-13T14:00:00Z'),
-            ('Kavita Deshmukh', 'kavita.ops@oxoo.in', '+91 98765 43233', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-16T14:00:00Z')
+            ('Rohit Sharma', 'rohit@primepro.ai', '+91 98765 43211', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read", "invoices.download", "reports.finance.read"]'::jsonb, '2026-10-10T10:00:00Z'),
+            ('Priya Mehta', 'support@primepro.ai', '+91 98765 43212', 'Support Staff', 'Support', 'Active', 'Module Specific', '["customers.read", "subscriptions.read", "support_tickets.read", "support_tickets.reply", "support_tickets.resolve"]'::jsonb, '2026-10-12T11:00:00Z'),
+            ('Amit Kumar', 'sales@primepro.ai', '+91 98765 43213', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "subscriptions.read", "products.read", "reports.sales.read"]'::jsonb, '2026-10-15T12:00:00Z'),
+            ('Vikram Malhotra', 'vikram@primepro.ai', '+91 98765 43214', 'Super Admin', 'Administration', 'Active', 'Full Platform', '["*"]'::jsonb, '2026-09-15T09:00:00Z'),
+            ('Neha Singhal', 'neha.finance@primepro.ai', '+91 98765 43215', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read"]'::jsonb, '2026-09-20T10:00:00Z'),
+            ('Kunal Verma', 'kunal.finance@primepro.ai', '+91 98765 43216', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read"]'::jsonb, '2026-09-25T10:00:00Z'),
+            ('Anjali Gupta', 'anjali.finance@primepro.ai', '+91 98765 43217', 'Finance Admin', 'Finance', 'Active', 'Module Specific', '["subscriptions.read", "payments.read", "invoices.read"]'::jsonb, '2026-10-02T10:00:00Z'),
+            ('Deepak Joshi', 'deepak.support@primepro.ai', '+91 98765 43218', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-09-18T11:00:00Z'),
+            ('Sonia Roy', 'sonia.support@primepro.ai', '+91 98765 43219', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-09-22T11:00:00Z'),
+            ('Rajesh Iyer', 'rajesh.support@primepro.ai', '+91 98765 43220', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-04T11:00:00Z'),
+            ('Sneha Nair', 'sneha.support@primepro.ai', '+91 98765 43221', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-06T11:00:00Z'),
+            ('Arjun Rao', 'arjun.support@primepro.ai', '+91 98765 43222', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-08T11:00:00Z'),
+            ('Divya Kapoor', 'divya.support@primepro.ai', '+91 98765 43223', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-11T11:00:00Z'),
+            ('Manoj Pandey', 'manoj.support@primepro.ai', '+91 98765 43224', 'Support Staff', 'Support', 'Active', 'Module Specific', '["support_tickets.read", "support_tickets.reply"]'::jsonb, '2026-10-14T11:00:00Z'),
+            ('Simran Kaur', 'simran.sales@primepro.ai', '+91 98765 43225', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-09-28T12:00:00Z'),
+            ('Varun Bajaj', 'varun.sales@primepro.ai', '+91 98765 43226', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-10-03T12:00:00Z'),
+            ('Tanvi Saxena', 'tanvi.sales@primepro.ai', '+91 98765 43227', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-10-07T12:00:00Z'),
+            ('Gaurav Sen', 'gaurav.sales@primepro.ai', '+91 98765 43228', 'Sales Staff', 'Sales', 'Active', 'Read Only', '["customers.read", "products.read"]'::jsonb, '2026-10-12T12:00:00Z'),
+            ('Ritu Bhatia', 'ritu.tech@primepro.ai', '+91 98765 43229', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-01T14:00:00Z'),
+            ('Alok Mishra', 'alok.ops@primepro.ai', '+91 98765 43230', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-05T14:00:00Z'),
+            ('Meera Reddy', 'meera.ops@primepro.ai', '+91 98765 43231', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-09T14:00:00Z'),
+            ('Sanjay Dutt', 'sanjay.ops@primepro.ai', '+91 98765 43232', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-13T14:00:00Z'),
+            ('Kavita Deshmukh', 'kavita.ops@primepro.ai', '+91 98765 43233', 'Support Staff', 'Engineering', 'Active', 'Module Specific', '["support_tickets.read"]'::jsonb, '2026-10-16T14:00:00Z')
           ON CONFLICT (email) DO UPDATE
           SET role = EXCLUDED.role,
               department = EXCLUDED.department,
@@ -1610,12 +1610,12 @@ async function initDb() {
             resource_type, resource_id, ip_address, result, duration_ms, details, created_at
           ) VALUES
             ('Login Success', 'Super Admin Console', 'Manminder Singh', 'Manminder Singh', 'manminder.singh@primepro.ai', 'Super Admin', 'Authentication', 'SESSION-8921', '103.212.144.18', 'Success', 34, '{"auth_method": "JWT", "device": "MacBook Pro M3"}'::jsonb, NOW() - INTERVAL '1 hour'),
-            ('Ticket Status Updated', 'TK-2026-4582', 'Priya Mehta', 'Priya Mehta', 'support@oxoo.in', 'Support Staff', 'SupportTicket', 'TK-2026-4582', '49.36.120.44', 'Success', 42, '{"old_status": "Open", "new_status": "In Progress"}'::jsonb, NOW() - INTERVAL '2 hours'),
-            ('Subscription Renewal Scheduled', 'SUB-2026-0001', 'System Scheduler', 'System Bot', 'system@oxoo.ai', 'Super Admin', 'Subscription', 'SUB-2026-0001', '127.0.0.1', 'Success', 18, '{"plan": "Business Plan", "auto_renew": true}'::jsonb, NOW() - INTERVAL '4 hours'),
+            ('Ticket Status Updated', 'TK-2026-4582', 'Priya Mehta', 'Priya Mehta', 'support@primepro.ai', 'Support Staff', 'SupportTicket', 'TK-2026-4582', '49.36.120.44', 'Success', 42, '{"old_status": "Open", "new_status": "In Progress"}'::jsonb, NOW() - INTERVAL '2 hours'),
+            ('Subscription Renewal Scheduled', 'SUB-2026-0001', 'System Scheduler', 'System Bot', 'system@primepro.ai', 'Super Admin', 'Subscription', 'SUB-2026-0001', '127.0.0.1', 'Success', 18, '{"plan": "Business Plan", "auto_renew": true}'::jsonb, NOW() - INTERVAL '4 hours'),
             ('Email Template Updated', 'subscription_renewal_reminder', 'Manminder Singh', 'Manminder Singh', 'manminder.singh@primepro.ai', 'Super Admin', 'EmailTemplate', 'TPL-005', '103.212.144.18', 'Success', 56, '{"template_key": "subscription_renewal_reminder", "changes": ["subject", "preview_text"]}'::jsonb, NOW() - INTERVAL '6 hours'),
             ('Role Permission Modified', 'Support Staff', 'Manminder Singh', 'Manminder Singh', 'manminder.singh@primepro.ai', 'Super Admin', 'Role', 'ROLE-SUPPORT', '103.212.144.18', 'Success', 38, '{"role": "Support Staff", "added_permission": "support_tickets.resolve"}'::jsonb, NOW() - INTERVAL '12 hours'),
             ('Security Policy Enforced', 'Session Timeout', 'Manminder Singh', 'Manminder Singh', 'manminder.singh@primepro.ai', 'Super Admin', 'SecuritySettings', 'POLICY-SEC-1', '103.212.144.18', 'Success', 22, '{"session_timeout_minutes": 60, "mfa_enforced": true}'::jsonb, NOW() - INTERVAL '1 day'),
-            ('Webhook Verification Ping', 'Razorpay Webhook', 'Razorpay Service', 'Razorpay Gateway', 'gateways@oxoo.ai', 'Super Admin', 'Integration', 'INT-RAZORPAY', '185.107.56.20', 'Success', 85, '{"event": "payment.authorized", "latency_ms": 85}'::jsonb, NOW() - INTERVAL '1 day')
+            ('Webhook Verification Ping', 'Razorpay Webhook', 'Razorpay Service', 'Razorpay Gateway', 'gateways@primepro.ai', 'Super Admin', 'Integration', 'INT-RAZORPAY', '185.107.56.20', 'Success', 85, '{"event": "payment.authorized", "latency_ms": 85}'::jsonb, NOW() - INTERVAL '1 day')
           ON CONFLICT DO NOTHING;
         `);
       }
@@ -1641,15 +1641,15 @@ async function initDb() {
 
         INSERT INTO email_templates (template_key, name, category, subject, body_html, body_plain, available_variables, is_system_protected) VALUES
           (
-            'otp_verification', 'OTP Verification', 'Security', 'Your OXOO Security Code: {{otp_code}}',
+            'otp_verification', 'OTP Verification', 'Security', 'Your PrimePro Security Code: {{otp_code}}',
             '<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;"><h2 style="color: #0f172a;">Verify Your Account</h2><p style="color: #475569;">Hello {{customer_name}},</p><p style="color: #475569;">Your one-time security authentication code is:</p><div style="font-size: 32px; font-weight: 800; letter-spacing: 4px; color: #0284c7; padding: 16px 0;">{{otp_code}}</div><p style="font-size: 13px; color: #94a3b8;">This code expires in 10 minutes. If you did not request this, please contact support.</p></div>',
             'Hello {{customer_name}}, Your one-time verification code is {{otp_code}}. It expires in 10 minutes.',
             '["{{customer_name}}", "{{otp_code}}", "{{expiration_minutes}}"]'::jsonb, true
           ),
           (
-            'welcome_email', 'Welcome Email', 'Account', 'Welcome to OXOO, {{customer_name}}!',
-            '<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;"><h2 style="color: #0f172a;">Welcome to OXOO!</h2><p style="color: #475569;">Hello {{customer_name}}, your {{organization_name}} workspace is ready.</p><a href="{{portal_url}}" style="display: inline-block; padding: 12px 24px; background: #0284c7; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 700;">Open Workspace</a></div>',
-            'Welcome to OXOO! Hello {{customer_name}}, your {{organization_name}} workspace is ready at {{portal_url}}.',
+            'welcome_email', 'Welcome Email', 'Account', 'Welcome to PrimePro, {{customer_name}}!',
+            '<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;"><h2 style="color: #0f172a;">Welcome to PrimePro!</h2><p style="color: #475569;">Hello {{customer_name}}, your {{organization_name}} workspace is ready.</p><a href="{{portal_url}}" style="display: inline-block; padding: 12px 24px; background: #0284c7; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 700;">Open Workspace</a></div>',
+            'Welcome to PrimePro! Hello {{customer_name}}, your {{organization_name}} workspace is ready at {{portal_url}}.',
             '["{{customer_name}}", "{{organization_name}}", "{{portal_url}}", "{{admin_email}}"]'::jsonb, true
           ),
           (
@@ -1678,7 +1678,7 @@ async function initDb() {
           ),
           (
             'support_ticket_reply', 'Support Ticket Reply', 'Support', '[{{ticket_id}}] New reply on your ticket: {{ticket_subject}}',
-            '<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;"><h2 style="color: #0f172a;">New Message on Ticket #{{ticket_id}}</h2><p style="color: #475569;">{{agent_name}} from OXOO Support posted an update:</p><div style="background: #f8fafc; padding: 14px; border-left: 3px solid #0284c7; margin: 16px 0; color: #1e293b;">{{reply_message}}</div></div>',
+            '<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;"><h2 style="color: #0f172a;">New Message on Ticket #{{ticket_id}}</h2><p style="color: #475569;">{{agent_name}} from PrimePro Support posted an update:</p><div style="background: #f8fafc; padding: 14px; border-left: 3px solid #0284c7; margin: 16px 0; color: #1e293b;">{{reply_message}}</div></div>',
             'New reply on ticket #{{ticket_id}} from {{agent_name}}: {{reply_message}}',
             '["{{customer_name}}", "{{ticket_id}}", "{{ticket_subject}}", "{{agent_name}}", "{{reply_message}}"]'::jsonb, true
           ),
@@ -1724,7 +1724,7 @@ async function initDb() {
             customer_id, customer_name, related_entity_type, related_entity_id,
             status, attempt_count, provider, provider_message_id, created_at
           ) VALUES
-            ('NOTIF-2026-9001', 'rahul@techsol.com', 'otp_verification', 'Your OXOO Security Code: 748291', 'Email', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'Customer', 'CST-0001', 'Delivered', 1, 'Brevo', '<brevo_9001@smtp.brevo.com>', NOW() - INTERVAL '30 minutes'),
+            ('NOTIF-2026-9001', 'rahul@techsol.com', 'otp_verification', 'Your PrimePro Security Code: 748291', 'Email', 'CST-0001', 'Tech Solutions Pvt. Ltd.', 'Customer', 'CST-0001', 'Delivered', 1, 'Brevo', '<brevo_9001@smtp.brevo.com>', NOW() - INTERVAL '30 minutes'),
             ('NOTIF-2026-9002', 'sarah@globaltrade.com', 'payment_receipt', 'Payment Received: Receipt for Invoice INV-2026-1019', 'Email', 'CST-0002', 'Global Trade Inc.', 'Invoice', 'INV-2026-1019', 'Delivered', 1, 'Brevo', '<brevo_9002@smtp.brevo.com>', NOW() - INTERVAL '2 hours'),
             ('NOTIF-2026-9003', 'amit@skylinemkt.com', 'support_ticket_reply', '[TK-2026-4580] New reply on your ticket: API webhook error', 'Email', 'CST-0003', 'Skyline Marketing', 'SupportTicket', 'TK-2026-4580', 'Delivered', 1, 'Brevo', '<brevo_9003@smtp.brevo.com>', NOW() - INTERVAL '3 hours'),
             ('NOTIF-2026-9004', 'priya@nextgenhr.com', 'support_ticket_resolved', '[TK-2026-4579] Ticket Resolved: Unable to add user', 'Email', 'CST-0004', 'NextGen HR', 'SupportTicket', 'TK-2026-4579', 'Delivered', 1, 'Brevo', '<brevo_9004@smtp.brevo.com>', NOW() - INTERVAL '6 hours'),
@@ -1767,14 +1767,14 @@ async function initDb() {
             'razorpay', 'Razorpay', 'Payments', 'Razorpay Payment Gateway',
             'Accept cards, UPI, netbanking and mandate recurring payments across India.',
             'R', '#0c2340', 'Connected', 'Live',
-            'https://api.oxoo.ai/api/webhooks/razorpay', 'whsec_rzp_live_9201948',
+            'https://api.primepro.ai/api/webhooks/razorpay', 'whsec_rzp_live_9201948',
             '["payment.authorized", "payment.captured", "payment.failed", "subscription.charged"]'::jsonb, 'Healthy'
           ),
           (
             'stripe', 'Stripe Payments', 'Payments', 'Stripe Inc.',
             'Global payments processing, multi-currency credit cards and international SaaS subscriptions.',
             'S', '#635bff', 'Connected', 'Test',
-            'https://api.oxoo.ai/api/webhooks/stripe', 'whsec_str_test_881920',
+            'https://api.primepro.ai/api/webhooks/stripe', 'whsec_str_test_881920',
             '["invoice.payment_succeeded", "customer.subscription.updated", "charge.refunded"]'::jsonb, 'Healthy'
           ),
           (
@@ -1814,7 +1814,7 @@ async function initDb() {
             'https://hooks.slack.com/services/T00/B00/XXXX', NULL, '["ticket.urgent", "payment.failed", "security.alert"]'::jsonb, 'Healthy'
           ),
           (
-            'webhooks', 'OXOO Outbound Webhooks', 'Webhooks', 'OXOO Platform Core',
+            'webhooks', 'PrimePro Outbound Webhooks', 'Webhooks', 'PrimePro Platform Core',
             'Dispatches secure HMAC-signed HTTP POST events to external customer and partner endpoints.',
             'W', '#0284c7', 'Connected', 'Live',
             'https://webhook.site/oxoo-events-demo', 'whsec_oxoo_master_key_9921',
@@ -1843,26 +1843,26 @@ async function initDb() {
 
         INSERT INTO platform_settings (category, settings) VALUES
           ('general', '{
-            "platformName": "OXOO",
-            "tagline": "One Platform. Infinite Possibilities.",
+            "platformName": "PrimePro",
+            "tagline": "Your 24/7 Workspace Is Here.",
             "defaultCurrency": "INR",
             "timezone": "Asia/Kolkata",
-            "supportEmail": "support@oxoo.ai",
+            "supportEmail": "support@primepro.ai",
             "supportPhone": "+91 80 4567 8900",
-            "publicWebsiteUrl": "https://oxoo.ai"
+            "publicWebsiteUrl": "https://primepro.ai"
           }'::jsonb),
           ('branding', '{
             "logoUrl": "/brand/oxoo-logo.svg",
             "faviconUrl": "/favicon.ico",
             "primaryColor": "#0284c7",
             "accentColor": "#06b6d4",
-            "companyName": "OXOO Technologies Inc."
+            "companyName": "PrimePro Technologies Inc."
           }'::jsonb),
           ('email', '{
             "provider": "Brevo",
-            "senderName": "OXOO Platform",
+            "senderName": "PrimePro Platform",
             "senderEmail": "manminder.singh@primepro.ai",
-            "replyToEmail": "support@oxoo.ai",
+            "replyToEmail": "support@primepro.ai",
             "smtpHost": "smtp-relay.brevo.com",
             "smtpPort": 587
           }'::jsonb),
@@ -1873,7 +1873,7 @@ async function initDb() {
             "enableGst": true,
             "gstRate": 18,
             "invoicePrefix": "INV-2026-",
-            "invoiceFooterNotes": "Thank you for choosing OXOO. For billing queries, contact finance@oxoo.ai"
+            "invoiceFooterNotes": "Thank you for choosing PrimePro. For billing queries, contact finance@primepro.ai"
           }'::jsonb),
           ('security', '{
             "sessionTimeoutMinutes": 60,
@@ -1884,7 +1884,7 @@ async function initDb() {
             "allowMultipleSessions": false
           }'::jsonb),
           ('api', '{
-            "webhookUrl": "https://api.oxoo.ai/api/webhooks",
+            "webhookUrl": "https://api.primepro.ai/api/webhooks",
             "webhookEvents": ["payment.captured", "subscription.renewed", "ticket.created"],
             "rateLimitPerMinute": 120
           }'::jsonb),
@@ -1902,10 +1902,10 @@ async function initDb() {
           }'::jsonb),
           ('agent', '{
             "enabled": true,
-            "agentName": "OXOO Agent",
-            "welcomeMessage": "Hi! I''m OXOO Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
+            "agentName": "PrimePro Agent",
+            "welcomeMessage": "Hi! I''m PrimePro Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
             "suggestedQuestions": [
-              "Explore OXOO applications",
+              "Explore PrimePro applications",
               "Compare pricing plans",
               "Find a website development package",
               "Explore Android and iOS app development",
@@ -1918,13 +1918,13 @@ async function initDb() {
             "aiModel": "gemini-1.5-flash",
             "rateLimitPerMinute": 30,
             "retentionDays": 90,
-            "supportEscalationEmail": "support@oxoo.ai",
+            "supportEscalationEmail": "support@primepro.ai",
             "allowCustomerActions": true
           }'::jsonb)
         ON CONFLICT (category) DO NOTHING;
       `);
 
-      // 18. OXOO Agent AI Tables
+      // 18. PrimePro Agent AI Tables
       await client.query(`
         CREATE TABLE IF NOT EXISTS agent_conversations (
           id SERIAL PRIMARY KEY,

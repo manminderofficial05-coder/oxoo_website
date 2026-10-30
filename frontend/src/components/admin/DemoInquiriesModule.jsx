@@ -531,7 +531,7 @@ export default function DemoInquiriesModule({ showToast, logAuditEvent }) {
                             Review
                           </button>
                           <a
-                            href={`mailto:${inq.email}?subject=OXOO Solution Inquiry — ${inq.inquiry_ref}`}
+                            href={`mailto:${inq.email}?subject=PrimePro Solution Inquiry — ${inq.inquiry_ref}`}
                             title="Send email to customer"
                             style={{
                               padding: '5px 8px',
@@ -850,7 +850,7 @@ export default function DemoInquiriesModule({ showToast, logAuditEvent }) {
                 </button>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <a
-                    href={`mailto:${selectedInquiry.email}?subject=OXOO Solution Inquiry — ${selectedInquiry.inquiry_ref}`}
+                    href={`mailto:${selectedInquiry.email}?subject=PrimePro Solution Inquiry — ${selectedInquiry.inquiry_ref}`}
                     style={{
                       background: '#2563eb',
                       color: '#ffffff',

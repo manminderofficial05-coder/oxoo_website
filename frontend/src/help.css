@@ -1,5 +1,5 @@
 /* ==========================================================================
-   OXOO HELP & SUPPORT HUB STYLES (Exact match to Oxoo / Odoo reference mockup)
+   PrimePro HELP & SUPPORT HUB STYLES (Exact match to PrimePro / Odoo reference mockup)
    ========================================================================== */
 
 .help-page-root {
@@ -44,7 +44,7 @@
 }
 
 /* -------------------------------------------------------------
-   TOP HERO: SEARCH "ASK OXOO AI" OR "ASK A HUMAN"
+   TOP HERO: SEARCH "ASK PrimePro AI" OR "ASK A HUMAN"
    ------------------------------------------------------------- */
 .help-hero-section {
   text-align: center;
@@ -117,7 +117,7 @@
 }
 
 .help-ask-human-btn {
-  background: #714b67; /* Distinctive Oxoo/Odoo mauve button */
+  background: #714b67; /* Distinctive PrimePro/Odoo mauve button */
   color: #ffffff;
   font-weight: 600;
   font-size: 14.5px;
@@ -483,7 +483,7 @@
 }
 
 /* -------------------------------------------------------------
-   OXOO GLOBAL OFFICES DIRECTORY (SCREENSHOT 2)
+   PrimePro GLOBAL OFFICES DIRECTORY (SCREENSHOT 2)
    ------------------------------------------------------------- */
 .offices-section {
   margin-top: 50px;

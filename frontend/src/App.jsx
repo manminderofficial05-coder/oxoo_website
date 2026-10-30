@@ -41,7 +41,7 @@ import {
   SecurityPage,
   CompliancePage,
 } from './InfoPages';
-import OxooAgentWidget from './components/agent/OxooAgentWidget';
+import PrimeProAgentWidget from './components/agent/PrimeProAgentWidget';
 import { authStorage } from './authStorage';
 
 function useScrollTop() {
@@ -436,7 +436,7 @@ function Home() {
               Imagine running your entire business from one intelligent platform.
             </h2>
             <p className="vast-collection-lead">
-              OXOO.ai brings HRMS, Finance, CRM, Sales, Inventory, Supply Chain, AI Agents, and  <br /> Website & App Builder together in one connected ecosystem.
+              PrimePro.ai brings HRMS, Finance, CRM, Sales, Inventory, Supply Chain, AI Agents, and  <br /> Website & App Builder together in one connected ecosystem.
 
             </p>
 
@@ -569,7 +569,7 @@ function Home() {
               >
                 <img
                   src="/home/oxoo_hrms.jpg"
-                  alt="OXOO Workforce Pulse and HRMS attendance dashboard"
+                  alt="PrimePro Workforce Pulse and HRMS attendance dashboard"
                   loading="lazy"
                 />
               </motion.div>
@@ -584,7 +584,7 @@ function Home() {
               >
                 <img
                   src="/home/oxoo_chat_assistant.png"
-                  alt="OXOO AI Assistant booking and customer conversation"
+                  alt="PrimePro AI Assistant booking and customer conversation"
                   loading="lazy"
                 />
               </motion.div>
@@ -898,7 +898,7 @@ function ServicesPage() {
             <span>Applications & Services Directory</span>
           </div>
           <h1>
-            Oxoo.ai Business <span className="gradient-text">Directory</span>
+            PrimePro.ai Business <span className="gradient-text">Directory</span>
           </h1>
           <p>Explore all 24 connected business applications, integrated services, and departmental tools in one place.</p>
 
@@ -1558,8 +1558,8 @@ function ContactPage() {
                 <a href="tel:+917940500100" className="direct-link">
                   <Phone size={16} /> +91 79 4050 0100
                 </a>
-                <a href="mailto:hello@oxoo.ai" className="direct-link">
-                  <Mail size={16} /> hello@oxoo.ai
+                <a href="mailto:hello@primepro.ai" className="direct-link">
+                  <Mail size={16} /> hello@primepro.ai
                 </a>
                 <div className="direct-link">
                   <MessageCircle size={16} /> Chat with our team
@@ -1792,7 +1792,7 @@ export default function App() {
         <Route path="/admin/*" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <OxooAgentWidget />
+      <PrimeProAgentWidget />
     </>
   );
 }

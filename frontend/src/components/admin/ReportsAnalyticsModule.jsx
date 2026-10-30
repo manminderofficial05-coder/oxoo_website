@@ -475,7 +475,7 @@ export default function ReportsAnalyticsModule({ showToast }) {
                   </thead>
                   <tbody>
                     {[
-                      { product: 'OXOO Business Suite', plans: 'Starter, Pro, Enterprise', price: '₹4,999 / mo', status: 'Active' },
+                      { product: 'PrimePro Business Suite', plans: 'Starter, Pro, Enterprise', price: '₹4,999 / mo', status: 'Active' },
                       { product: 'Finance Pro', plans: 'Finance Standard & Advanced', price: '₹4,999 / mo', status: 'Active' },
                       { product: 'HRMS Pro', plans: 'Employee Pro & Payroll', price: '₹4,999 / mo', status: 'Active' },
                       { product: 'Marketing Suite', plans: 'Omnichannel Growth', price: '₹3,499 / mo', status: 'Active' },
@@ -512,7 +512,7 @@ export default function ReportsAnalyticsModule({ showToast }) {
                   </thead>
                   <tbody>
                     {[
-                      { app: 'OXOO Auth & SSO', url: '/auth', status: 'Healthy', uptime: '99.98%' },
+                      { app: 'PrimePro Auth & SSO', url: '/auth', status: 'Healthy', uptime: '99.98%' },
                       { app: 'Finance Engine', url: '/finance', status: 'Healthy', uptime: '99.95%' },
                       { app: 'HRMS Engine', url: '/hrms', status: 'Healthy', uptime: '99.92%' },
                       { app: 'Marketing Hub', url: '/marketing', status: 'Healthy', uptime: '99.90%' },

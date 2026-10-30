@@ -33,9 +33,9 @@ function buildLegalDocuments(cfg) {
       key: 'privacy-policy',
       route: '/privacy-policy',
       eyebrow: 'PRIVACY & DATA PROTECTION',
-      title: 'OXOO.ai Privacy Policy',
+      title: 'PrimePro.ai Privacy Policy',
       subtitle:
-        'How OXOO.ai collects, uses, stores, shares and protects personal information across our website and connected business applications.',
+        'How PrimePro.ai collects, uses, stores, shares and protects personal information across our website and connected business applications.',
       effectiveDate: cfg.effectiveDate,
       lastUpdated: cfg.lastUpdated,
       icon: Lock,
@@ -45,8 +45,8 @@ function buildLegalDocuments(cfg) {
           number: '1',
           heading: '1. Introduction',
           paragraphs: [
-            'OXOO.ai provides connected business software, including HRMS, Finance, Accounting, CRM, Sales, Inventory, Supply Chain, AI-powered automation and Website Builder services.',
-            'This Privacy Policy explains how OXOO.ai collects, uses, stores, shares and protects personal information when you visit our website, register an account, purchase a subscription or use our services.',
+            'PrimePro.ai provides connected business software, including HRMS, Finance, Accounting, CRM, Sales, Inventory, Supply Chain, AI-powered automation and Website Builder services.',
+            'This Privacy Policy explains how PrimePro.ai collects, uses, stores, shares and protects personal information when you visit our website, register an account, purchase a subscription or use our services.',
           ],
           metaCard: [
             { label: 'Website', value: cfg.websiteUrl, isLink: true, href: cfg.websiteUrl },
@@ -95,7 +95,7 @@ function buildLegalDocuments(cfg) {
             },
           ],
           afterParagraphs: [
-            'Customers are responsible for ensuring they have the legal authority to submit personal information to OXOO.ai.',
+            'Customers are responsible for ensuring they have the legal authority to submit personal information to PrimePro.ai.',
           ],
         },
         {
@@ -134,7 +134,7 @@ function buildLegalDocuments(cfg) {
           paragraphs: [
             'Customers retain their rights in the business information they provide, subject to applicable law.',
             'Customers must maintain appropriate access permissions, provide required privacy notices, obtain necessary authorisations and ensure that information is collected and processed lawfully.',
-            'Where OXOO.ai processes information on behalf of a customer organisation, the relevant customer agreement and data-processing terms apply.',
+            'Where PrimePro.ai processes information on behalf of a customer organisation, the relevant customer agreement and data-processing terms apply.',
           ],
         },
         {
@@ -152,7 +152,7 @@ function buildLegalDocuments(cfg) {
           number: '7',
           heading: '7. International Data Transfers',
           paragraphs: [
-            'OXOO.ai may serve customers in different countries. Information may be processed in countries other than the country where it was collected, depending on our hosting infrastructure and service providers.',
+            'PrimePro.ai may serve customers in different countries. Information may be processed in countries other than the country where it was collected, depending on our hosting infrastructure and service providers.',
             'Where required, appropriate safeguards will be used for international transfers. Specific data-residency commitments apply only when expressly agreed.',
           ],
         },
@@ -175,7 +175,7 @@ function buildLegalDocuments(cfg) {
             'No system can guarantee absolute security. We will describe security controls and certifications accurately and will not claim unverified certifications.',
           ],
           internalLinks: [
-            { label: 'Review OXOO.ai Security Practices', to: '/security' },
+            { label: 'Review PrimePro.ai Security Practices', to: '/security' },
             { label: 'View Security & Compliance Overview', to: '/compliance' },
           ],
         },
@@ -184,7 +184,7 @@ function buildLegalDocuments(cfg) {
           number: '10',
           heading: '10. Cookies and Country Detection',
           paragraphs: [
-            'OXOO.ai may use cookies, local storage and similar technologies for essential functionality, preferences, security and analytics.',
+            'PrimePro.ai may use cookies, local storage and similar technologies for essential functionality, preferences, security and analytics.',
             'We may use IP-based country detection to select a default country, language or regional pricing display. This identifies an approximate country or region, not precise GPS location.',
             'Visitors may be able to change their region manually. Displayed regional prices do not guarantee that every currency or payment method is supported at checkout.',
           ],
@@ -214,7 +214,7 @@ function buildLegalDocuments(cfg) {
           number: '13',
           heading: "13. Children's Privacy",
           paragraphs: [
-            'OXOO.ai is designed primarily for business use and is not intended as a consumer service directed at children. Any information involving children will be handled according to applicable legal requirements.',
+            'PrimePro.ai is designed primarily for business use and is not intended as a consumer service directed at children. Any information involving children will be handled according to applicable legal requirements.',
           ],
         },
         {
@@ -245,7 +245,7 @@ function buildLegalDocuments(cfg) {
           id: 'section-17',
           number: '17',
           heading: '17. Contact Us',
-          paragraphs: ['OXOO.ai Privacy Team'],
+          paragraphs: ['PrimePro.ai Privacy Team'],
           metaCard: [
             { label: 'Website', value: cfg.websiteUrl, isLink: true, href: cfg.websiteUrl },
             { label: 'Email', value: cfg.privacyEmail },
@@ -253,7 +253,7 @@ function buildLegalDocuments(cfg) {
             { label: 'Address', value: cfg.registeredAddress },
           ],
           reviewNote:
-            "This policy must be reviewed against OXOO.ai's actual data practices and applicable law before publication.",
+            "This policy must be reviewed against PrimePro.ai's actual data practices and applicable law before publication.",
         },
       ],
     },
@@ -262,9 +262,9 @@ function buildLegalDocuments(cfg) {
       key: 'terms',
       route: '/terms',
       eyebrow: 'TERMS & SERVICE CONDITIONS',
-      title: 'OXOO.ai Terms of Service',
+      title: 'PrimePro.ai Terms of Service',
       subtitle:
-        'The rules governing access to and use of OXOO.ai, subscriptions, payments, cancellations and customer responsibilities.',
+        'The rules governing access to and use of PrimePro.ai, subscriptions, payments, cancellations and customer responsibilities.',
       effectiveDate: cfg.effectiveDate,
       lastUpdated: cfg.lastUpdated,
       icon: FileText,
@@ -274,8 +274,8 @@ function buildLegalDocuments(cfg) {
           number: '1',
           heading: '1. Agreement to These Terms',
           paragraphs: [
-            'These Terms of Service govern your access to and use of OXOO.ai, including our website, software applications, AI features, subscriptions, integrations and related services.',
-            'By accessing or using our services, you agree to these Terms. If you use OXOO.ai on behalf of a company or organisation, you represent that you are authorised to accept these Terms on its behalf.',
+            'These Terms of Service govern your access to and use of PrimePro.ai, including our website, software applications, AI features, subscriptions, integrations and related services.',
+            'By accessing or using our services, you agree to these Terms. If you use PrimePro.ai on behalf of a company or organisation, you represent that you are authorised to accept these Terms on its behalf.',
           ],
           metaCard: [
             { label: 'Service provider', value: cfg.legalEntity },
@@ -287,7 +287,7 @@ function buildLegalDocuments(cfg) {
           id: 'section-2',
           number: '2',
           heading: '2. Our Services',
-          paragraphs: ['OXOO.ai provides business software and related services that may include:'],
+          paragraphs: ['PrimePro.ai provides business software and related services that may include:'],
           bullets: [
             { text: 'Human Resource Management and Payroll.' },
             { text: 'Finance and Accounting.' },
@@ -364,10 +364,10 @@ function buildLegalDocuments(cfg) {
           number: '8',
           heading: '8. Customer Data',
           paragraphs: [
-            'You retain your rights in the business information you submit to OXOO.ai.',
+            'You retain your rights in the business information you submit to PrimePro.ai.',
             'You grant us the limited rights necessary to host, process, transmit and display that information to provide the services you request.',
             'You are responsible for ensuring that you have the necessary rights and permissions to upload and process the information.',
-            "You must not use OXOO.ai to unlawfully collect, disclose or process another person's information.",
+            "You must not use PrimePro.ai to unlawfully collect, disclose or process another person's information.",
             'Data exports, deletion, backup and retention will be governed by the applicable service plan, data-processing terms and Privacy Policy.',
           ],
         },
@@ -377,7 +377,7 @@ function buildLegalDocuments(cfg) {
           heading: '9. Acceptable Use',
           paragraphs: ['You must not:'],
           bullets: [
-            { text: 'Use OXOO.ai for unlawful, fraudulent or deceptive activities.' },
+            { text: 'Use PrimePro.ai for unlawful, fraudulent or deceptive activities.' },
             { text: "Attempt to access another organisation's accounts or information without authorisation." },
             { text: 'Bypass authentication, access controls or subscription entitlements.' },
             { text: 'Upload malicious code or interfere with service operation.' },
@@ -395,7 +395,7 @@ function buildLegalDocuments(cfg) {
           number: '10',
           heading: '10. Intellectual Property',
           paragraphs: [
-            'OXOO.ai and its applicable software, branding, design, documentation and original materials are protected by intellectual property laws.',
+            'PrimePro.ai and its applicable software, branding, design, documentation and original materials are protected by intellectual property laws.',
             'Subject to these Terms and your subscription, we grant you a limited, non-exclusive, non-transferable right to use the services for their intended purpose.',
             'You retain ownership of your content, subject to the rights necessary for us to provide the services.',
             'Third-party software and integrations may be governed by separate licences and terms.',
@@ -417,7 +417,7 @@ function buildLegalDocuments(cfg) {
           number: '12',
           heading: '12. Third-Party Services',
           paragraphs: [
-            'OXOO.ai may integrate with third-party products, payment providers, AI services and external websites.',
+            'PrimePro.ai may integrate with third-party products, payment providers, AI services and external websites.',
             'Your use of those services may be subject to separate terms. We do not control independent third-party services and cannot guarantee their uninterrupted availability.',
           ],
         },
@@ -457,9 +457,9 @@ function buildLegalDocuments(cfg) {
           number: '16',
           heading: '16. Privacy',
           paragraphs: [
-            'Our Privacy Policy explains how personal information is handled. By using OXOO.ai, you acknowledge that the applicable privacy practices and disclosures apply to your use of the services.',
+            'Our Privacy Policy explains how personal information is handled. By using PrimePro.ai, you acknowledge that the applicable privacy practices and disclosures apply to your use of the services.',
           ],
-          internalLinks: [{ label: 'Read the OXOO.ai Privacy Policy', to: '/privacy-policy' }],
+          internalLinks: [{ label: 'Read the PrimePro.ai Privacy Policy', to: '/privacy-policy' }],
         },
         {
           id: 'section-17',
@@ -483,7 +483,7 @@ function buildLegalDocuments(cfg) {
           id: 'section-19',
           number: '19',
           heading: '19. Contact',
-          paragraphs: ['For questions about these Terms, contact:', 'OXOO.ai Legal and Support Team'],
+          paragraphs: ['For questions about these Terms, contact:', 'PrimePro.ai Legal and Support Team'],
           metaCard: [
             { label: 'Email', value: cfg.businessEmail },
             { label: 'Website', value: cfg.websiteUrl, isLink: true, href: cfg.websiteUrl },
@@ -500,10 +500,10 @@ function buildLegalDocuments(cfg) {
       key: 'security',
       route: '/security',
       eyebrow: 'PLATFORM & DATA SECURITY',
-      title: 'OXOO.ai Security',
+      title: 'PrimePro.ai Security',
       subtitle: 'Protecting the systems, accounts and business information that power your organisation.',
       introParagraphs: [
-        'OXOO.ai is designed to bring HRMS, Finance, CRM, Sales, Inventory, Supply Chain and AI-powered business tools into one connected ecosystem. Security is an essential part of operating that ecosystem.',
+        'PrimePro.ai is designed to bring HRMS, Finance, CRM, Sales, Inventory, Supply Chain and AI-powered business tools into one connected ecosystem. Security is an essential part of operating that ecosystem.',
         'Our security approach focuses on protecting customer information, restricting access to authorised users, reducing risk and responding responsibly to security incidents.',
       ],
       effectiveDate: cfg.effectiveDate,
@@ -532,7 +532,7 @@ function buildLegalDocuments(cfg) {
           number: '2',
           heading: '2. Organisation and Tenant Isolation',
           paragraphs: [
-            'OXOO.ai is designed for business customers that may maintain separate organisations and teams.',
+            'PrimePro.ai is designed for business customers that may maintain separate organisations and teams.',
             "Tenant isolation is a critical requirement. Requests must be authorised against the authenticated user's verified organisation membership. A customer-supplied company ID, email address or request header must not independently grant access to another organisation's data.",
             'Access restrictions should apply consistently to profiles, employee records, invoices, reports, subscriptions, attachments, APIs and administrative functions.',
           ],
@@ -619,7 +619,7 @@ function buildLegalDocuments(cfg) {
           number: '8',
           heading: '8. Third-Party Providers',
           paragraphs: [
-            'OXOO.ai may rely on cloud hosting, databases, payment providers, email services and AI services.',
+            'PrimePro.ai may rely on cloud hosting, databases, payment providers, email services and AI services.',
             'These providers have their own security controls and contractual terms. The providers used for each production service should be documented, and their relevant security assurances should be reviewed.',
           ],
         },
@@ -628,7 +628,7 @@ function buildLegalDocuments(cfg) {
           number: '9',
           heading: '9. Responsible Security Reporting',
           paragraphs: [
-            'If you believe you have discovered a security vulnerability in OXOO.ai, please report it privately.',
+            'If you believe you have discovered a security vulnerability in PrimePro.ai, please report it privately.',
           ],
           metaCard: [{ label: 'Security contact', value: cfg.securityEmail }],
           secondParagraphs: ['Please include:'],
@@ -665,10 +665,10 @@ function buildLegalDocuments(cfg) {
       key: 'compliance',
       route: '/compliance',
       eyebrow: 'SECURITY & COMPLIANCE GOVERNANCE',
-      title: 'OXOO.ai — Compliance and Information Security',
+      title: 'PrimePro.ai — Compliance and Information Security',
       subtitle: 'Building trust through responsible information security practices.',
       introParagraphs: [
-        'OXOO.ai is committed to developing and maintaining appropriate safeguards for the business information processed through our software platform.',
+        'PrimePro.ai is committed to developing and maintaining appropriate safeguards for the business information processed through our software platform.',
         'Our services may support HRMS, Finance, CRM, Sales, Inventory, Supply Chain, AI-powered automation and other business workflows. Protecting information across these services requires clear access controls, responsible data handling, risk management and continuous improvement.',
       ],
       effectiveDate: cfg.effectiveDate,
@@ -702,7 +702,7 @@ function buildLegalDocuments(cfg) {
           heading: '2. ISO/IEC 27001',
           paragraphs: [
             'ISO/IEC 27001 is an international standard for establishing, implementing, maintaining and continually improving an Information Security Management System (ISMS).',
-            'OXOO.ai recognises the importance of structured information security governance and risk management.',
+            'PrimePro.ai recognises the importance of structured information security governance and risk management.',
           ],
           metaCard: [
             { label: 'Certification status', value: cert.statusSummary },
@@ -718,7 +718,7 @@ function buildLegalDocuments(cfg) {
               : []),
           ],
           afterParagraphs: [
-            'If OXOO.ai has not obtained a valid ISO/IEC 27001 certification, this page must not describe OXOO.ai as “ISO 27001 Certified.” It may instead describe verified security practices or an active readiness programme.',
+            'If PrimePro.ai has not obtained a valid ISO/IEC 27001 certification, this page must not describe PrimePro.ai as “ISO 27001 Certified.” It may instead describe verified security practices or an active readiness programme.',
             "If certification is obtained, publish the certification body's name, certificate number, covered legal entity, ISMS scope, issue date, expiry date and certificate verification details as appropriate.",
           ],
         },
@@ -727,7 +727,7 @@ function buildLegalDocuments(cfg) {
           number: '3',
           heading: '3. Privacy and Data Protection',
           paragraphs: [
-            'OXOO.ai aims to handle personal information according to its Privacy Policy, applicable agreements and relevant data protection obligations.',
+            'PrimePro.ai aims to handle personal information according to its Privacy Policy, applicable agreements and relevant data protection obligations.',
             'Depending on the services used, our data protection approach may include:',
           ],
           bullets: [
@@ -741,7 +741,7 @@ function buildLegalDocuments(cfg) {
           afterParagraphs: [
             'Our specific legal obligations depend on the relevant processing activity, customer relationship and jurisdiction.',
           ],
-          internalLinks: [{ label: 'Read the OXOO.ai Privacy Policy', to: '/privacy-policy' }],
+          internalLinks: [{ label: 'Read the PrimePro.ai Privacy Policy', to: '/privacy-policy' }],
         },
         {
           id: 'section-4',
@@ -759,7 +759,7 @@ function buildLegalDocuments(cfg) {
           number: '5',
           heading: '5. Supplier and Infrastructure Management',
           paragraphs: [
-            'Cloud infrastructure, databases, payment providers and other external services may form part of the OXOO.ai environment.',
+            'Cloud infrastructure, databases, payment providers and other external services may form part of the PrimePro.ai environment.',
             'We aim to evaluate relevant supplier security information and document the services that process or store customer data.',
             'The actual hosting locations, provider certifications and contractual safeguards should be verified before being represented as compliance commitments.',
           ],
@@ -778,7 +778,7 @@ function buildLegalDocuments(cfg) {
           number: '7',
           heading: '7. Customer Responsibilities',
           paragraphs: [
-            'Customers should use strong authentication, assign appropriate permissions, protect credentials and ensure that data uploaded to OXOO.ai is handled lawfully.',
+            'Customers should use strong authentication, assign appropriate permissions, protect credentials and ensure that data uploaded to PrimePro.ai is handled lawfully.',
             'Customers should also review their own access settings, integrations and retention requirements.',
           ],
         },
@@ -788,7 +788,7 @@ function buildLegalDocuments(cfg) {
           heading: '8. Compliance Enquiries',
           paragraphs: [
             'For questions about our security controls, privacy practices or compliance documentation, contact:',
-            'OXOO.ai Security and Compliance Team',
+            'PrimePro.ai Security and Compliance Team',
           ],
           metaCard: [
             { label: 'Security email', value: cfg.securityEmail },
@@ -812,19 +812,19 @@ function buildLegalDocuments(cfg) {
 // ============================================================================
 const COMPANY_INFO_PAGES = {
   about: {
-    eyebrow: 'ABOUT OXOO.AI',
-    title: 'One Platform. Every Business Workflow.',
+    eyebrow: 'ABOUT PrimePro.ai',
+    title: 'Your 24/7 Workspace Is Here.',
     subtitle:
-      'Headquartered in Bengaluru, India, OXOO.ai unifies 24 enterprise business applications into a single connected AI-driven operating system.',
+      'Headquartered in Bengaluru, India, PrimePro.ai unifies 24 enterprise business applications into a single connected AI-driven operating system.',
     icon: Building2,
     sections: [
       {
         heading: 'Our Mission',
-        body: 'Modern businesses often struggle with disconnected point solutions across finance, sales, HR, and supply chain. OXOO.ai eliminates data silos by delivering an integrated, modular cloud platform backed by professional implementation and ongoing support.',
+        body: 'Modern businesses often struggle with disconnected point solutions across finance, sales, HR, and supply chain. PrimePro.ai eliminates data silos by delivering an integrated, modular cloud platform backed by professional implementation and ongoing support.',
       },
       {
         heading: 'Unified Architecture',
-        body: 'From GST-compliant Accounting and HRMS Payroll to Omnichannel CRM, Inventory Management, AI Automation, and Website Builder, every OXOO.ai application shares a unified data model, single sign-on, and consistent user experience.',
+        body: 'From GST-compliant Accounting and HRMS Payroll to Omnichannel CRM, Inventory Management, AI Automation, and Website Builder, every PrimePro.ai application shares a unified data model, single sign-on, and consistent user experience.',
       },
       {
         heading: 'Engineering & Support in Bengaluru',
@@ -835,7 +835,7 @@ const COMPANY_INFO_PAGES = {
     ctaTo: '/request-demo',
   },
   careers: {
-    eyebrow: 'CAREERS AT OXOO.AI',
+    eyebrow: 'CAREERS AT PrimePro.ai',
     title: 'Build the Future of Enterprise Software',
     subtitle:
       'Join our engineering, product design, and enterprise implementation teams in Bengaluru, India.',
@@ -843,7 +843,7 @@ const COMPANY_INFO_PAGES = {
     sections: [
       {
         heading: 'Why Work With Us',
-        body: 'At OXOO.ai, we build mission-critical software that powers finance, operations, human resources, and AI workflows. We value clean architecture, customer empathy, and high-ownership engineering.',
+        body: 'At PrimePro.ai, we build mission-critical software that powers finance, operations, human resources, and AI workflows. We value clean architecture, customer empathy, and high-ownership engineering.',
       },
       {
         heading: 'Open Practice Areas',
@@ -851,22 +851,22 @@ const COMPANY_INFO_PAGES = {
       },
       {
         heading: 'How to Apply',
-        body: 'Send your resume, portfolio, or profile to hello@oxoo.ai with the role title in the subject line, or reach out through our contact page.',
+        body: 'Send your resume, portfolio, or profile to hello@primepro.ai with the role title in the subject line, or reach out through our contact page.',
       },
     ],
     ctaLabel: 'Contact Our Team',
     ctaTo: '/contact',
   },
   partners: {
-    eyebrow: 'OXOO.AI PARTNER PROGRAM',
-    title: 'Grow Your Practice as an OXOO.ai Solution Partner',
+    eyebrow: 'PrimePro.ai PARTNER PROGRAM',
+    title: 'Grow Your Practice as an PrimePro.ai Solution Partner',
     subtitle:
-      'Collaborate with OXOO.ai to deliver unified ERP, CRM, HRMS, and AI transformation for your clients.',
+      'Collaborate with PrimePro.ai to deliver unified ERP, CRM, HRMS, and AI transformation for your clients.',
     icon: Handshake,
     sections: [
       {
         heading: 'Implementation & Consulting Partners',
-        body: 'Accounting firms, IT system integrators, and digital transformation agencies partner with OXOO.ai to deploy tailored multi-app workspaces, custom integrations, and industry workflows.',
+        body: 'Accounting firms, IT system integrators, and digital transformation agencies partner with PrimePro.ai to deploy tailored multi-app workspaces, custom integrations, and industry workflows.',
       },
       {
         heading: 'Partner Benefits',
@@ -980,7 +980,7 @@ export function InfoPageView({ pageKey }) {
               <div>
                 <h3>Need more information from our Bengaluru team?</h3>
                 <p>
-                  Reach us at <strong>+91 79 4050 0100</strong> or <strong>hello@oxoo.ai</strong>.
+                  Reach us at <strong>+91 79 4050 0100</strong> or <strong>hello@primepro.ai</strong>.
                 </p>
               </div>
               <Link to={content.ctaTo} className="legal-cta-primary-btn">
@@ -1230,7 +1230,7 @@ export function InfoPageView({ pageKey }) {
                 </div>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   <Link to="/contact" className="legal-cta-primary-btn">
-                    <span>Contact OXOO.ai</span>
+                    <span>Contact PrimePro.ai</span>
                     <ArrowRight size={16} />
                   </Link>
                 </div>

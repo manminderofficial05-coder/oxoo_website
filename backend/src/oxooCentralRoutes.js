@@ -7,7 +7,7 @@ const { sendOtpEmail } = require('./emailService');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'oxoo-super-secret-jwt-key-2026';
-const ISSUER = process.env.OXOO_CENTRAL_ISSUER || 'http://localhost:5000/api/v1/oxoo';
+const ISSUER = process.env.PrimePro_CENTRAL_ISSUER || 'http://localhost:5000/api/v1/oxoo';
 
 // In-memory store for PKCE auth codes and OTP challenges (with expiration)
 const authCodesStore = new Map(); // code -> { clientId, userUuid, orgUuid, codeChallenge, redirectUri, scope, expiresAt }
@@ -23,7 +23,7 @@ function normalizePhone(raw) {
   return `+${cleaned}`;
 }
 
-// Audit helper for Oxoo Identity Link Events
+// Audit helper for PrimePro Identity Link Events
 async function logLinkEvent({
   productCode = 'oxoo_central',
   eventType,
@@ -96,8 +96,8 @@ router.get('/.well-known/openid-configuration', (req, res) => {
       'entitlements',
       'roles'
     ],
-    service_documentation: 'https://docs.oxoo.ai/central-control-plane',
-    central_authority: 'Oxoo.ai Authoritative Control Plane'
+    service_documentation: 'https://docs.primepro.ai/central-control-plane',
+    central_authority: 'PrimePro.ai Authoritative Control Plane'
   });
 });
 
@@ -426,7 +426,7 @@ router.post('/entitlements/check', async (req, res) => {
     return res.status(403).json({
       allowed: false,
       error_code: 'PRODUCT_UNAVAILABLE',
-      reason: `Product '${product_code}' is not registered or disabled in Oxoo Central.`
+      reason: `Product '${product_code}' is not registered or disabled in PrimePro Central.`
     });
   }
 
@@ -453,7 +453,7 @@ router.post('/entitlements/check', async (req, res) => {
       return res.status(403).json({
         allowed: false,
         error_code: 'USER_NOT_FOUND',
-        reason: 'The specified identity does not exist in Oxoo Central.'
+        reason: 'The specified identity does not exist in PrimePro Central.'
       });
     }
     user = userRes.rows[0];
@@ -513,7 +513,7 @@ router.post('/entitlements/check', async (req, res) => {
     return res.status(403).json({
       allowed: false,
       error_code: 'ORGANIZATION_NOT_FOUND',
-      reason: 'The specified organization tenant does not exist in Oxoo Central.'
+      reason: 'The specified organization tenant does not exist in PrimePro Central.'
     });
   }
   const org = orgRes.rows[0];
@@ -683,7 +683,7 @@ router.post('/identity/request-otp', async (req, res) => {
       console.log(`[OTP Email Fallback] OTP for ${target} is ${otp}`);
     }
   } else {
-    console.log(`[OTP SMS Service] Simulated SMS to ${target}: Your Oxoo verification code is ${otp}`);
+    console.log(`[OTP SMS Service] Simulated SMS to ${target}: Your PrimePro verification code is ${otp}`);
   }
 
   res.json({
@@ -898,7 +898,7 @@ router.get('/tenants/resolve', async (req, res) => {
   res.json({
     organization: org,
     entitlements: entRes.rows,
-    is_internal_primepro: org.name.includes('PrimePro') || org.name.includes('Oxoo.ai Core')
+    is_internal_primepro: org.name.includes('PrimePro') || org.name.includes('PrimePro.ai Core')
   });
 });
 

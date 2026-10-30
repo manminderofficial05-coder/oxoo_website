@@ -39,11 +39,11 @@ function createTransporters() {
 }
 
 // Send via Resend HTTPS REST API (Port 443 - Never blocked on Render)
-async function sendViaResend({ to, subject, html }) {
+async function sendViaResend({ to, subject, html, text }) {
   const apiKey = (process.env.RESEND_API_KEY || '').trim();
   if (!apiKey) return null;
 
-  const fromEmail = process.env.RESEND_FROM || 'OXOO <onboarding@resend.dev>';
+  const fromEmail = process.env.RESEND_FROM || 'PrimePro <onboarding@resend.dev>';
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -54,7 +54,8 @@ async function sendViaResend({ to, subject, html }) {
       from: fromEmail,
       to: [to],
       subject,
-      html
+      html,
+      text: text || undefined
     })
   });
 
@@ -66,16 +67,17 @@ async function sendViaResend({ to, subject, html }) {
 }
 
 // Send via Brevo HTTPS REST API (Port 443 - Never blocked on Render)
-async function sendViaBrevo({ to, subject, html, attachments = [] }) {
+async function sendViaBrevo({ to, subject, html, text, attachments = [] }) {
   const apiKey = (process.env.BREVO_API_KEY || '').trim();
   if (!apiKey) return null;
 
   const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'manminder.singh@primepro.ai';
   const payload = {
-    sender: { name: 'OXOO', email: senderEmail },
+    sender: { name: 'PrimePro', email: senderEmail },
     to: [{ email: to }],
     subject,
-    htmlContent: html
+    htmlContent: html,
+    textContent: text || undefined
   };
 
   if (Array.isArray(attachments) && attachments.length > 0) {
@@ -115,12 +117,13 @@ async function sendMailWithFallback(mailOptions) {
   const to = mailOptions.to;
   const subject = mailOptions.subject;
   const html = mailOptions.html;
+  const text = mailOptions.text || '';
   const attachments = mailOptions.attachments || [];
 
   // 1. Try Resend HTTPS REST API (Port 443) if configured
   if (process.env.RESEND_API_KEY) {
     try {
-      const res = await sendViaResend({ to, subject, html });
+      const res = await sendViaResend({ to, subject, html, text });
       if (res && res.success) {
         console.log(`[EmailService] Delivered via Resend HTTPS API to ${to} (${res.messageId})`);
         return { success: true, messageId: res.messageId, port: 443, provider: 'resend' };
@@ -134,7 +137,7 @@ async function sendMailWithFallback(mailOptions) {
   const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
   if (brevoApiKey) {
     try {
-      const res = await sendViaBrevo({ to, subject, html, attachments });
+      const res = await sendViaBrevo({ to, subject, html, text, attachments });
       if (res && res.success) {
         console.log(`[EmailService] Delivered via Brevo HTTPS API to ${to} (${res.messageId})`);
         return { success: true, messageId: res.messageId, port: 443, provider: 'brevo' };
@@ -166,7 +169,7 @@ async function sendMailWithFallback(mailOptions) {
           socketTimeout: 10000
         });
         const sender = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'manminder.singh@primepro.ai';
-        const info = await relay.sendMail({ ...mailOptions, from: `"OXOO" <${sender}>`, attachments });
+        const info = await relay.sendMail({ ...mailOptions, from: `"PrimePro" <${sender}>`, attachments });
         console.log(`[EmailService] Delivered via Brevo SMTP relay (port ${port}) to ${to}`);
         return { success: true, messageId: info.messageId, port, provider: 'brevo-smtp' };
       } catch (sErr) {
@@ -198,7 +201,7 @@ async function sendMailWithFallback(mailOptions) {
   return { success: true, messageId: `sim_${Date.now()}`, provider: 'simulated-dev' };
 }
 
-const DEFAULT_FROM = process.env.EMAIL_FROM || '"OXOO" <manminder.singh@primepro.ai>';
+const DEFAULT_FROM = process.env.EMAIL_FROM || '"PrimePro" <manminder.singh@primepro.ai>';
 
 // Normalize mobile number to international format with country code (+91 for 10-digit Indian numbers)
 function normalizePhone(phone) {
@@ -221,7 +224,7 @@ function normalizePhone(phone) {
   return null;
 }
 
-// Send Transactional SMS via Brevo (https://api.brevo.com/v3/transactionalSMS/sendTransactionalSMS)
+// Send Transactional SMS via Brevo
 async function sendBrevoSms({ phone, otp, message }) {
   const apiKey = (process.env.BREVO_API_KEY || '').trim();
   const recipient = normalizePhone(phone);
@@ -231,7 +234,7 @@ async function sendBrevoSms({ phone, otp, message }) {
     return { success: false, reason: 'Invalid phone number format' };
   }
 
-  const content = message || `Your OXOO verification code is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
+  const content = message || `Your PrimePro verification code is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
 
   if (!apiKey) {
     console.log(`[Brevo SMS:Mock] Code ${otp} to ${recipient}`);
@@ -247,7 +250,7 @@ async function sendBrevoSms({ phone, otp, message }) {
         'accept': 'application/json'
       },
       body: JSON.stringify({
-        sender: 'OXOO',
+        sender: 'PrimePro',
         recipient,
         content,
         type: 'transactional'
@@ -276,11 +279,9 @@ async function sendBrevoSms({ phone, otp, message }) {
 
 // Send SMS OTP via Brevo with Fast2SMS fallback
 async function sendSmsOtp({ phone, otp, message }) {
-  // 1. Try Brevo Transactional SMS
   const brevoRes = await sendBrevoSms({ phone, otp, message });
   if (brevoRes && brevoRes.success) return brevoRes;
 
-  // 2. Fallback to Fast2SMS if configured
   const fast2Key = (process.env.FAST2SMS_API_KEY || '').trim();
   if (fast2Key) {
     try {
@@ -301,100 +302,220 @@ async function sendSmsOtp({ phone, otp, message }) {
 }
 
 /**
- * Generate and send 6-digit Email OTP for Demo or Subscription/Software purchase verification.
- * Only Email OTP is required and verified. SMS verification requirement is removed.
+ * Master PrimePro Branded HTML Email Template Builder.
+ * Adheres strictly to the official Brand Guidelines:
+ * - Primary Navy: #082B68
+ * - Primary Cyan: #12B5D8
+ * - Dark Navy: #061B40
+ * - Primary Text: #26374D
+ * - Light Background: #F4F8FC
+ * - Tagline: "Your 24/7 Workspace Is Here."
  */
+function buildPrimeProEmailHtml({
+  heading,
+  bodyHtml,
+  buttonText,
+  buttonUrl,
+  subtextHtml = '',
+  cardExtraHtml = '',
+  subject = ''
+}) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject || heading || 'PrimePro Notification'}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F4F8FC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #26374D; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F4F8FC; padding: 36px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container Card -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 10px 30px rgba(8, 43, 104, 0.08);">
+          
+          <!-- Top Navy Header with Official PrimePro Identity -->
+          <tr>
+            <td style="background-color: #061B40; background: linear-gradient(135deg, #061B40 0%, #082B68 100%); padding: 32px 30px; text-align: center;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center">
+                    <!-- Brand Mark / Header Wordmark -->
+                    <a href="https://primepro.ai" target="_blank" style="text-decoration: none; display: inline-block;">
+                      <img src="https://primepro.ai/primepro-logo-horizontal-white.png" alt="PrimePro" style="height: 38px; width: auto; max-width: 220px; display: block; border: 0;" onerror="this.style.display='none'" />
+                      <div style="font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px; line-height: 1.2;">
+                        <span style="color: #FFFFFF;">Prime</span><span style="color: #12B5D8;">Pro</span>
+                      </div>
+                    </a>
+                    <div style="margin-top: 8px; font-size: 11px; font-weight: 600; color: #12B5D8; letter-spacing: 1.2px; text-transform: uppercase;">
+                      Your 24/7 Workspace Is Here.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Body Content -->
+          <tr>
+            <td style="padding: 38px 34px 28px 34px; background-color: #FFFFFF;">
+              ${heading ? `
+              <h1 style="margin: 0 0 18px 0; font-size: 22px; font-weight: 800; color: #082B68; letter-spacing: -0.4px; line-height: 1.3;">
+                ${heading}
+              </h1>` : ''}
+
+              <div style="font-size: 14.5px; line-height: 1.65; color: #26374D; margin-bottom: 24px;">
+                ${bodyHtml}
+              </div>
+
+              ${cardExtraHtml ? `
+              <div style="margin: 22px 0;">
+                ${cardExtraHtml}
+              </div>` : ''}
+
+              ${buttonText && buttonUrl ? `
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 28px 0 16px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${buttonUrl}" target="_blank" style="display: inline-block; background-color: #082B68; background: linear-gradient(135deg, #082B68 0%, #12B5D8 100%); color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none; padding: 14px 34px; border-radius: 10px; box-shadow: 0 6px 18px rgba(8, 43, 104, 0.28); letter-spacing: 0.2px;">
+                      ${buttonText} →
+                    </a>
+                  </td>
+                </tr>
+              </table>` : ''}
+
+              ${subtextHtml ? `
+              <div style="margin-top: 26px; padding-top: 18px; border-top: 1px solid #EDF2F7; font-size: 12.5px; line-height: 1.6; color: #64748B;">
+                ${subtextHtml}
+              </div>` : ''}
+            </td>
+          </tr>
+
+          <!-- Professional Footer -->
+          <tr>
+            <td style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 24px 30px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #082B68;">
+                PrimePro.ai — Your 24/7 Workspace Is Here.
+              </p>
+              <p style="margin: 0 0 10px 0; font-size: 11.5px; color: #64748B;">
+                <a href="https://primepro.ai" target="_blank" style="color: #12B5D8; text-decoration: none; font-weight: 600;">Visit Website</a>
+                &nbsp;·&nbsp;
+                <a href="https://primepro.ai/#/customer/login" target="_blank" style="color: #12B5D8; text-decoration: none; font-weight: 600;">Customer Portal</a>
+                &nbsp;·&nbsp;
+                <a href="mailto:support@primepro.ai" style="color: #12B5D8; text-decoration: none; font-weight: 600;">support@primepro.ai</a>
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94A3B8;">
+                © ${new Date().getFullYear()} PrimePro Cloud Technologies. All rights reserved.<br>
+                Powered by PrimePro.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// -----------------------------------------------------------------------------
+// EMAIL 1: Welcome Email
+// -----------------------------------------------------------------------------
+async function sendWelcomeEmail({ to, customerName = 'Valued Customer', loginUrl = 'https://primepro.ai/#/customer/login', credentials = null }) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  if (!normEmail) throw new Error('Recipient email is required.');
+
+  const subject = 'Welcome to PrimePro — Your 24/7 Workspace Is Here!';
+  const heading = 'Welcome to PrimePro!';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Your business workspace is ready.</p>
+    <p style="margin: 0 0 14px 0;">Access your applications, manage your team, explore your subscription and manage your business through one centralized workspace.</p>
+    <p style="margin: 0 0 14px 0;">Thank you for choosing PrimePro.</p>
+    <p style="margin: 0; font-weight: 700; color: #082B68;">Your 24/7 Workspace Is Here.</p>
+  `;
+
+  let credsHtml = '';
+  if (credentials) {
+    credsHtml = `
+      <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 18px 20px; font-size: 13.5px;">
+        <div style="font-weight: 700; color: #082B68; margin-bottom: 10px; font-size: 14px;">Your PrimePro Login Credentials</div>
+        ${credentials.storageId ? `<div style="margin-bottom: 6px;"><strong>Storage ID:</strong> <span style="font-family: monospace; font-weight: 700; color: #082B68;">${credentials.storageId}</span></div>` : ''}
+        <div style="margin-bottom: 6px;"><strong>User / Login ID:</strong> <span style="font-family: monospace;">${normEmail}</span></div>
+        ${credentials.password ? `<div><strong>Temporary Password:</strong> <span style="font-family: monospace; background: #E2E8F0; padding: 2px 8px; border-radius: 4px;">${credentials.password}</span></div>` : ''}
+      </div>
+    `;
+  }
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: credsHtml,
+    buttonText: 'Access Your Workspace',
+    buttonUrl: loginUrl,
+    subtextHtml: `Direct portal link: <a href="${loginUrl}" style="color: #12B5D8;">${loginUrl}</a>`
+  });
+
+  const text = `Welcome to PrimePro!\n\nYour business workspace is ready.\nAccess your applications, manage your team, explore your subscription and manage your business through one centralized workspace.\n\nThank you for choosing PrimePro.\nYour 24/7 Workspace Is Here.\n\nAccess your workspace at: ${loginUrl}\nUser ID: ${normEmail}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
+}
+
+// -----------------------------------------------------------------------------
+// EMAIL 2: OTP Verification Email
+// -----------------------------------------------------------------------------
 async function sendOtpEmail({ email, phone = '', purpose = 'Verification', customerName = '' }) {
   const normEmail = (email || '').trim().toLowerCase();
   if (!normEmail) throw new Error('Recipient email address is required.');
 
-  const isDemo = purpose.toLowerCase().includes('demo');
-
-  // Generate 6-digit OTP for Email
   const otp = crypto.randomInt(100000, 1000000).toString();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-  // Store in-memory keyed by email
-  const entry = {
+  otpStore.set(normEmail, {
     otp,
     email: normEmail,
     purpose,
     expiresAt,
     verified: false,
     attempts: 0
-  };
+  });
 
-  otpStore.set(normEmail, entry);
+  const subject = 'Your PrimePro Verification Code';
+  const heading = 'Verify Your Email Address';
 
-  const subject = isDemo
-    ? `${otp} is your OXOO Live Demo Verification Code`
-    : `${otp} is your OXOO Purchase & Billing Verification Code`;
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 15px;">
-    <tr>
-      <td align="center">
-        <table width="100%" max-width="560px" style="max-width: 560px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" cellpadding="0" cellspacing="0">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 32px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
-                OXOO <span style="font-size: 13px; font-weight: 500; color: #38bdf8; display: block; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase;">One Platform. Infinite Possibilities.</span>
-              </h1>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding: 36px 32px;">
-              <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 12px;">
-                ${isDemo ? 'Verify Your Live Demo Access' : 'Confirm Your Subscription & Software Order'}
-              </h2>
-              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-                ${customerName ? `Hello <strong>${customerName}</strong>,<br>` : ''}
-                You requested an email verification code for <strong>${purpose}</strong> on OXOO. Please enter the one-time code below to proceed:
-              </p>
-
-              <!-- OTP Box -->
-              <div style="background: #f1f5f9; border: 2px dashed #0284c7; border-radius: 12px; padding: 22px; text-align: center; margin-bottom: 28px;">
-                <span style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #0284c7; display: block;">
-                  ${otp}
-                </span>
-                <span style="font-size: 12px; color: #64748b; margin-top: 8px; display: block;">
-                  Valid for 10 minutes · Do not share this code with anyone
-                </span>
-              </div>
-
-              <p style="font-size: 13px; color: #64748b; line-height: 1.6; margin: 0;">
-                If you did not make this request, you can safely ignore this email.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 20px 32px; text-align: center; font-size: 12px; color: #94a3b8;">
-              © ${new Date().getFullYear()} OXOO Multiix Enterprise Suite. All rights reserved.<br>
-              Automated system notification.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+  const bodyHtml = `
+    ${customerName ? `<p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>` : ''}
+    <p style="margin: 0 0 14px 0;">Use the verification code below to securely verify your PrimePro account for <strong>${purpose}</strong>.</p>
   `;
 
-  // Dispatch Email via Brevo/Resend/SMTP
-  const emailRes = await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html });
+  const otpCardHtml = `
+    <div style="background-color: #F4F8FC; border: 2px dashed #12B5D8; border-radius: 12px; padding: 22px; text-align: center;">
+      <span style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #082B68; display: block;">
+        ${otp}
+      </span>
+      <span style="font-size: 12px; color: #64748B; margin-top: 8px; display: block; font-weight: 500;">
+        Valid for 10 minutes · Do not share this code with anyone
+      </span>
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: otpCardHtml,
+    buttonText: 'Verify Account',
+    buttonUrl: 'https://primepro.ai/#/customer/login',
+    subtextHtml: 'If you did not make this request, you can safely ignore this email.'
+  });
+
+  const text = `Your PrimePro Verification Code is: ${otp}\n\nUse this verification code to securely verify your PrimePro account. Valid for 10 minutes.`;
+
+  const emailRes = await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
   const emailDelivered = Boolean(emailRes && emailRes.success);
 
   return {
@@ -405,14 +526,9 @@ async function sendOtpEmail({ email, phone = '', purpose = 'Verification', custo
   };
 }
 
-/**
- * Verify Email OTP entered by customer.
- * Only Email OTP is verified. SMS verification is not required.
- */
 function verifyOtp({ email, phone, otp, smsOtp }) {
   const normEmail = (email || '').trim().toLowerCase();
   const cleanPhone = normalizePhone(phone);
-
   const entry = (normEmail && otpStore.get(normEmail)) || (cleanPhone && otpStore.get(cleanPhone));
 
   if (!entry) {
@@ -441,383 +557,54 @@ function verifyOtp({ email, phone, otp, smsOtp }) {
     return { valid: false, message: 'Incorrect email verification code. Please check your inbox.' };
   }
 
-  // Verified successfully - clean up
   if (normEmail) otpStore.delete(normEmail);
   if (cleanPhone) otpStore.delete(cleanPhone);
 
   return { valid: true, message: 'Email OTP verified successfully.' };
 }
 
-/**
- * Send Tax Invoice & Customer Portal Login Credentials with attached PDF invoice document.
- */
-async function sendInvoiceAndCredentialsEmail({
-  toEmail,
-  customerName = 'Customer',
-  companyName = 'My Organization',
-  invoiceNumber,
-  orderNumber,
-  storageId,
-  amount,
-  billingCycle = 'monthly',
-  planName = 'Standard Pack',
-  selectedApps = [],
-  password = 'oxoo123',
-  loginUrl = 'http://localhost:5173/login',
-  customerPhone = '',
-  includeCredentials = false
-}) {
-  if (!toEmail) throw new Error('Recipient email is required.');
-  const normEmail = toEmail.trim().toLowerCase();
+// -----------------------------------------------------------------------------
+// EMAIL 3: Password Reset Email
+// -----------------------------------------------------------------------------
+async function sendPasswordResetEmail(opts = {}) {
+  const targetEmail = opts.toEmail || opts.to || opts.email;
+  if (!targetEmail) throw new Error('Recipient email is required.');
+  const normEmail = targetEmail.trim().toLowerCase();
+  const customerName = opts.customerName || 'Customer';
+  const storageId = opts.storageId || '';
+  const resetUrl = opts.resetUrl || (opts.resetToken ? `https://primepro.ai/#/reset-password?token=${opts.resetToken}` : 'https://primepro.ai/#/reset-password');
 
-  const isYearly = String(billingCycle).toLowerCase() === 'yearly';
-  const effectiveStorageId = storageId || (orderNumber ? 'STG-' + String(orderNumber).replace(/[^0-9]/g, '').slice(-8) : 'STG-08643413');
+  const subject = 'Reset Your PrimePro Password';
+  const heading = 'Password Reset Request';
 
-  // 1. Generate official Tax Invoice PDF document
-  let pdfBuffer = null;
-  try {
-    pdfBuffer = await generateInvoicePdf({
-      invoiceNumber,
-      orderNumber,
-      storageId: effectiveStorageId,
-      customerName,
-      companyName,
-      toEmail: normEmail,
-      customerPhone,
-      amount,
-      billingCycle,
-      planName,
-      selectedApps
-    });
-    console.log(`[EmailService] Generated Invoice PDF for ${invoiceNumber} (${pdfBuffer.length} bytes)`);
-  } catch (pdfErr) {
-    console.error(`[EmailService] Could not generate invoice PDF for ${invoiceNumber}:`, pdfErr.message);
-  }
-
-  const attachments = [];
-  if (pdfBuffer) {
-    attachments.push({
-      filename: `Tax-Invoice-${invoiceNumber}.pdf`,
-      content: pdfBuffer,
-      contentType: 'application/pdf'
-    });
-  }
-
-  const appsListHtml = Array.isArray(selectedApps) && selectedApps.length > 0
-    ? selectedApps.map(a => {
-        const name = typeof a === 'string' ? a : (a.name || a.id);
-        return `<li style="padding: 4px 0; font-weight: 600; color: #0f172a;">${name}</li>`;
-      }).join('')
-    : '<li style="padding: 4px 0; font-weight: 600; color: #0f172a;">Business Application Suite</li>';
-
-  const subject = includeCredentials
-    ? `Order Confirmed: ${invoiceNumber} & Your OXOO Customer Login Credentials`
-    : `Tax Invoice Confirmed: ${invoiceNumber} - ${companyName}`;
-
-  const credentialsBlock = includeCredentials ? `
-              <!-- Credentials Card (Highlighted Box) -->
-              <div style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border: 2px solid #38bdf8; border-radius: 14px; padding: 24px; margin-bottom: 28px;">
-                <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                  <span style="font-size: 16px; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px;">
-                    🔑 Your Customer Dashboard Login Details
-                  </span>
-                </div>
-                <p style="font-size: 13px; color: #334155; margin-top: 0; margin-bottom: 16px;">
-                  Use these credentials to sign in to your Customer Dashboard, view your bills, and access your active software:
-                </p>
-                <table width="100%" cellpadding="6" cellspacing="0" style="background: #ffffff; border-radius: 10px; border: 1px solid #bae6fd; font-size: 14px;">
-                  <tr>
-                    <td width="35%" style="color: #64748b; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">Portal Login URL:</td>
-                    <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
-                      <a href="${loginUrl}" style="color: #0284c7; font-weight: 700; text-decoration: none;">${loginUrl}</a>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">Storage ID:</td>
-                    <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
-                      <span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 14px; font-weight: 800; border: 1px solid #bae6fd;">
-                        ${effectiveStorageId}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">User ID / Email:</td>
-                    <td style="color: #0f172a; font-weight: 700; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
-                      ${normEmail}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">Password:</td>
-                    <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
-                      <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a;">
-                        ${password}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="color: #64748b; font-weight: 600; padding: 10px 14px;">Password Security:</td>
-                    <td style="color: #475569; font-size: 12px; line-height: 1.4; padding: 10px 14px;">
-                      You can change this password anytime in Dashboard Settings. If forgotten, click <strong>"Forgot Password"</strong> on the login screen to get a reset link on your email.
-                    </td>
-                  </tr>
-                </table>
-
-                <div style="text-align: center; margin-top: 20px;">
-                  <a href="${loginUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
-                    Open Customer Dashboard →
-                  </a>
-                </div>
-              </div>` : `
-              <!-- Existing Account Portal Access Box (No passwords sent) -->
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 24px;">
-                <span style="font-size: 15px; font-weight: 800; color: #0f172a; display: block; margin-bottom: 6px;">
-                  Access Your Software & Subscriptions
-                </span>
-                <p style="font-size: 13px; color: #475569; margin: 0 0 16px; line-height: 1.5;">
-                  Your purchased software and entitlements are now active on your organization account. You can log in to your OXOO Customer Dashboard using your existing OXOO login credentials:
-                </p>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                  <a href="${loginUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);">
-                    Open Customer Dashboard →
-                  </a>
-                  <span style="font-size: 12px; color: #64748b;">(Registered Email: <strong>${normEmail}</strong>)</span>
-                </div>
-              </div>`;
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 15px;">
-    <tr>
-      <td align="center">
-        <table width="100%" max-width="640px" style="max-width: 640px; background-color: #ffffff; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 14px 35px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
-          
-          <!-- Top Navy Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 34px 32px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">
-                OXOO
-              </h1>
-              <span style="font-size: 13px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">
-                Payment Confirmed · Subscription Active
-              </span>
-            </td>
-          </tr>
-
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 36px 32px;">
-              <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
-                Thank you, ${customerName}!
-              </h2>
-              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-                Thank you for subscribing to <strong>OXOO</strong> for <strong>${companyName}</strong>. Your payment was verified and processed successfully. Your official Tax Invoice is attached as a PDF document to this email.
-              </p>
-
-              ${credentialsBlock}
-
-              <!-- Attached PDF Notice -->
-              <div style="background: #f8fafc; border: 2px dashed #0284c7; border-radius: 12px; padding: 18px 22px; margin-bottom: 26px; text-align: center;">
-                <span style="font-size: 24px; display: block; margin-bottom: 4px;">📎</span>
-                <span style="font-size: 14.5px; font-weight: 800; color: #0284c7; display: block;">
-                  Official Tax Invoice PDF Attached
-                </span>
-                <span style="font-size: 12.5px; color: #64748b; display: block; margin-top: 4px;">
-                  Document: <strong>Tax-Invoice-${invoiceNumber}.pdf</strong> (${pdfBuffer ? `${Math.round(pdfBuffer.length / 1024)} KB` : 'PDF Document'}) has been attached below for your finance and taxation records.
-                </span>
-              </div>
-
-              <!-- Invoice Summary Table -->
-              <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">
-                Tax Invoice Details (${invoiceNumber})
-              </h3>
-              <table width="100%" cellpadding="8" cellspacing="0" style="font-size: 13px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; margin-bottom: 24px;">
-                <tr style="background: #f8fafc;">
-                  <td style="color: #64748b; font-weight: 600;">Invoice Number</td>
-                  <td style="text-align: right; font-weight: 700; color: #0f172a;">${invoiceNumber}</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600;">Order ID</td>
-                  <td style="text-align: right; font-weight: 700; color: #0f172a;">${orderNumber || 'N/A'}</td>
-                </tr>
-                <tr style="background: #f8fafc;">
-                  <td style="color: #64748b; font-weight: 600;">Plan & Billing Period</td>
-                  <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                    ${planName} (${isYearly ? '12 Months Annual Payment' : '1 Month Subscription'})
-                  </td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600;">Billing Entity / Company</td>
-                  <td style="text-align: right; font-weight: 700; color: #0f172a;">${companyName}</td>
-                </tr>
-                <tr style="background: #f8fafc;">
-                  <td style="color: #64748b; font-weight: 600;">Invoice Date</td>
-                  <td style="text-align: right; color: #0f172a;">${new Date().toLocaleDateString('en-GB')}</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600;">Status</td>
-                  <td style="text-align: right; color: #16a34a; font-weight: 800;">PAID (Verified)</td>
-                </tr>
-                <tr style="background: #0f172a; color: #ffffff;">
-                  <td style="font-size: 15px; font-weight: 700; color: #ffffff; padding: 12px 8px;">Total Amount Paid</td>
-                  <td style="text-align: right; font-size: 16px; font-weight: 800; color: #38bdf8; padding: 12px 8px;">
-                    ₹${typeof amount === 'number' ? amount.toLocaleString('en-IN') : amount} (incl. 18% GST)
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Activated Apps -->
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
-                <span style="font-size: 13px; font-weight: 700; color: #0f172a; display: block; margin-bottom: 8px;">
-                  Activated Software Modules:
-                </span>
-                <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
-                  ${appsListHtml}
-                </ul>
-              </div>
-
-              <p style="font-size: 13px; color: #64748b; line-height: 1.6; margin: 0;">
-                If you need assistance or wish to add more team members, feel free to visit your Customer Dashboard or contact our enterprise support team at <a href="mailto:support@oxoo.ai" style="color: #0284c7;">support@oxoo.ai</a>.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 32px; text-align: center; font-size: 12px; color: #94a3b8;">
-              © ${new Date().getFullYear()} OXOO Multiix Enterprise Suite. All rights reserved.<br>
-              This is an official transaction confirmation and tax invoice.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">We received a request to reset your PrimePro account password. Use the secure link below to continue.</p>
   `;
 
-  let info = null;
-  try {
-    info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html,
-      attachments
-    });
-    console.log(`[EmailService] Invoice and login credentials sent to ${normEmail} (Message ID: ${info.messageId}, PDF Attached: ${attachments.length > 0})`);
-    return { success: true, messageId: info.messageId, pdfAttached: attachments.length > 0 };
-  } catch (err) {
-    console.error(`[EmailService] Could not deliver invoice email to ${normEmail}:`, err.message);
-    return { success: false, error: err.message };
+  let extraHtml = '';
+  if (storageId) {
+    extraHtml = `
+      <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #082B68;">
+        <strong>Storage / Account ID:</strong> <span style="font-family: monospace; font-weight: 700;">${storageId}</span>
+      </div>
+    `;
   }
-}
 
-/**
- * Send Password Reset Link Email
- */
-async function sendPasswordResetEmail({
-  toEmail,
-  customerName = 'Customer',
-  storageId = '',
-  resetUrl
-}) {
-  if (!toEmail) throw new Error('Recipient email is required.');
-  const normEmail = toEmail.trim().toLowerCase();
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: extraHtml,
+    buttonText: 'Reset Password',
+    buttonUrl: resetUrl,
+    subtextHtml: `This secure link is valid for 1 hour.<br>If the button doesn't work, copy and paste this link:<br><a href="${resetUrl}" style="color: #12B5D8; word-break: break-all;">${resetUrl}</a><br><br>If you did not request a password reset, you can safely ignore this email.`
+  });
 
-  const subject = `Reset Your OXOO Password · Security Link`;
+  const text = `Reset Your PrimePro Password\n\nWe received a request to reset your PrimePro account password. Use the secure link below to continue:\n\n${resetUrl}\n\nThis link is valid for 1 hour. If you did not request this, please ignore this email.`;
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 15px;">
-    <tr>
-      <td align="center">
-        <table width="100%" max-width="600px" style="max-width: 600px; background-color: #ffffff; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 14px 35px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
-          
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
-                OXOO
-              </h1>
-              <span style="font-size: 12px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">
-                Account Security & Password Assistance
-              </span>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 36px 32px;">
-              <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
-                Password Reset Request
-              </h2>
-              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 16px;">
-                Hello <strong>${customerName}</strong>, we received a request to reset the password for your OXOO account.
-              </p>
-
-              ${storageId ? `
-              <div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #0369a1;">
-                <strong>Storage / Account ID:</strong> <span style="font-family: monospace; font-weight: 800;">${storageId}</span>
-              </div>
-              ` : ''}
-
-              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-                Click the secure button below to choose a new password. This link is valid for <strong>1 hour</strong>.
-              </p>
-
-              <div style="text-align: center; margin: 28px 0;">
-                <a href="${resetUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 14px 34px; border-radius: 10px; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
-                  Reset My Password →
-                </a>
-              </div>
-
-              <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px; padding-top: 18px; border-top: 1px solid #f1f5f9;">
-                If the button above does not work, copy and paste this link into your browser:<br>
-                <a href="${resetUrl}" style="color: #0284c7; word-break: break-all;">${resetUrl}</a>
-              </p>
-
-              <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 20px;">
-                If you did not request a password reset, please ignore this email. Your password will remain unchanged until you access the link above.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
-              © ${new Date().getFullYear()} OXOO Multiix Enterprise Suite. All rights reserved.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-
-  let info = null;
   try {
-    info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html
-    });
-    console.log(`[EmailService] Password reset link sent to ${normEmail} (Message ID: ${info.messageId})`);
+    const info = await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
     return { success: true, messageId: info.messageId };
   } catch (err) {
     console.error(`[EmailService] Could not deliver reset password email to ${normEmail}:`, err.message);
@@ -825,893 +612,571 @@ async function sendPasswordResetEmail({
   }
 }
 
-/**
- * Dispatch automated credentials (ID & Password) email to newly created Admin, Software Admin, Manager or Employee.
- */
+// -----------------------------------------------------------------------------
+// EMAIL 4: Subscription Confirmation Email
+// -----------------------------------------------------------------------------
+async function sendSubscriptionConfirmationEmail({
+  to,
+  customerName = 'Valued Customer',
+  planName = 'Standard Plan',
+  expiryDate = '',
+  amount = '',
+  manageUrl = 'https://primepro.ai/#/customer/login'
+}) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = 'Your PrimePro Subscription Is Confirmed';
+  const heading = 'Subscription Activated!';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Your PrimePro subscription is now active. You can access your subscribed applications and manage your workspace.</p>
+  `;
+
+  const detailsHtml = `
+    <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 18px 20px; font-size: 13.5px;">
+      <div style="font-weight: 700; color: #082B68; margin-bottom: 8px;">Subscription Details</div>
+      <div style="margin-bottom: 6px;"><strong>Active Plan:</strong> <span style="font-weight: 700; color: #12B5D8;">${planName}</span></div>
+      ${amount ? `<div style="margin-bottom: 6px;"><strong>Amount Paid:</strong> Rs. ${amount}</div>` : ''}
+      ${expiryDate ? `<div><strong>Valid Until:</strong> ${expiryDate}</div>` : ''}
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: detailsHtml,
+    buttonText: 'View Subscription',
+    buttonUrl: manageUrl,
+    subtextHtml: `Manage your applications anytime at: <a href="${manageUrl}" style="color: #12B5D8;">${manageUrl}</a>`
+  });
+
+  const text = `Your PrimePro Subscription Is Confirmed!\n\nYour PrimePro subscription is now active. Plan: ${planName}. Access your workspace at: ${manageUrl}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
+}
+
+// -----------------------------------------------------------------------------
+// EMAIL 5: Subscription Reminder Email
+// -----------------------------------------------------------------------------
+async function sendSubscriptionReminderEmail({
+  to,
+  customerName = 'Valued Customer',
+  planName = 'Standard Plan',
+  daysRemaining = 7,
+  expiryDate = '',
+  renewalUrl = 'https://primepro.ai/#/customer/login'
+}) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = 'Your PrimePro Subscription Renewal Reminder';
+  const heading = 'Your Subscription Is Due for Renewal';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Your subscription is approaching its renewal date. Review your subscription details and complete your renewal to maintain uninterrupted access.</p>
+  `;
+
+  const reminderCardHtml = `
+    <div style="background-color: #FFFBEB; border: 1px solid #FCD34D; border-radius: 10px; padding: 18px 20px; font-size: 13.5px; color: #92400E;">
+      <div style="font-weight: 700; color: #B45309; margin-bottom: 6px;">Renewal Alert · ${daysRemaining} Days Remaining</div>
+      <div style="margin-bottom: 4px;"><strong>Plan:</strong> ${planName}</div>
+      ${expiryDate ? `<div><strong>Renewal Date:</strong> ${expiryDate}</div>` : ''}
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: reminderCardHtml,
+    buttonText: 'Manage Subscription',
+    buttonUrl: renewalUrl,
+    subtextHtml: `Renew securely at: <a href="${renewalUrl}" style="color: #12B5D8;">${renewalUrl}</a>`
+  });
+
+  const text = `Your PrimePro Subscription Renewal Reminder\n\nYour subscription is due for renewal in ${daysRemaining} days. Plan: ${planName}.\nRenew at: ${renewalUrl}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
+}
+
+// Alias for backwards compatibility with server.js callers
+const sendAdminSubscriptionDueEmail = sendSubscriptionReminderEmail;
+
+// -----------------------------------------------------------------------------
+// EMAIL 6: Successful Payment & Welcome/Invoice Email
+// -----------------------------------------------------------------------------
+async function sendPaymentSuccessEmail({
+  to,
+  customerName = 'Valued Customer',
+  invoiceNumber = 'INV-2026',
+  amount = 0,
+  invoiceUrl = 'https://primepro.ai/#/customer/login',
+  attachments = []
+}) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = 'PrimePro Payment Confirmation';
+  const heading = 'Payment Successful!';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Your payment has been successfully received. Your payment details and invoice are available in your PrimePro account.</p>
+  `;
+
+  const paymentCardHtml = `
+    <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 18px 20px; font-size: 13.5px;">
+      <div style="font-weight: 700; color: #082B68; margin-bottom: 8px;">Payment Summary</div>
+      <div style="margin-bottom: 6px;"><strong>Invoice Number:</strong> <span style="font-family: monospace; font-weight: 700;">${invoiceNumber}</span></div>
+      <div style="margin-bottom: 6px;"><strong>Amount Paid:</strong> <span style="color: #059669; font-weight: 700;">Rs. ${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+      <div><strong>Status:</strong> <span style="color: #059669; font-weight: 700;">PAID & VERIFIED</span></div>
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: paymentCardHtml,
+    buttonText: 'View Invoice',
+    buttonUrl: invoiceUrl,
+    subtextHtml: 'Your official GST Tax Invoice PDF is attached to this email.'
+  });
+
+  const text = `PrimePro Payment Confirmation\n\nPayment Successful!\nYour payment of Rs. ${amount} for invoice ${invoiceNumber} has been received.\nView your invoice at: ${invoiceUrl}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text, attachments });
+}
+
+// Master registration & purchase email combining credentials and invoice PDF
+async function sendInvoiceAndCredentialsEmail({
+  toEmail,
+  customerName = 'Valued Customer',
+  companyName = 'My Organization',
+  storageId = 'STG-08643413',
+  password = 'PrimeProUser@2026',
+  invoiceNumber = 'INV-2026',
+  orderNumber = 'ORD-2026',
+  amount = 0,
+  selectedApps = [],
+  billingCycle = 'monthly',
+  userCount = 1,
+  paymentId = 'pay_verified',
+  planName = 'Standard Plan'
+}) {
+  const normEmail = String(toEmail || '').trim().toLowerCase();
+  if (!normEmail) throw new Error('Recipient email is required.');
+
+  // Generate official PDF invoice with PDFKit
+  let pdfBuffer = null;
+  try {
+    pdfBuffer = await generateInvoicePdf({
+      invoiceNumber,
+      orderNumber,
+      storageId,
+      customerName,
+      companyName,
+      customerEmail: normEmail,
+      amount,
+      planName,
+      selectedApps,
+      billingCycle,
+      userCount,
+      paymentId
+    });
+  } catch (pdfErr) {
+    console.error('[EmailService] Invoice PDF generation error:', pdfErr.message);
+  }
+
+  const attachments = pdfBuffer ? [{
+    filename: `PrimePro_Tax_Invoice_${invoiceNumber}.pdf`,
+    content: pdfBuffer,
+    contentType: 'application/pdf'
+  }] : [];
+
+  const subject = `Welcome to PrimePro — Your 24/7 Workspace Is Here! [${invoiceNumber}]`;
+  const heading = 'Welcome to PrimePro!';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Your business workspace is ready.</p>
+    <p style="margin: 0 0 14px 0;">Access your applications, manage your team, explore your subscription and manage your business through one centralized workspace.</p>
+    <p style="margin: 0 0 14px 0;">Thank you for choosing PrimePro.</p>
+    <p style="margin: 0; font-weight: 700; color: #082B68;">Your 24/7 Workspace Is Here.</p>
+  `;
+
+  const credsCardHtml = `
+    <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 20px; font-size: 13.5px; margin-bottom: 16px;">
+      <div style="font-weight: 700; color: #082B68; margin-bottom: 12px; font-size: 14.5px;">Your Customer Workspace Credentials</div>
+      <div style="margin-bottom: 8px;"><strong>Customer Storage ID:</strong> <span style="font-family: monospace; font-weight: 700; color: #082B68;">${storageId}</span></div>
+      <div style="margin-bottom: 8px;"><strong>User / Login ID:</strong> <span style="font-family: monospace;">${normEmail}</span></div>
+      <div style="margin-bottom: 8px;"><strong>Initial Password:</strong> <span style="font-family: monospace; background: #E2E8F0; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${password}</span></div>
+      <div><strong>Workspace URL:</strong> <a href="https://primepro.ai/#/customer/login" style="color: #12B5D8;">https://primepro.ai/#/customer/login</a></div>
+    </div>
+    <div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px 20px; font-size: 13px;">
+      <div style="font-weight: 700; color: #082B68; margin-bottom: 6px;">Payment & Invoice Details</div>
+      <div>Invoice: <strong>${invoiceNumber}</strong> · Amount: <strong>Rs. ${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> · Plan: <strong>${planName}</strong></div>
+      <div style="color: #059669; font-weight: 600; margin-top: 4px;">Official GST Invoice attached below.</div>
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: credsCardHtml,
+    buttonText: 'Access Your Workspace',
+    buttonUrl: 'https://primepro.ai/#/customer/login',
+    subtextHtml: 'Please store your Customer Storage ID and Login Credentials in a secure location.'
+  });
+
+  const text = `Welcome to PrimePro!\n\nYour business workspace is ready.\n\nCredentials:\nStorage ID: ${storageId}\nUser ID: ${normEmail}\nPassword: ${password}\n\nLogin at: https://primepro.ai/#/customer/login\nInvoice: ${invoiceNumber} (Rs. ${amount})`;
+
+  return await sendMailWithFallback({
+    from: DEFAULT_FROM,
+    to: normEmail,
+    subject,
+    html,
+    text,
+    attachments
+  });
+}
+
+// -----------------------------------------------------------------------------
+// EMAIL 7: Failed Payment Email
+// -----------------------------------------------------------------------------
+async function sendPaymentFailedEmail({
+  to,
+  customerName = 'Valued Customer',
+  amount = '',
+  retryUrl = 'https://primepro.ai/#/checkout',
+  errorReason = 'Card authentication failed or network timeout.'
+}) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = 'Action Required — PrimePro Payment Failed';
+  const heading = 'Payment Could Not Be Completed';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">We could not process your recent payment. Please review your payment details and try again.</p>
+  `;
+
+  const failCardHtml = `
+    <div style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 18px 20px; font-size: 13.5px; color: #991B1B;">
+      <div style="font-weight: 700; color: #B91C1C; margin-bottom: 6px;">Transaction Failed</div>
+      ${amount ? `<div style="margin-bottom: 4px;"><strong>Amount:</strong> Rs. ${amount}</div>` : ''}
+      <div><strong>Reason:</strong> ${errorReason}</div>
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: failCardHtml,
+    buttonText: 'Retry Payment',
+    buttonUrl: retryUrl,
+    subtextHtml: `If you need assistance, please contact support@primepro.ai`
+  });
+
+  const text = `Action Required — PrimePro Payment Failed\n\nPayment Could Not Be Completed.\nWe could not process your recent payment. Please review your payment details and try again at: ${retryUrl}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
+}
+
+// -----------------------------------------------------------------------------
+// EMAIL 8: Invoice Ready Email
+// -----------------------------------------------------------------------------
+async function sendInvoiceReadyEmail({
+  to,
+  customerName = 'Valued Customer',
+  invoiceNumber = 'INV-2026',
+  amount = 0,
+  downloadUrl = 'https://primepro.ai/#/customer/login',
+  attachments = []
+}) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = 'Your PrimePro Invoice Is Ready';
+  const heading = 'Your Invoice Is Available';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Your latest PrimePro invoice is ready. Download it from your account billing section.</p>
+  `;
+
+  const invCardHtml = `
+    <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 18px 20px; font-size: 13.5px;">
+      <div style="font-weight: 700; color: #082B68; margin-bottom: 6px;">Invoice Summary</div>
+      <div style="margin-bottom: 4px;"><strong>Invoice:</strong> <span style="font-family: monospace;">${invoiceNumber}</span></div>
+      ${amount ? `<div><strong>Total Amount:</strong> Rs. ${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>` : ''}
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: invCardHtml,
+    buttonText: 'Download Invoice',
+    buttonUrl: downloadUrl,
+    subtextHtml: 'Your invoice is also attached directly to this email in PDF format.'
+  });
+
+  const text = `Your PrimePro Invoice Is Ready\n\nYour latest PrimePro invoice (${invoiceNumber}) is ready. Download it from your account billing section: ${downloadUrl}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text, attachments });
+}
+
+// -----------------------------------------------------------------------------
+// EMAIL 9: Support Ticket Update Email
+// -----------------------------------------------------------------------------
+async function sendSupportTicketUpdateEmail({
+  to,
+  customerName = 'Valued Customer',
+  ticketNumber = 'TICK-1001',
+  ticketSubject = 'Inquiry',
+  updateDetails = '',
+  origin = 'https://primepro.ai'
+}) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = 'PrimePro Support Ticket Update';
+  const heading = 'Your Support Request Has Been Updated';
+
+  const viewUrl = `${origin}/#/help`;
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">There is an update to your support request. Log in to PrimePro to view the latest information.</p>
+  `;
+
+  const ticketCardHtml = `
+    <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 18px 20px; font-size: 13.5px;">
+      <div style="font-weight: 700; color: #082B68; margin-bottom: 6px;">Ticket #${ticketNumber}</div>
+      <div style="margin-bottom: 6px;"><strong>Subject:</strong> ${ticketSubject}</div>
+      ${updateDetails ? `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #CBD5E1; color: #475569;"><em>"${updateDetails}"</em></div>` : ''}
+    </div>
+  `;
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: ticketCardHtml,
+    buttonText: 'View Support Ticket',
+    buttonUrl: viewUrl,
+    subtextHtml: `Our support team is available 24/7 at support@primepro.ai`
+  });
+
+  const text = `PrimePro Support Ticket Update\n\nThere is an update to your support request #${ticketNumber} (${ticketSubject}).\nLog in to view the latest information: ${viewUrl}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
+}
+
+// Alias for backwards compatibility
+const sendTicketAcknowledgementEmail = sendSupportTicketUpdateEmail;
+
+// -----------------------------------------------------------------------------
+// EMAIL 10: Team Invitation / Staff Credentials Email
+// -----------------------------------------------------------------------------
+async function sendTeamInvitationEmail({
+  to,
+  name = 'Team Member',
+  role = 'Member',
+  workspaceName = 'PrimePro Workspace',
+  inviteUrl = 'https://primepro.ai/#/customer/login',
+  password = '',
+  employeeId = ''
+}) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = "You've Been Invited to a PrimePro Workspace";
+  const heading = "You're Invited!";
+
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${name}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">You have been invited to join a PrimePro workspace (<strong>${workspaceName}</strong>) as a <strong>${role}</strong>.</p>
+    <p style="margin: 0 0 14px 0;">Accept the invitation to access your organization's applications.</p>
+  `;
+
+  let extraHtml = '';
+  if (password || employeeId) {
+    extraHtml = `
+      <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 18px 20px; font-size: 13.5px;">
+        <div style="font-weight: 700; color: #082B68; margin-bottom: 8px;">Access Credentials</div>
+        ${employeeId ? `<div style="margin-bottom: 6px;"><strong>Member ID:</strong> <span style="font-family: monospace;">${employeeId}</span></div>` : ''}
+        <div style="margin-bottom: 6px;"><strong>Login Email:</strong> <span style="font-family: monospace;">${normEmail}</span></div>
+        ${password ? `<div><strong>Password:</strong> <span style="font-family: monospace; background: #E2E8F0; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${password}</span></div>` : ''}
+      </div>
+    `;
+  }
+
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    cardExtraHtml: extraHtml,
+    buttonText: 'Accept Invitation',
+    buttonUrl: inviteUrl,
+    subtextHtml: `Access your workspace at: <a href="${inviteUrl}" style="color: #12B5D8;">${inviteUrl}</a>`
+  });
+
+  const text = `You've Been Invited to a PrimePro Workspace!\n\nYou have been invited to join ${workspaceName} as a ${role}.\nAccept the invitation to access your organization's applications at: ${inviteUrl}`;
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html, text });
+}
+
+// Admin staff credentials email (compatible with existing admin callers)
 async function sendAdminStaffCredentialsEmail({ to, name, role, email, employeeId, password, assignedSoftware = [], loginUrl }) {
   const normEmail = String(to || email || '').trim().toLowerCase();
   const userName = name || 'Administrator';
   const userRole = role || 'Software Admin';
-  const userPwd = password || 'Welcome@2026';
-  const scope = Array.isArray(assignedSoftware) && assignedSoftware.length > 0 
-    ? assignedSoftware.join(', ') 
-    : 'All Platform Software & Websites';
-  
-  const portalUrl = loginUrl || process.env.ADMIN_LOGIN_URL || 'http://localhost:5173/admin/login';
-  const subject = `Your OXOO Admin & Staff Account Credentials (${userRole})`;
+  const userPwd = password || 'PrimeProAdmin@2026';
+  const portalUrl = loginUrl || process.env.ADMIN_LOGIN_URL || 'https://primepro.ai/#/admin/login';
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
-    <tr>
-      <td style="background: linear-gradient(135deg, #091322 0%, #0f172a 100%); padding: 32px 28px; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">OXOO</h1>
-        <div style="color: #38bdf8; font-size: 13px; font-weight: 600; margin-top: 6px; letter-spacing: 0.3px;">Enterprise Multi-App Platform</div>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 32px 28px;">
-        <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 14px 0;">
-          Welcome to the Team, ${userName}
-        </h2>
-        <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
-          An administrator account has been created for you on the <strong>OXOO Platform</strong>. You have been granted access as a <strong>${userRole}</strong>.
-        </p>
-
-        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-          <div style="font-size: 11px; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;">
-            Your Login Credentials
-          </div>
-          <table width="100%" style="font-size: 13px; color: #1e293b; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 6px 0; color: #64748b; width: 140px;">Role / Access:</td>
-              <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${userRole}</td>
-            </tr>
-            ${employeeId ? `
-            <tr>
-              <td style="padding: 6px 0; color: #64748b;">Staff / Admin ID:</td>
-              <td style="padding: 6px 0; font-family: monospace; font-weight: 700; color: #0284c7;">${employeeId}</td>
-            </tr>` : ''}
-            <tr>
-              <td style="padding: 6px 0; color: #64748b;">Login Email / ID:</td>
-              <td style="padding: 6px 0; font-family: monospace; font-weight: 700; color: #0f172a;">${normEmail}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #64748b;">Password:</td>
-              <td style="padding: 6px 0;">
-                <code style="background-color: #e2e8f0; color: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 14px; font-weight: 800; letter-spacing: 0.5px;">${userPwd}</code>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #64748b;">Assigned Scope:</td>
-              <td style="padding: 6px 0; font-size: 12px; color: #334155;">${scope}</td>
-            </tr>
-          </table>
-        </div>
-
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${portalUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 14px 34px; border-radius: 10px; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
-            Log In to Console →
-          </a>
-        </div>
-
-        <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px; padding-top: 18px; border-top: 1px solid #f1f5f9;">
-          Direct Console URL:<br>
-          <a href="${portalUrl}" style="color: #0284c7; word-break: break-all;">${portalUrl}</a>
-        </p>
-
-        <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 12px 14px; margin-top: 20px; font-size: 12px; color: #92400e;">
-          <strong>Security Notice:</strong> Please update your password after your first successful login from your Profile Settings.
-        </div>
-      </td>
-    </tr>
-
-    <tr>
-      <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
-        © ${new Date().getFullYear()} OXOO Enterprise Platform. All rights reserved.
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-
-  try {
-    const info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html
-    });
-    console.log(`[EmailService] Credentials email dispatched to ${normEmail} (${userRole}) [ID: ${info?.messageId || 'sim'}]`);
-    return { success: true, messageId: info?.messageId };
-  } catch (err) {
-    console.error(`[EmailService] Failed to dispatch credentials email to ${normEmail}:`, err.message);
-    return { success: false, error: err.message };
-  }
+  return await sendTeamInvitationEmail({
+    to: normEmail,
+    name: userName,
+    role: userRole,
+    workspaceName: 'PrimePro Control Center',
+    inviteUrl: portalUrl,
+    password: userPwd,
+    employeeId
+  });
 }
 
-// -------------------------------------------------------------
-// Admin Due & Renewal Notification Email
-// -------------------------------------------------------------
-async function sendAdminSubscriptionDueEmail({
-  adminEmail,
-  customerName = 'Customer',
-  companyName = 'My Organization',
-  customerEmail = '',
-  planName = 'Standard Pack',
-  dueDate = 'N/A',
-  amount = 0,
-  daysLeft = 0,
-  subscriptionId = '',
-  isRenewal = false,
-  status = 'Due Soon'
-}) {
-  const targetAdmin = adminEmail || process.env.ADMIN_NOTIFICATION_EMAIL || process.env.BREVO_SENDER_EMAIL || 'support@oxoo.ai';
-  const normEmail = targetAdmin.trim().toLowerCase();
-
-  const isOverdue = daysLeft < 0;
-  const statusColor = isRenewal ? '#16a34a' : isOverdue ? '#dc2626' : '#d97706';
-  const statusBadge = isRenewal ? 'RENEWAL COMPLETED' : isOverdue ? `OVERDUE (${Math.abs(daysLeft)} DAYS)` : `DUE IN ${daysLeft} DAYS`;
-
-  const subject = isRenewal
-    ? `[OXOO Admin Alert] Subscription Renewed: ${companyName} (${planName})`
-    : `[OXOO Admin Alert] Subscription Due Notice: ${companyName} (${isOverdue ? 'Overdue' : `${daysLeft} days remaining`})`;
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 30px 15px;">
-    <tr>
-      <td align="center">
-        <table width="100%" max-width="600px" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
-          <tr>
-            <td style="background: linear-gradient(135deg, #091322 0%, #1e293b 100%); padding: 26px 30px; text-align: left;">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">OXOO Admin Notification</h1>
-                  <span style="font-size: 12px; font-weight: 600; color: #38bdf8; display: block; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Subscription Lifecycle & Billing Alert
-                  </span>
-                </div>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 28px 30px;">
-              <div style="display: inline-block; padding: 4px 12px; border-radius: 9999px; background: ${statusColor}18; color: ${statusColor}; font-weight: 800; font-size: 12px; border: 1px solid ${statusColor}40; margin-bottom: 16px;">
-                ● ${statusBadge}
-              </div>
-
-              <h2 style="font-size: 19px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
-                ${isRenewal ? 'Customer Renewed Subscription' : 'Customer Subscription Payment Due'}
-              </h2>
-              <p style="font-size: 13.5px; line-height: 1.6; color: #475569; margin-bottom: 20px;">
-                ${isRenewal
-                  ? `<strong>${customerName}</strong> from <strong>${companyName}</strong> has completed their renewal payment.`
-                  : `A customer subscription is approaching its due date or is overdue. Please review details below:`}
-              </p>
-
-              <table width="100%" cellpadding="8" cellspacing="0" style="background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 13.5px; margin-bottom: 24px;">
-                <tr>
-                  <td width="38%" style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Company / Customer:</td>
-                  <td style="color: #0f172a; font-weight: 700; border-bottom: 1px solid #edf2f7;">${companyName} (${customerName})</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Customer Email:</td>
-                  <td style="color: #0284c7; font-weight: 600; border-bottom: 1px solid #edf2f7;">
-                    <a href="mailto:${customerEmail}" style="color: #0284c7; text-decoration: none;">${customerEmail || 'N/A'}</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Subscription ID:</td>
-                  <td style="color: #0f172a; font-family: monospace; font-weight: 700; border-bottom: 1px solid #edf2f7;">${subscriptionId || 'SUB-2026-ACTIVE'}</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Plan / Software:</td>
-                  <td style="color: #0f172a; font-weight: 700; border-bottom: 1px solid #edf2f7;">${planName}</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Due Date:</td>
-                  <td style="color: #0f172a; font-weight: 700; border-bottom: 1px solid #edf2f7;">${dueDate}</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600; border-bottom: 1px solid #edf2f7;">Amount:</td>
-                  <td style="color: #16a34a; font-weight: 800; border-bottom: 1px solid #edf2f7;">₹${Number(amount || 0).toLocaleString('en-IN')}</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b; font-weight: 600;">Time Remaining:</td>
-                  <td style="color: ${statusColor}; font-weight: 800;">
-                    ${isRenewal ? 'Active / Extended' : isOverdue ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days remaining`}
-                  </td>
-                </tr>
-              </table>
-
-              <div style="text-align: center; margin-top: 10px;">
-                <a href="http://localhost:5173/admin" style="display: inline-block; background: #0284c7; color: #ffffff; padding: 10px 22px; border-radius: 8px; font-size: 13.5px; font-weight: 700; text-decoration: none;">
-                  Manage in Admin Portal →
-                </a>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 30px; text-align: center; font-size: 11.5px; color: #94a3b8;">
-              OXOO Automated Billing & Renewal Notification Engine &bull; Confidential &copy; ${new Date().getFullYear()}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-
-  try {
-    const info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html
-    });
-    console.log(`[EmailService] Admin due notification sent to ${normEmail} for ${companyName} [ID: ${info?.messageId || 'sim'}]`);
-    return { success: true, messageId: info?.messageId };
-  } catch (err) {
-    console.error(`[EmailService] Failed to send admin due notification:`, err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-// -------------------------------------------------------------
-// Official First-Ticket Acknowledgement Email (Phase 6 Specification)
-// -------------------------------------------------------------
-async function sendTicketAcknowledgementEmail({ to, customerName, ticketNumber, ticketSubject, origin = 'http://localhost:5173' }) {
-  const normEmail = (to || '').trim().toLowerCase();
-  if (!normEmail) return { success: false, error: 'Recipient email required' };
-
-  const safeName = (customerName || 'Valued Customer').trim();
-  const safeTicketNum = (ticketNumber || '').trim();
-  const safeSubject = (ticketSubject || 'Support Inquiry').trim();
-
-  const subject = "We’ve Received Your OXOO Support Request";
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <tr>
-      <td style="padding: 28px 32px; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">OXOO Support Team</h1>
-        <p style="color: #e0f2fe; margin: 4px 0 0 0; font-size: 13px;">Official Ticket Confirmation · #${safeTicketNum}</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 32px; font-size: 15px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">Hello ${safeName},</p>
-        <p>Thank you for contacting the OXOO Support Team and creating support ticket <strong>${safeTicketNum}</strong>.</p>
-        <p>We have received your request regarding "<strong>${safeSubject}</strong>". Our team is here to help, and we will review your message and follow up as soon as possible.</p>
-        <p>You can view your ticket status, reply to the conversation, and share relevant documents through your OXOO Customer Portal.</p>
-        <div style="margin: 28px 0; text-align: center;">
-          <a href="${origin}/customer?tab=support" style="background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">Open Ticket in Customer Portal</a>
-        </div>
-        <p>Thank you for choosing OXOO. Our team is always here to support you.</p>
-        <p style="margin-bottom: 0;">Best regards,<br><strong>OXOO Support Team</strong></p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 16px 32px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
-        OXOO Technologies Inc. · All-in-One Intelligent Cloud Platform · This is an automated notification.
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-
-  try {
-    const info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html
-    });
-    console.log(`[EmailService] Ticket acknowledgement email sent to ${normEmail} for ticket ${safeTicketNum}`);
-    return { success: true, messageId: info?.messageId };
-  } catch (err) {
-    console.error(`[EmailService] Failed to send ticket acknowledgement email:`, err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-// -------------------------------------------------------------
-// Inquiry Confirmation Email (Phase 3 & 4 Specification)
-// -------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Additional Notification Handlers (Rebranded to PrimePro)
+// -----------------------------------------------------------------------------
 async function sendInquiryConfirmationEmail({ to, contactPerson, companyName, inquiryRef, category, productName, selectedPlan }) {
-  const normEmail = (to || '').trim().toLowerCase();
-  if (!normEmail) return { success: false, error: 'Recipient email required' };
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = `PrimePro Inquiry Acknowledged: ${inquiryRef}`;
+  const heading = 'We Received Your Inquiry';
 
-  const safePerson = (contactPerson || 'Customer').trim();
-  const safeCompany = (companyName || '').trim();
-  const safeRef = (inquiryRef || '').trim();
-  const safeCat = (category || 'Demo & Website Services').trim();
-  const safeProduct = (productName || safeCat).trim();
-  const safePlan = (selectedPlan || 'Custom Solution').trim();
-
-  const subject = `We’ve Received Your OXOO Inquiry [${safeRef}]`;
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <tr>
-      <td style="padding: 28px 32px; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">OXOO Enterprise Solutions</h1>
-        <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 13px;">Inquiry Reference: ${safeRef}</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 32px; font-size: 15px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">Hello ${safePerson},</p>
-        <p>Thank you for your interest in OXOO. We have received your inquiry for <strong>${safeProduct}</strong> (${safeCat}) under the <strong>${safePlan}</strong>.</p>
-        <div style="background-color: #f1f5f9; border-radius: 8px; padding: 16px; margin: 20px 0;">
-          <table width="100%" style="font-size: 13px; color: #475569;">
-            <tr><td style="padding: 4px 0; font-weight: 600; width: 140px;">Inquiry Reference:</td><td>${safeRef}</td></tr>
-            ${safeCompany ? `<tr><td style="padding: 4px 0; font-weight: 600;">Company:</td><td>${safeCompany}</td></tr>` : ''}
-            <tr><td style="padding: 4px 0; font-weight: 600;">Category:</td><td>${safeCat}</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: 600;">Interested Service:</td><td>${safeProduct}</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: 600;">Selected Plan:</td><td>${safePlan}</td></tr>
-          </table>
-        </div>
-        <p>Our solutions architecture team has received your details and an assigned specialist will follow up with you within one business day with customized specifications, timeline, and next steps.</p>
-        <p>If you have urgent questions, you can reply directly to this email.</p>
-        <p style="margin-bottom: 0;">Warm regards,<br><strong>OXOO Enterprise Solutions Team</strong></p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 16px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
-        OXOO Technologies Inc. · All-in-One Business Platform · oxoo.ai
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${contactPerson || 'Valued Partner'}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Thank you for your interest in PrimePro enterprise solutions for <strong>${companyName || 'your organization'}</strong>.</p>
+    <p style="margin: 0 0 14px 0;">Our enterprise team has received your inquiry (Ref: <strong>${inquiryRef}</strong>) regarding <strong>${productName || category || 'Enterprise Workspace'}</strong> (${selectedPlan || 'Custom Plan'}). A specialist will connect with you within 1 business day.</p>
   `;
 
-  try {
-    const info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html
-    });
-    console.log(`[EmailService] Inquiry confirmation email sent to ${normEmail} [Ref: ${safeRef}]`);
-    return { success: true, messageId: info?.messageId };
-  } catch (err) {
-    console.error(`[EmailService] Failed to send inquiry confirmation email:`, err.message);
-    return { success: false, error: err.message };
-  }
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    buttonText: 'Visit PrimePro',
+    buttonUrl: 'https://primepro.ai',
+    subtextHtml: 'Need urgent assistance? Reply directly to this email or contact support@primepro.ai.'
+  });
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html });
 }
 
-// -------------------------------------------------------------
-// Live Demo Request Notification Email (Sales/Support + Visitor)
-// -------------------------------------------------------------
-async function sendDemoRequestNotificationEmail({
-  requestRef,
-  fullName,
-  email,
-  phone,
-  companyName,
-  companyWebsite,
-  companySize,
-  demoId,
-  demoLabel,
-  preferredDate,
-  preferredTime,
-  requirements
-}) {
-  const normEmail = (email || '').trim().toLowerCase();
-  if (!normEmail) return { success: false, error: 'Visitor email is required' };
+async function sendDemoRequestNotificationEmail({ adminEmail = 'manminder.singh@primepro.ai', demoDetails = {} }) {
+  const subject = `[PrimePro Demo Request] ${demoDetails.customerName || 'New Lead'} - ${demoDetails.companyName || 'Business'}`;
+  const heading = 'New Live Demo Request';
 
-  const safeName = (fullName || 'Visitor').trim();
-  const safeCompany = (companyName || '').trim();
-  const safePhone = (phone || '').trim();
-  const safeWebsite = (companyWebsite || 'Not provided').trim();
-  const safeSize = (companySize || 'Not specified').trim();
-  const safeDemoLabel = (demoLabel || demoId || 'OXOO Live Demo').trim();
-  const safeDate = (preferredDate || 'Flexible').trim();
-  const safeTime = (preferredTime || 'Flexible').trim();
-  const safeNotes = (requirements || 'None provided').trim();
-  const safeRef = (requestRef || 'DEMO-2026').trim();
-
-  const salesTeamRecipient = (
-    process.env.SALES_NOTIFICATION_EMAIL ||
-    process.env.SUPPORT_EMAIL ||
-    process.env.EMAIL_USER ||
-    'hello@oxoo.ai'
-  ).trim();
-
-  const salesSubject = `[New Live Demo Request] ${safeDemoLabel} — ${safeCompany} (${safeRef})`;
-  const salesHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>${salesSubject}</title></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
-    <tr>
-      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">New OXOO.ai Live Demo Request</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Demo: ${safeDemoLabel}</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">A visitor has requested access to the <strong>${safeDemoLabel}</strong> live demo and personalized walkthrough:</p>
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 16px 0;">
-          <table width="100%" style="font-size: 13px; color: #334155;">
-            <tr><td style="padding: 5px 0; font-weight: 700; width: 160px;">Full Name:</td><td>${safeName}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Business Email:</td><td>${normEmail}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Phone Number:</td><td>${safePhone}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Company Name:</td><td>${safeCompany}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Company Website:</td><td>${safeWebsite}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Company Size:</td><td>${safeSize}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Interested Demo:</td><td>${safeDemoLabel}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Preferred Date:</td><td>${safeDate}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Preferred Time:</td><td>${safeTime}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700; vertical-align: top;">Requirements:</td><td>${safeNotes}</td></tr>
-          </table>
-        </div>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">A new enterprise demo was requested on PrimePro.</p>
+    <div style="background-color: #F4F8FC; border: 1px solid #D8E6F5; border-radius: 10px; padding: 18px 20px; font-size: 13.5px;">
+      <div><strong>Name:</strong> ${demoDetails.customerName || 'N/A'}</div>
+      <div><strong>Email:</strong> ${demoDetails.customerEmail || 'N/A'}</div>
+      <div><strong>Phone:</strong> ${demoDetails.customerPhone || 'N/A'}</div>
+      <div><strong>Company:</strong> ${demoDetails.companyName || 'N/A'}</div>
+      <div><strong>App / Suite:</strong> ${demoDetails.appName || demoDetails.selectedApp || 'General Demo'}</div>
+    </div>
   `;
 
-  try {
-    // 1. Notify Sales / Support Team
-    const salesInfo = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: salesTeamRecipient,
-      subject: salesSubject,
-      html: salesHtml
-    });
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    buttonText: 'Open Admin Dashboard',
+    buttonUrl: 'https://primepro.ai/#/admin'
+  });
 
-    // 2. Send Visitor Confirmation
-    await sendInquiryConfirmationEmail({
-      to: normEmail,
-      contactPerson: safeName,
-      companyName: safeCompany,
-      inquiryRef: safeRef,
-      category: 'Live Demo Request',
-      productName: safeDemoLabel,
-      selectedPlan: safeSize !== 'Not specified' ? `Company Size: ${safeSize}` : 'Live Interactive Demo'
-    });
-
-    return { success: true, messageId: salesInfo?.messageId || `mock-${Date.now()}` };
-  } catch (err) {
-    console.error(`[EmailService] Failed to send demo request notification:`, err.message);
-    return { success: false, error: err.message };
-  }
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: adminEmail, subject, html });
 }
 
-/**
- * Send notification to OXOO Sales/Projects team and confirmation to customer
- * when a new Project Request is submitted.
- */
-async function sendProjectRequestNotificationEmail({
-  requestId,
-  customerName,
-  businessEmail,
-  phoneNumber,
-  companyName,
-  country,
-  selectedCategories,
-  selectedServices,
-  projectTitle,
-  projectDescription,
-  budgetRange,
-  preferredStartDate,
-  expectedCompletionDate
-}) {
-  const normEmail = (businessEmail || '').toLowerCase().trim();
-  const safeRef = (requestId || 'PRJ-2026').trim();
-  const safeName = (customerName || 'Valued Client').trim();
-  const safeCompany = (companyName || 'Organization').trim();
-  const safeTitle = (projectTitle || 'Custom Digital Solution').trim();
-  const safeCats = Array.isArray(selectedCategories) && selectedCategories.length > 0 ? selectedCategories.join(', ') : 'General';
-  const safeSvcs = Array.isArray(selectedServices) && selectedServices.length > 0 ? selectedServices.join(', ') : 'Custom Scope';
+async function sendProjectRequestNotificationEmail({ to, customerName, projectName, projectRef, details = {} }) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = `PrimePro Project Request Acknowledged: ${projectRef}`;
+  const heading = 'Project Scope Received';
 
-  const teamRecipient = (
-    process.env.SALES_NOTIFICATION_EMAIL ||
-    process.env.SUPPORT_EMAIL ||
-    process.env.EMAIL_USER ||
-    'hello@oxoo.ai'
-  ).trim();
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName || 'Partner'}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Thank you for submitting your project request for <strong>${projectName || 'Custom Development'}</strong> (Ref: <strong>${projectRef}</strong>) on PrimePro.</p>
+    <p style="margin: 0 0 14px 0;">Our solutions architect will review the requirements and schedule an alignment session.</p>
+  `;
 
-  const teamSubject = `[New Project Request] ${safeRef} — ${safeTitle} (${safeCompany})`;
-  const teamHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>${teamSubject}</title></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
-    <tr>
-      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">New OXOO.ai Project Request</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: ${safeRef} · Company: ${safeCompany}</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">A new project enquiry has been submitted through the OXOO.ai Projects Hub:</p>
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 16px 0;">
-          <table width="100%" style="font-size: 13px; color: #334155;">
-            <tr><td style="padding: 5px 0; font-weight: 700; width: 170px;">Reference ID:</td><td><strong>${safeRef}</strong></td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Customer Name:</td><td>${safeName}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Business Email:</td><td>${normEmail}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Phone:</td><td>${phoneNumber || 'Not provided'}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Company & Country:</td><td>${safeCompany} (${country || 'Global'})</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Categories:</td><td>${safeCats}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Selected Services:</td><td>${safeSvcs}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Project Title:</td><td>${safeTitle}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Budget Range:</td><td>${budgetRange || 'Flexible / To be discussed'}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Timeline:</td><td>Start: ${preferredStartDate || 'Flexible'} · Target: ${expectedCompletionDate || 'Flexible'}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700; vertical-align: top;">Summary:</td><td>${projectDescription || ''}</td></tr>
-          </table>
-        </div>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    buttonText: 'View Workspace',
+    buttonUrl: 'https://primepro.ai/#/customer/login'
+  });
 
-  const customerSubject = `Project Request Received — ${safeRef} | OXOO.ai`;
-  const customerHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>${customerSubject}</title></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.04);">
-    <tr>
-      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">We've Received Your Project Request</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: <strong>${safeRef}</strong></p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">Hi <strong>${safeName}</strong>,</p>
-        <p>Thank you for submitting your project request to <strong>OXOO.ai</strong>. Our solutions architects and engineering team are reviewing your project requirements.</p>
-
-        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 20px 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Your Submitted Project Details</h3>
-        
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 12px 0 20px 0;">
-          <table width="100%" style="font-size: 13.5px; color: #334155; border-collapse: collapse;">
-            <tr><td style="padding: 6px 0; font-weight: 700; width: 170px; color: #64748b;">Reference ID:</td><td style="padding: 6px 0; font-weight: 800; color: #0284c7;">${safeRef}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Full Name:</td><td style="padding: 6px 0;">${safeName}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Email Address:</td><td style="padding: 6px 0;">${normEmail}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Phone Number:</td><td style="padding: 6px 0;">${phoneNumber || 'Not provided'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Country:</td><td style="padding: 6px 0;">${country || 'Global'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Project Title:</td><td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${safeTitle}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Selected Services:</td><td style="padding: 6px 0;"><span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 600;">${safeSvcs}</span></td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Service Categories:</td><td style="padding: 6px 0;">${safeCats}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Budget Range:</td><td style="padding: 6px 0;">${budgetRange || 'Flexible / To be discussed'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Estimated Timeline:</td><td style="padding: 6px 0;">Start: ${preferredStartDate || 'Flexible'} · Target: ${expectedCompletionDate || 'Flexible'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b; vertical-align: top;">Project Brief:</td><td style="padding: 6px 0; line-height: 1.5;">${(projectDescription || '').replace(/\n/g, '<br/>')}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Current Status:</td><td style="padding: 6px 0; font-weight: 700; color: #0284c7;">New (Under Architecture Review)</td></tr>
-          </table>
-        </div>
-
-        <!-- Direct change / assistance box -->
-        <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 16px; margin: 20px 0;">
-          <h4 style="margin: 0 0 6px 0; color: #166534; font-size: 14px; font-weight: 700;">Need to change or update anything?</h4>
-          <p style="margin: 0 0 10px 0; font-size: 13px; color: #15803d; line-height: 1.5;">
-            If you want to update any details, add more requirements, adjust your timeline, or connect with our engineering team, reach out directly:
-          </p>
-          <table width="100%" style="font-size: 13px; color: #166534;">
-            <tr><td style="padding: 3px 0; width: 140px; font-weight: 700;">• Direct Reply:</td><td>Simply reply directly to this email with your updates.</td></tr>
-            <tr><td style="padding: 3px 0; font-weight: 700;">• Email Us:</td><td><a href="mailto:hello@oxoo.ai" style="color: #0284c7; font-weight: 600; text-decoration: underline;">hello@oxoo.ai</a></td></tr>
-            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 79 4050 0100</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
-          </table>
-        </div>
-
-        <p style="margin: 20px 0 0 0; font-size: 13px; color: #64748b;">
-          A dedicated specialist from our team will reach out within 1 business day with architecture recommendations and a transparent proposal.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 16px 30px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
-        © 2026 OXOO.ai Inc. Bengaluru, India · One Platform. Every Business Workflow.
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  try {
-    const teamInfo = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: teamRecipient,
-      subject: teamSubject,
-      html: teamHtml
-    });
-    let custInfo = null;
-    if (normEmail) {
-      custInfo = await sendMailWithFallback({
-        from: DEFAULT_FROM,
-        to: normEmail,
-        subject: customerSubject,
-        html: customerHtml
-      });
-    }
-    const isRealDelivery = Boolean(
-      teamInfo?.messageId && !String(teamInfo.messageId).startsWith('mock-id-')
-    );
-    return {
-      success: true,
-      delivered: isRealDelivery,
-      messageId: custInfo?.messageId || teamInfo?.messageId || null
-    };
-  } catch (err) {
-    console.error('[EmailService] sendProjectRequestNotificationEmail error:', err.message);
-    return { success: false, delivered: false, error: err.message };
-  }
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html });
 }
 
-/**
- * Send notification when a Consultation Call Request is submitted or updated.
- */
-async function sendConsultationRequestNotificationEmail({
-  requestId,
-  customerName,
-  businessEmail,
-  phoneNumber,
-  companyName,
-  country,
-  preferredContactMethod,
-  preferredDate,
-  preferredTime,
-  selectedServices,
-  projectSummary
-}) {
-  const normEmail = (businessEmail || '').toLowerCase().trim();
-  const safeRef = (requestId || 'CNS-2026').trim();
-  const safeName = (customerName || 'Valued Client').trim();
-  const safeCompany = (companyName || 'Organization').trim();
-  const safeSvcs = Array.isArray(selectedServices) && selectedServices.length > 0 ? selectedServices.join(', ') : 'General Consultation';
+async function sendConsultationRequestNotificationEmail({ to, customerName, consultationDate, topic }) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = `PrimePro Consultation Confirmed: ${topic || 'Enterprise Architecture'}`;
+  const heading = 'Consultation Scheduled';
 
-  const teamRecipient = (
-    process.env.SALES_NOTIFICATION_EMAIL ||
-    process.env.SUPPORT_EMAIL ||
-    process.env.EMAIL_USER ||
-    'hello@oxoo.ai'
-  ).trim();
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName || 'Valued Partner'}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">Your enterprise consultation with PrimePro has been scheduled.</p>
+    <p style="margin: 0 0 14px 0;">Date/Time: <strong>${consultationDate || 'Upcoming'}</strong><br>Topic: <strong>${topic || 'Enterprise Software Architecture'}</strong></p>
+  `;
 
-  const teamSubject = `[New Consultation Request] ${safeRef} — ${safeName} (${safeCompany})`;
-  const teamHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>${teamSubject}</title></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
-    <tr>
-      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">New Consultation Call Request</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Company: ${safeCompany}</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 26px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">A customer has requested a consultation call via the OXOO.ai Projects page:</p>
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 16px 0;">
-          <table width="100%" style="font-size: 13px; color: #334155;">
-            <tr><td style="padding: 5px 0; font-weight: 700; width: 170px;">Reference ID:</td><td><strong>${safeRef}</strong></td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Customer:</td><td>${safeName} (${normEmail})</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Phone:</td><td>${phoneNumber || 'Not provided'}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Company & Country:</td><td>${safeCompany} (${country || 'Global'})</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Contact Method:</td><td>${preferredContactMethod || 'Phone / Video'}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Requested Slot:</td><td>${preferredDate ? `${preferredDate} ${preferredTime || ''}` : 'Flexible / Earliest available'}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700;">Selected Services:</td><td>${safeSvcs}</td></tr>
-            <tr><td style="padding: 5px 0; font-weight: 700; vertical-align: top;">Project Summary:</td><td>${projectSummary || ''}</td></tr>
-          </table>
-        </div>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    buttonText: 'Join Workspace',
+    buttonUrl: 'https://primepro.ai'
+  });
 
-  const customerSubject = `Consultation Request Received — ${safeRef} | OXOO.ai`;
-  const customerHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>${customerSubject}</title></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.04);">
-    <tr>
-      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Consultation Call Request Received</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: <strong>${safeRef}</strong></p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 28px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">Hi <strong>${safeName}</strong>,</p>
-        <p>Thank you for requesting a consultation call with <strong>OXOO.ai</strong>. We have logged your appointment request and our solutions specialist is preparing for your session.</p>
-
-        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 20px 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Your Consultation Request Details</h3>
-        
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 12px 0 20px 0;">
-          <table width="100%" style="font-size: 13.5px; color: #334155; border-collapse: collapse;">
-            <tr><td style="padding: 6px 0; font-weight: 700; width: 170px; color: #64748b;">Reference ID:</td><td style="padding: 6px 0; font-weight: 800; color: #0284c7;">${safeRef}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Full Name:</td><td style="padding: 6px 0;">${safeName}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Email Address:</td><td style="padding: 6px 0;">${normEmail}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Phone Number:</td><td style="padding: 6px 0;">${phoneNumber || 'Not provided'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Country:</td><td style="padding: 6px 0;">${country || 'Global'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Contact Method:</td><td style="padding: 6px 0; font-weight: 600;">${preferredContactMethod || 'Phone / Video Call'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Requested Slot:</td><td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${preferredDate ? `${preferredDate} · ${preferredTime || '10:00 AM – 10:30 AM'}` : 'Flexible / Earliest available'}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Selected Services:</td><td style="padding: 6px 0;"><span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 600;">${safeSvcs}</span></td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b; vertical-align: top;">Project Brief:</td><td style="padding: 6px 0; line-height: 1.5;">${(projectSummary || 'Discussion of digital project requirements').replace(/\n/g, '<br/>')}</td></tr>
-            <tr><td style="padding: 6px 0; font-weight: 700; color: #64748b;">Appointment Status:</td><td style="padding: 6px 0; color: #d97706; font-weight: 700;">Pending Confirmation by Team</td></tr>
-          </table>
-        </div>
-
-        <!-- Direct change / reschedule box -->
-        <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 16px; margin: 20px 0;">
-          <h4 style="margin: 0 0 6px 0; color: #166534; font-size: 14px; font-weight: 700;">Need to reschedule or update your details?</h4>
-          <p style="margin: 0 0 10px 0; font-size: 13px; color: #15803d; line-height: 1.5;">
-            If you need to change your appointment slot, update your contact number, or modify your project requirements, connect directly with our team:
-          </p>
-          <table width="100%" style="font-size: 13px; color: #166534;">
-            <tr><td style="padding: 3px 0; width: 140px; font-weight: 700;">• Direct Reply:</td><td>Simply reply directly to this email with your preferred new date/time or notes.</td></tr>
-            <tr><td style="padding: 3px 0; font-weight: 700;">• Email Us:</td><td><a href="mailto:hello@oxoo.ai" style="color: #0284c7; font-weight: 600; text-decoration: underline;">hello@oxoo.ai</a></td></tr>
-            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 79 4050 0100</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
-          </table>
-        </div>
-
-        <p style="margin: 20px 0 0 0; font-size: 13px; color: #64748b;">
-          Our team will send you a calendar invite and confirmation as soon as your slot is confirmed.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 16px 30px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
-        © 2026 OXOO.ai Inc. Bengaluru, India · One Platform. Every Business Workflow.
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  try {
-    const teamInfo = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: teamRecipient,
-      subject: teamSubject,
-      html: teamHtml
-    });
-    if (normEmail) {
-      await sendMailWithFallback({
-        from: DEFAULT_FROM,
-        to: normEmail,
-        subject: customerSubject,
-        html: customerHtml
-      });
-    }
-    const isRealDelivery = Boolean(
-      teamInfo?.messageId && !String(teamInfo.messageId).startsWith('mock-id-')
-    );
-    return {
-      success: true,
-      delivered: isRealDelivery,
-      messageId: teamInfo?.messageId || null
-    };
-  } catch (err) {
-    console.error('[EmailService] sendConsultationRequestNotificationEmail error:', err.message);
-    return { success: false, delivered: false, error: err.message };
-  }
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html });
 }
 
-/**
- * Send an email to the customer when an admin updates their Project/Consultation status
- * or requests additional information.
- */
-async function sendProjectStatusUpdateEmail({
-  to,
-  customerName,
-  requestId,
-  newStatus,
-  messageToCustomer,
-  confirmedDate,
-  confirmedTime,
-  meetingLink
-}) {
-  const normEmail = (to || '').toLowerCase().trim();
-  if (!normEmail) return { success: false, delivered: false };
-  const safeName = (customerName || 'Valued Client').trim();
-  const safeRef = (requestId || 'PRJ-2026').trim();
+async function sendProjectStatusUpdateEmail({ to, customerName, projectName, status, message }) {
+  const normEmail = String(to || '').trim().toLowerCase();
+  const subject = `PrimePro Project Update: ${projectName} [${status}]`;
+  const heading = `Project Update: ${status}`;
 
-  const subject = `Update on Your OXOO.ai Request (${safeRef}) — ${newStatus}`;
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>${subject}</title></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
-    <tr>
-      <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">OXOO.ai Request Update</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Status: ${newStatus}</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 26px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
-        <p style="margin-top: 0;">Hi <strong>${safeName}</strong>,</p>
-        <p>Your OXOO.ai request <strong>${safeRef}</strong> has been updated to: <strong>${newStatus}</strong>.</p>
-        ${
-          confirmedDate
-            ? `<div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px; margin: 14px 0;">
-                <p style="margin: 0 0 4px 0;"><strong>Confirmed Consultation Date:</strong> ${confirmedDate} ${confirmedTime || ''}</p>
-                ${meetingLink ? `<p style="margin: 0;"><strong>Meeting Link:</strong> <a href="${meetingLink}" style="color: #0284c7;">${meetingLink}</a></p>` : ''}
-              </div>`
-            : ''
-        }
-        ${
-          messageToCustomer
-            ? `<div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 16px; margin: 16px 0;">
-                <p style="margin: 0; font-size: 13px; color: #0f172a;"><strong>Message from OXOO.ai Team:</strong><br/>${messageToCustomer}</p>
-              </div>`
-            : ''
-        }
-        <p style="margin-bottom: 0;">If you have any questions or additional details to share, simply reply to this email or contact us at <a href="mailto:hello@oxoo.ai" style="color: #0284c7;">hello@oxoo.ai</a>.</p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  const bodyHtml = `
+    <p style="margin: 0 0 14px 0;">Hello <strong>${customerName || 'Partner'}</strong>,</p>
+    <p style="margin: 0 0 14px 0;">There is an update on your project <strong>${projectName}</strong>.</p>
+    <p style="margin: 0 0 14px 0;">Status: <strong>${status}</strong></p>
+    ${message ? `<p style="margin: 0 0 14px 0; padding: 12px 16px; background: #F4F8FC; border-left: 3px solid #12B5D8;">${message}</p>` : ''}
+  `;
 
-  try {
-    const info = await sendMailWithFallback({
-      from: DEFAULT_FROM,
-      to: normEmail,
-      subject,
-      html
-    });
-    const isRealDelivery = Boolean(info?.messageId && !String(info.messageId).startsWith('mock-id-'));
-    return { success: true, delivered: isRealDelivery, messageId: info?.messageId || null };
-  } catch (err) {
-    console.error('[EmailService] sendProjectStatusUpdateEmail error:', err.message);
-    return { success: false, delivered: false, error: err.message };
-  }
+  const html = buildPrimeProEmailHtml({
+    subject,
+    heading,
+    bodyHtml,
+    buttonText: 'View Project',
+    buttonUrl: 'https://primepro.ai/#/customer/login'
+  });
+
+  return await sendMailWithFallback({ from: DEFAULT_FROM, to: normEmail, subject, html });
 }
 
 module.exports = {
+  // Core 10 Email Notification Handlers as specified by PrimePro
+  sendWelcomeEmail,
   sendOtpEmail,
-  verifyOtp,
-  sendInvoiceAndCredentialsEmail,
   sendPasswordResetEmail,
+  sendSubscriptionConfirmationEmail,
+  sendSubscriptionReminderEmail,
+  sendPaymentSuccessEmail,
+  sendPaymentFailedEmail,
+  sendInvoiceReadyEmail,
+  sendSupportTicketUpdateEmail,
+  sendTeamInvitationEmail,
+
+  // Backwards-compatible aliases & existing endpoints
+  verifyOtp,
+  sendSmsOtp,
+  sendInvoiceAndCredentialsEmail,
   sendAdminStaffCredentialsEmail,
   sendAdminSubscriptionDueEmail,
   sendTicketAcknowledgementEmail,
@@ -1720,5 +1185,6 @@ module.exports = {
   sendProjectRequestNotificationEmail,
   sendConsultationRequestNotificationEmail,
   sendProjectStatusUpdateEmail,
-  sendMailWithFallback
+  sendMailWithFallback,
+  buildPrimeProEmailHtml
 };

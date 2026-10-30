@@ -351,7 +351,7 @@ export default function IntegrationsModule({ showToast, logAuditEvent }) {
                 <label className="oxoo-form-label">Webhook Endpoint / Callback URL</label>
                 <input
                   type="url"
-                  placeholder="https://api.oxoo.ai/api/webhooks/..."
+                  placeholder="https://api.primepro.ai/api/webhooks/..."
                   className="oxoo-form-input"
                   value={configForm.webhook_url}
                   onChange={(e) => setConfigForm({ ...configForm, webhook_url: e.target.value })}

@@ -148,7 +148,7 @@ export default function NeedsContactModule({ onToast }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `OXOO_Client_Needs_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `PrimePro_Client_Needs_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -665,7 +665,7 @@ export default function NeedsContactModule({ onToast }) {
                           )}
                           {lead.email && (
                             <a
-                              href={`mailto:${lead.email}?subject=OXOO%20Platform%20-%20Regarding%20Your%20Inquiry`}
+                              href={`mailto:${lead.email}?subject=PrimePro%20Platform%20-%20Regarding%20Your%20Inquiry`}
                               title="Send Email"
                               style={{
                                 width: '30px',
@@ -894,7 +894,7 @@ export default function NeedsContactModule({ onToast }) {
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {selectedLead.email && (
                     <a
-                      href={`mailto:${selectedLead.email}?subject=OXOO%20Platform%20Follow-up`}
+                      href={`mailto:${selectedLead.email}?subject=PrimePro%20Platform%20Follow-up`}
                       style={{
                         flex: 1,
                         padding: '10px',
