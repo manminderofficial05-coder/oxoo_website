@@ -544,7 +544,7 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
 ## 16. Homepage Showcase Video Replacement & Audio Mute/Unmute Controls
 
 1. **Section Video Updates (`frontend/src/App.jsx`):**
-   - **"Level up your quality of work":** Replaced default external video with local static video asset `/oxoo_home.mp4` (`frontend/public/oxoo_home.mp4`).
+   - **"Level up your quality of work":** Replaced default external video with local static video asset `/oxoo_hoome.mp4` (`frontend/public/oxoo_hoome.mp4`).
    - **"Native AI across all your business":** Replaced external AI video with local static video asset `/oxoo_website.mp4` (`frontend/public/oxoo_website.mp4`).
 2. **Video Audio Toggle Control (`HomepageVideoPlayer` & `frontend/src/styles.css`):**
    - Preserved identical video container styling, curved squircle border (`12px`), drop shadows, play/pause toggle, and timeline scrubber slider.

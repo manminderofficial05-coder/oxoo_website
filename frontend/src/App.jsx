@@ -93,7 +93,7 @@ const HERO_APP_CARDS = [
 // HOMEPAGE VIDEO PLAYER COMPONENT
 // -------------------------------------------------------------
 function HomepageVideoPlayer({
-  srcMp4 = "/oxoo_home.mp4",
+  srcMp4 = "/oxoo_hoome.mp4",
   srcWebm = null
 }) {
   const videoRef = useRef(null);
@@ -525,7 +525,7 @@ function Home() {
               </span>
             </h2>
 
-            <HomepageVideoPlayer srcMp4="/oxoo_home.mp4" />
+            <HomepageVideoPlayer srcMp4="/oxoo_hoome.mp4" />
           </div>
 
           {/* Part 2: Optimized for productivity + Layered Tasks & Ask AI collage */}
