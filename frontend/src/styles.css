@@ -3839,6 +3839,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .video-ctrl-btn:hover {
   transform: scale(1.1);
+  color: #55344d;
+}
+
+.video-sound-btn {
+  border-radius: 50%;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.video-sound-btn:hover {
+  background: rgba(113, 75, 103, 0.08);
 }
 
 .video-pause-bars {

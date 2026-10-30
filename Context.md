@@ -538,3 +538,15 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
 6. **Universal Price Standardization (₹580 to ₹560) (`frontend/src/pricingConfig.js`, `backend/src/pricingConfig.js`, `frontend/src/PricingPage.jsx`, `frontend/src/CheckoutPage.jsx`):**
    - Updated the authoritative annual pricing and additional app rate from ₹580 to ₹560 across frontend and backend single-source-of-truth pricing configurations.
    - Updated module package items and fallback defaults on `PricingPage.jsx` and `CheckoutPage.jsx` so all yearly prices and checkout totals reflect ₹560/mo (billed annually as ₹6,720 + GST).
+
+---
+
+## 16. Homepage Showcase Video Replacement & Audio Mute/Unmute Controls
+
+1. **Section Video Updates (`frontend/src/App.jsx`):**
+   - **"Level up your quality of work":** Replaced default external video with local static video asset `/oxoo_home.mp4` (`frontend/public/oxoo_home.mp4`).
+   - **"Native AI across all your business":** Replaced external AI video with local static video asset `/oxoo_website.mp4` (`frontend/public/oxoo_website.mp4`).
+2. **Video Audio Toggle Control (`HomepageVideoPlayer` & `frontend/src/styles.css`):**
+   - Preserved identical video container styling, curved squircle border (`12px`), drop shadows, play/pause toggle, and timeline scrubber slider.
+   - Added an integrated Audio On/Off toggle button (`Volume2` / `VolumeX` from `lucide-react`) positioned beside the timeline scrubber.
+   - Videos autoplay muted (`muted={isMuted}`) in compliance with browser autoplay security policies, allowing users to toggle audio on or off with a single click.

@@ -8,7 +8,8 @@ import {
   MapPin, Clock, Filter, CheckCircle2, Send, LayoutDashboard, Users, CircleDollarSign,
   Ticket, PackageCheck, TrendingUp, Plus, ExternalLink, Globe2, Layers, Cpu,
   Laptop, Smartphone, ShoppingCart, MessageCircle, Star, Building2, Briefcase,
-  HelpCircle, ChevronDown, CheckCheck, Headphones, LogIn
+  HelpCircle, ChevronDown, CheckCheck, Headphones, LogIn,
+  Volume2, VolumeX
 } from 'lucide-react';
 import { Header, Footer, SectionHeading, ServiceCard, CTA, Logo, PartnerLogos, VideoModal, AnimatedHeroTitle } from './components';
 import { categories, services, industries } from './data';
@@ -92,11 +93,12 @@ const HERO_APP_CARDS = [
 // HOMEPAGE VIDEO PLAYER COMPONENT
 // -------------------------------------------------------------
 function HomepageVideoPlayer({
-  srcWebm = "https://download.odoocdn.com/videos/odoo_com/video_homepage.webm",
-  srcMp4 = "https://download.odoocdn.com/videos/odoo_com/video_homepage.mp4"
+  srcMp4 = "/oxoo_home.mp4",
+  srcWebm = null
 }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
 
   const togglePlay = () => {
@@ -108,6 +110,13 @@ function HomepageVideoPlayer({
       videoRef.current.play();
       setIsPlaying(true);
     }
+  };
+
+  const toggleAudio = () => {
+    if (!videoRef.current) return;
+    const nextMuted = !videoRef.current.muted;
+    videoRef.current.muted = nextMuted;
+    setIsMuted(nextMuted);
   };
 
   const handleTimeUpdate = () => {
@@ -136,24 +145,25 @@ function HomepageVideoPlayer({
           ref={videoRef}
           autoPlay
           loop
-          muted
+          muted={isMuted}
           playsInline
           onTimeUpdate={handleTimeUpdate}
           className="homepage-showcase-video"
-          key={srcWebm}
+          key={srcMp4}
         >
-          <source src={srcWebm} type="video/webm" />
+          {srcWebm && <source src={srcWebm} type="video/webm" />}
           {srcMp4 && <source src={srcMp4} type="video/mp4" />}
         </video>
       </div>
 
-      {/* Video Scrubber & Play/Pause Controls */}
+      {/* Video Scrubber & Play/Pause & Audio Controls */}
       <div className="homepage-video-controls">
         <button
           type="button"
           onClick={togglePlay}
           className="video-ctrl-btn"
           aria-label={isPlaying ? 'Pause video' : 'Play video'}
+          title={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
             <span className="video-pause-bars" aria-hidden="true">
@@ -180,6 +190,20 @@ function HomepageVideoPlayer({
             }}
           />
         </div>
+
+        <button
+          type="button"
+          onClick={toggleAudio}
+          className="video-ctrl-btn video-sound-btn"
+          aria-label={isMuted ? 'Turn audio on' : 'Turn audio off'}
+          title={isMuted ? 'Audio off (click to unmute)' : 'Audio on (click to mute)'}
+        >
+          {isMuted ? (
+            <VolumeX size={16} strokeWidth={2.2} />
+          ) : (
+            <Volume2 size={16} strokeWidth={2.2} />
+          )}
+        </button>
       </div>
     </div>
   );
@@ -501,7 +525,7 @@ function Home() {
               </span>
             </h2>
 
-            <HomepageVideoPlayer />
+            <HomepageVideoPlayer srcMp4="/oxoo_home.mp4" />
           </div>
 
           {/* Part 2: Optimized for productivity + Layered Tasks & Ask AI collage */}
@@ -604,8 +628,7 @@ function Home() {
             </h2>
 
             <HomepageVideoPlayer
-              srcWebm="https://download.odoocdn.com/videos/odoo_com/video_ai_homepage.webm"
-              srcMp4="https://download.odoocdn.com/videos/odoo_com/video_ai_homepage.mp4"
+              srcMp4="/oxoo_website.mp4"
             />
 
             <p className="native-ai-subtext">
