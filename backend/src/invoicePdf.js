@@ -55,15 +55,17 @@ function generateInvoicePdf(data) {
       // --- 1. Top Brand Banner ---
       doc.rect(40, 40, 515, 65).fill(primaryColor);
 
-      doc.fillColor('#ffffff')
-        .fontSize(22)
-        .font('Helvetica-Bold')
-        .text('OXOO', 56, 52);
-
-      doc.fillColor('#38bdf8')
-        .fontSize(9)
-        .font('Helvetica')
-        .text('MULTIIX ENTERPRISE SUITE', 56, 78);
+      // Official White OXOO Logo Image
+      const path = require('path');
+      const logoPath = path.resolve(__dirname, 'assets/oxoo-logo-white.png');
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 52, 53, { height: 38 });
+      } else {
+        doc.fillColor('#ffffff')
+          .fontSize(22)
+          .font('Helvetica-Bold')
+          .text('OXOO', 56, 52);
+      }
 
       doc.fillColor('#ffffff')
         .fontSize(16)

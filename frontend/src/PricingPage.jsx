@@ -103,12 +103,27 @@ export default function PricingPage() {
   };
 
   const [selectedSoftware, setSelectedSoftware] = useState(() => normalizeSoftware(querySoftware));
+  const [customSelectedApps, setCustomSelectedApps] = useState(() => {
+    const primary = normalizeSoftware(querySoftware);
+    const secondary = primary === 'sales' ? 'finance' : 'sales';
+    return [primary, secondary];
+  });
   const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
 
   // State: Billing toggle (default yearly)
   const [isYearly, setIsYearly] = useState(true);
 
   const activeModule = SOFTWARE_MODULES.find((m) => m.id === selectedSoftware) || SOFTWARE_MODULES[0];
+
+  const toggleCustomApp = (id) => {
+    setCustomSelectedApps((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length <= 1) return prev; // Keep at least one
+        return prev.filter((item) => item !== id);
+      }
+      return [...prev, id];
+    });
+  };
 
   // Derived regional plan prices safely aligned with pricingConfig schema
   const single = currentRegion?.plans?.singleApp || {};
@@ -138,10 +153,18 @@ export default function PricingPage() {
     ? Math.round(((customPlan.originalPrice - customPlan.price) / customPlan.originalPrice) * 100)
     : (customPlan.discountPercent || 0);
 
+  // Calculate live custom total based on selected apps count
+  // Base includes 2 software suites, additional apps add addlPlan.price
+  const customCount = customSelectedApps.length;
+  const customAdditionalCount = Math.max(0, customCount - 2);
+  const customLivePrice = customPlan.price + (customAdditionalCount * addlPlan.price);
+  const customLiveOriginalPrice = customPlan.originalPrice + (customAdditionalCount * (isYearly ? (custom.yearlyStrikethroughAdditionalPrice ?? 740) : 975));
+
   // Navigate to full-page checkout flow carrying selected product and parameters forward!
   const handleGoToCheckout = (plan, trial = false) => {
     const compParam = queryCompany ? `&company=${encodeURIComponent(queryCompany)}` : '';
-    navigate(`/checkout?plan=${plan}&apps=${selectedSoftware}&billing=${isYearly ? 'yearly' : 'monthly'}${trial ? '&trial=true' : ''}${compParam}&country=${currentRegion.regionCode}&currency=${currentRegion.currency}`);
+    const appsToPass = plan === 'custom' ? customSelectedApps.join(',') : selectedSoftware;
+    navigate(`/checkout?plan=${plan}&apps=${appsToPass}&billing=${isYearly ? 'yearly' : 'monthly'}${trial ? '&trial=true' : ''}${compParam}&country=${currentRegion.regionCode}&currency=${currentRegion.currency}`);
   };
 
   return (
@@ -239,42 +262,40 @@ export default function PricingPage() {
         </section>
 
         {/* ================================================================= */}
-        {/* 2. Three Pricing Cards (Clean & Compact)                          */}
+        {/* 2. Exactly TWO Main Pricing Options: Standard Plan & Custom Plan    */}
         {/* ================================================================= */}
-        <section className="pricing-cards-container">
-          {/* Card 1: Free Demo */}
-          <div className="pricing-card">
-            <div className="card-top-banner banner-blue">
-              Try OXOO Without Any Cost
-            </div>
-            <div className="card-content-body">
-              <h2 className="card-plan-title">Free Demo</h2>
-
-              <div className="card-price-row">
-                <span className="price-currency blue">{currentRegion.symbol}</span>
-                <span className="price-val blue">0</span>
-              </div>
-              <div className="price-unit-caption">Completely Free</div>
-              <div className="price-extra-note invisible-note">&nbsp;</div>
-
-              {/* Free Demo goes directly to all apps as requested */}
-              <Link
-                to="/apps"
-                className="card-cta-btn btn-blue"
-              >
-                Start Free Demo <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 2: Standard Pack (Single App) */}
-          <div className="pricing-card">
+        <section className="pricing-cards-container two-plans-grid">
+          {/* OPTION A: STANDARD PLAN */}
+          <div className="pricing-card standard-plan-card">
             <div className="card-top-banner banner-coral">
-              Best for Small Business
+              Ideal for Single Software Suite Focus
             </div>
             <div className="card-content-body">
-              <h2 className="card-plan-title">Standard Pack</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <h2 className="card-plan-title" style={{ margin: 0 }}>Standard Plan</h2>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: '#eff6ff', color: '#2563eb' }}>
+                  1 Core Suite
+                </span>
+              </div>
+              <p className="card-plan-tagline" style={{ marginBottom: '14px', minHeight: 'auto' }}>
+                Full access to your chosen software suite with all enterprise capabilities, unlimited records, and cloud backup.
+              </p>
 
+              {/* Selected Suite Display & Switcher */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Selected Core Software:
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <img src={activeModule.iconSrc} alt={activeModule.shortName} style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>{activeModule.name}</strong>
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                  Includes: {activeModule.desc}
+                </div>
+              </div>
+
+              {/* Price Display */}
               <div className="card-price-row">
                 <span className="price-currency coral">{currentRegion.symbol}</span>
                 <span className="price-val coral">{singlePlan.price}</span>
@@ -289,59 +310,135 @@ export default function PricingPage() {
                 / user / month
                 {isYearly && (
                   <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
-                    Billed annually (12 months payment)
+                    Billed annually ({currentRegion.symbol}{(singlePlan.price * 12).toLocaleString()} / user / year)
                   </span>
                 )}
               </div>
-              <div className="price-extra-note invisible-note">&nbsp;</div>
 
-              <button
-                type="button"
-                className="card-cta-btn btn-coral"
-                onClick={() => handleGoToCheckout('single')}
-              >
-                Buy Standard Pack <ArrowRight size={14} />
-              </button>
+              <div className="price-extra-note" style={{ color: '#64748b', fontSize: '12px', marginTop: '10px' }}>
+                Want to add more applications? Upgrade to the <strong>Custom Plan</strong> at any time.
+              </div>
+
+              <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  className="card-cta-btn btn-global-primary"
+                  onClick={() => handleGoToCheckout('single')}
+                >
+                  Buy Standard Plan <ArrowRight size={15} />
+                </button>
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                  <Link to="/apps" style={{ fontSize: '11.5px', color: '#64748b', textDecoration: 'underline' }}>
+                    Or explore free demo on all applications
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Card 3: Custom Pack (2 Softwares included) */}
-          <div className="pricing-card featured-card">
+          {/* OPTION B: CUSTOM PLAN */}
+          <div className="pricing-card featured-card custom-plan-card">
             <div className="card-top-banner banner-mint">
-              Most Popular for Growing Business
+              Multi-Software Selection & Tailored Enterprise Package
             </div>
             <div className="card-content-body">
-              <h2 className="card-plan-title">Custom Pack</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <h2 className="card-plan-title" style={{ margin: 0 }}>Custom Plan</h2>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: '#dcfce7', color: '#15803d' }}>
+                  {customSelectedApps.length} Software{customSelectedApps.length > 1 ? 's' : ''} Selected
+                </span>
+              </div>
+              <p className="card-plan-tagline" style={{ marginBottom: '14px', minHeight: 'auto' }}>
+                Select exactly the software applications your organization needs. Base plan includes 2 suites; additional suites added at transparent configured rates.
+              </p>
 
+              {/* Interactive Multi-Select Checkboxes */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', marginBottom: '14px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Choose Your Applications ({customSelectedApps.length} selected):
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {SOFTWARE_MODULES.map((mod) => {
+                    const isChecked = customSelectedApps.includes(mod.id);
+                    return (
+                      <label
+                        key={mod.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          background: isChecked ? '#ffffff' : 'transparent',
+                          border: isChecked ? '1px solid #bfdbfe' : '1px solid transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCustomApp(mod.id)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <img src={mod.iconSrc} alt={mod.shortName} style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                          <span style={{ fontSize: '12.5px', fontWeight: isChecked ? 700 : 500, color: isChecked ? '#0f172a' : '#475569' }}>
+                            {mod.name}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>
+                          {mod.appsCount} apps
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Price Calculation Display */}
               <div className="card-price-row">
                 <span className="price-currency mint">{currentRegion.symbol}</span>
-                <span className="price-val mint">{customPlan.price}</span>
+                <span className="price-val mint">{customLivePrice}</span>
                 {customDiscount > 0 && (
                   <div className="price-strike-wrap">
-                    <span className="price-struck">{currentRegion.symbol} {customPlan.originalPrice}</span>
+                    <span className="price-struck">{currentRegion.symbol} {customLiveOriginalPrice}</span>
                     <span className="discount-pill mint">{customDiscount}% OFF</span>
                   </div>
                 )}
               </div>
               <div className="price-unit-caption">
-                / user / month (for 2 softwares)
+                / user / month ({customSelectedApps.length} suite{customSelectedApps.length > 1 ? 's' : ''})
                 {isYearly && (
                   <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
-                    Billed annually (12 months payment)
+                    Billed annually ({currentRegion.symbol}{(customLivePrice * 12).toLocaleString()} / user / year)
                   </span>
                 )}
               </div>
-              <div className="price-extra-note">
-                Additional software: + {currentRegion.symbol} {addlPlan.price} each / user / month
+
+              <div className="price-extra-note" style={{ fontSize: '11.5px', color: '#64748b', marginTop: '8px' }}>
+                Base 2 suites: {currentRegion.symbol}{customPlan.price}/mo
+                {customAdditionalCount > 0 ? ` + ${customAdditionalCount} additional suite${customAdditionalCount > 1 ? 's' : ''} at ${currentRegion.symbol}${addlPlan.price}/mo each` : ` (Add 3rd suite for +${currentRegion.symbol}${addlPlan.price}/mo)`}
               </div>
 
-              <button
-                type="button"
-                className="card-cta-btn btn-mint"
-                onClick={() => handleGoToCheckout('custom')}
-              >
-                Buy Custom Pack <ArrowRight size={14} />
-              </button>
+              <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  className="card-cta-btn btn-global-primary"
+                  onClick={() => handleGoToCheckout('custom')}
+                >
+                  Buy Custom Plan <ArrowRight size={15} />
+                </button>
+                <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setInquiryModalOpen(true)}
+                    style={{ background: 'none', border: 'none', fontSize: '11.5px', color: '#2563eb', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+                  >
+                    Need enterprise customization or integration? Request custom solution
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>

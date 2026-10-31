@@ -112,7 +112,7 @@ export default function AdminDashboard() {
 
   // Platform standard products & plans
   const [productsPlans, setProductsPlans] = useState([
-    { id: 1, product: 'OXOO Business Suite', plan: 'Single Software', price: '₹660.8', cycle: 'Monthly', status: 'Active' },
+    { id: 1, product: 'OXOO Business Suite', plan: 'Supply Chain Software', price: '₹660.8', cycle: 'Monthly', status: 'Active' },
     { id: 2, product: 'OXOO Business Suite', plan: 'Starter Plan', price: '₹4,999', cycle: 'Monthly', status: 'Active' },
     { id: 3, product: 'OXOO Business Suite', plan: 'Professional Plan', price: '₹9,499', cycle: 'Monthly', status: 'Active' },
     { id: 4, product: 'OXOO Business Suite', plan: 'Enterprise Plan', price: '₹14,999', cycle: 'Monthly', status: 'Active' },
@@ -432,7 +432,7 @@ export default function AdminDashboard() {
           loadedInvoices = invRes.map((inv, idx) => ({
             id: inv.invoice_number || inv.id || `INV-2026-${String(idx + 1).padStart(3, '0')}`,
             customer: inv.company_name || inv.customer || 'Customer Admin',
-            plan: inv.plan || 'Single Software',
+            plan: inv.plan || 'Supply Chain Software',
             amount: typeof inv.amount === 'number' ? `₹${inv.amount.toLocaleString('en-IN')}` : (inv.amount || '₹0'),
             status: inv.status || 'Paid',
             date: inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent'
@@ -8116,7 +8116,7 @@ export default function AdminDashboard() {
                         setInvoices([{
                           id: newInvoiceForm.number,
                           customer: newInvoiceForm.customer,
-                          plan: 'Single Software',
+                          plan: 'Supply Chain Software',
                           amount: newInvoiceForm.amount,
                           status: 'Paid',
                           date: 'Today'

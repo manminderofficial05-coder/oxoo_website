@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowRight, Search, ChevronDown, ChevronRight, Menu, X, Globe2, Sparkles, Layers3, User, ShieldCheck,
+  ArrowRight, Search, ChevronDown, ChevronRight, Menu, X, Globe2, Sparkles, Layers3, Layers, User, ShieldCheck,
   LogOut, LayoutDashboard, CreditCard, Code2, Plug, Headset, Check, Star, Play, Calendar, Mail, Phone, MapPin, MessageSquare,
   Users, Package, ExternalLink, RotateCcw, LayoutGrid, PlayCircle, Box, Zap, Briefcase, BarChart3, Globe,
-  Bot, Smartphone, ShoppingCart, Code, Share2, MessageCircle, ClipboardList, Inbox, Megaphone, GitBranch, ShoppingBag, CalendarCheck, Settings, FolderKanban
+  Bot, Smartphone, ShoppingCart, Code, Share2, MessageCircle, ClipboardList, Inbox, Megaphone, GitBranch, ShoppingBag, CalendarCheck, Settings, FolderKanban,
+  Bell, Send
 } from 'lucide-react';
 import { categories, services, industries } from './data';
 import { getAppMeta } from './appMetaHelper';
@@ -36,6 +37,7 @@ export function renderProjectServiceIcon(iconKey, color = '#2563eb', size = 18) 
     case 'Box': return <Box {...props} />;
     case 'MessageSquare': return <MessageSquare {...props} />;
     case 'Code': return <Code {...props} />;
+    case 'Code2': return <Code2 {...props} />;
     case 'Share2': return <Share2 {...props} />;
     case 'Mail': return <Mail {...props} />;
     case 'MessageCircle': return <MessageCircle {...props} />;
@@ -46,8 +48,17 @@ export function renderProjectServiceIcon(iconKey, color = '#2563eb', size = 18) 
     case 'GitBranch': return <GitBranch {...props} />;
     case 'ShoppingBag': return <ShoppingBag {...props} />;
     case 'CalendarCheck': return <CalendarCheck {...props} />;
+    case 'Calendar': return <Calendar {...props} />;
     case 'Settings': return <Settings {...props} />;
     case 'Globe': return <Globe {...props} />;
+    case 'Zap': return <Zap {...props} />;
+    case 'Users': return <Users {...props} />;
+    case 'BarChart3': return <BarChart3 {...props} />;
+    case 'Search': return <Search {...props} />;
+    case 'Layers3': return <Layers3 {...props} />;
+    case 'Headset': return <Headset {...props} />;
+    case 'Bell': return <Bell {...props} />;
+    case 'Send': return <Send {...props} />;
     default: return <FolderKanban {...props} />;
   }
 }
@@ -1049,7 +1060,6 @@ export function Header() {
                       />
                       <div className="projects-mega-col-titles">
                         <h4 style={{ color: category.accentColor }}>{category.title}</h4>
-                        <p>{category.subtitle}</p>
                       </div>
                     </div>
 
@@ -1069,7 +1079,6 @@ export function Header() {
                             </span>
                             <span className="projects-mega-service-text">
                               <strong>{svc.name}</strong>
-                              <small>{svc.shortDescription}</small>
                             </span>
                             <ChevronRight size={14} className="projects-mega-service-arrow" />
                           </button>
@@ -1295,6 +1304,23 @@ export function Footer() {
       <div className="oxoo-footer-bg-shapes" aria-hidden="true">
         <div className="oxoo-footer-wave-right" />
         <div className="oxoo-footer-wave-bottom" />
+        <svg className="oxoo-footer-waves-svg" viewBox="0 0 1440 280" fill="none" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,160 C320,80 520,240 840,140 C1120,50 1320,190 1440,110 L1440,280 L0,280 Z" fill="url(#oxoo-footer-wave-grad-1)" opacity="0.6" />
+          <path d="M0,190 C360,110 600,260 920,180 C1180,120 1340,220 1440,160 L1440,280 L0,280 Z" fill="url(#oxoo-footer-wave-grad-2)" opacity="0.75" />
+          <defs>
+            <linearGradient id="oxoo-footer-wave-grad-1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#E0F2FE" stopOpacity="0.8" />
+              <stop offset="40%" stopColor="#EDE9FE" stopOpacity="0.6" />
+              <stop offset="80%" stopColor="#BAE6FD" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#E0F2FE" stopOpacity="0.7" />
+            </linearGradient>
+            <linearGradient id="oxoo-footer-wave-grad-2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#F0F9FF" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#E0F2FE" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#EDE9FE" stopOpacity="0.85" />
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
 
       <div className="oxoo-footer-container">
@@ -1435,7 +1461,7 @@ export function Footer() {
           <nav className="oxoo-footer-col oxoo-footer-nav-col" aria-label="Solutions Navigation">
             <div className="oxoo-footer-col-header">
               <span className="oxoo-footer-col-badge badge-solutions" aria-hidden="true">
-                <LayoutGrid size={16} />
+                <Layers size={16} />
               </span>
               <h4>Solutions</h4>
             </div>
@@ -1551,12 +1577,10 @@ export function Footer() {
           </nav>
 
           <div className="oxoo-footer-status-slot">
-            {healthState.connected && healthState.status === 'operational' && (
-              <span className="oxoo-footer-live-status" title="Connected to live OXOO.ai health monitor">
-                <span className="oxoo-footer-status-dot" aria-hidden="true" />
-                <span>Cloud services operational</span>
-              </span>
-            )}
+            <span className="oxoo-footer-live-status" title="Live OXOO Cloud status">
+              <span className="oxoo-footer-status-dot" aria-hidden="true" />
+              <span>Cloud services operational</span>
+            </span>
           </div>
         </div>
       </div>

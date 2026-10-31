@@ -243,7 +243,7 @@ function Home() {
 
   const handleAdvisorSelect = (option) => {
     setAdvisorDropdownOpen(false);
-    navigate('/contact');
+    navigate('/request-demo');
   };
 
   useEffect(() => {
@@ -338,7 +338,7 @@ function Home() {
                   aria-expanded={advisorDropdownOpen}
                   aria-haspopup="true"
                 >
-                  Meet an advisor
+                  Book a Demo
                 </button>
 
                 <AnimatePresence>
@@ -637,104 +637,6 @@ function Home() {
           </div>
         </section>
 
-        {/* ENTERPRISE SOFTWARE DONE RIGHT (Image 3 & 4) */}
-        <section className="enterprise-done-right-section">
-          <div className="enterprise-container">
-            <h2 className="enterprise-headline">
-              Enterprise{' '}
-              <span className="software-loop-wrap">
-                <span className="loop-text">software</span>
-                <svg className="software-loop-svg" viewBox="0 0 180 70" fill="none" aria-hidden="true">
-                  <ellipse cx="90" cy="35" rx="84" ry="28" stroke="#00a09d" strokeWidth="3" transform="rotate(-3 90 35)" />
-                </svg>
-              </span>{' '}
-              done{' '}
-              <span className="right-underline-wrap">
-                <span className="underline-text">right.</span>
-                <span className="right-blue-stroke" aria-hidden="true" />
-              </span>
-            </h2>
-
-            <div className="enterprise-bento-grid">
-              {/* Card 1: Open source */}
-              <div className="bento-card bento-card-open-source">
-                <h3>Open source</h3>
-                <p>
-                  Behind the technology is a community of 100k+ developers collaborating worldwide.
-                  We're united by the spirit of open source, and a common vision: "to transform companies, empower employees".
-                </p>
-                <div className="bento-editions-sub">
-                  <p>OXOO is available in two editions:</p>
-                  <p>• <strong>Community:</strong> Open Source, 100% free.</p>
-                  <p>• <strong>Enterprise:</strong> extra apps, infrastructure and professional services.</p>
-                </div>
-                <button type="button" className="bento-purple-btn" onClick={handleStartNow}>
-                  Compare Editions
-                </button>
-              </div>
-
-              {/* Card 2: No vendor lock-in */}
-              <div className="bento-card bento-card-lockin">
-                <h3>No vendor lock-in</h3>
-                <p>
-                  No proprietary data format, just PostgreSQL: you own your data.
-                  No software lock-in: you get the source code, GitHub access, and the flexibility to host on our infrastructure, or on premise.
-                </p>
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bento-purple-btn"
-                >
-                  Follow us on GitHub
-                </a>
-              </div>
-
-              {/* Card 3: Open Source + AI = ❤️ */}
-              <div className="bento-card bento-card-ai">
-                <h3>Open Source + AI = ❤️</h3>
-                <p>
-                  Use OXOO.sh to develop or vibe-code tailored modules. As we are open source, LLMs are already trained on our source code.
-                </p>
-                <div className="bento-code-img-frame">
-                  <img src="/home/claude.webp" alt="OXOO AI vibe-coding terminal" loading="lazy" />
-                </div>
-                <Link to="/apps" className="bento-purple-btn">
-                  Browse Community Apps
-                </Link>
-              </div>
-
-              {/* Card 4: Fair pricing */}
-              <div className="bento-card bento-card-pricing">
-                <h3>Fair pricing</h3>
-                <p>
-                  No usage-based pricing, no feature upselling, no long term contracts, no hosting limits, no surprises... just a single price per user - all inclusive.
-                </p>
-                <button type="button" className="bento-purple-btn" onClick={handleStartNow}>
-                  View Pricing
-                </button>
-              </div>
-
-              {/* Card 5: A unique value proposition */}
-              <div className="bento-card bento-card-value-prop">
-                <h3>A unique value proposition</h3>
-                <div className="bento-chart-frame">
-                  <img src="/home/unique-value-2024.svg" alt="Unique value proposition chart vs SAP, Salesforce, Microsoft" loading="lazy" />
-                </div>
-              </div>
-
-              {/* Card 6: No corporate bullsh*t */}
-              <div className="bento-card bento-card-quote">
-                <h3>No corporate bullsh*t</h3>
-                <blockquote className="competitor-quote">
-                  “With most systems, you get 70% of what you hoped. With OXOO, you get more than what you expected. You, guys, will transform the market.”
-                </blockquote>
-                <span className="competitor-author">- Anonymous competitor</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* JOIN 28 MILLION HAPPY USERS MOSAIC SECTION (Image 4) */}
         <JoinMosaic />
         {false && <section className="join-users-mosaic-section">
@@ -818,9 +720,6 @@ function Home() {
 
 
       </main>
-
-      {/* OUR GLOBAL OFFICES SECTION (Immediately above Footer) */}
-      <GlobalOffices />
 
       <Footer />
       <VideoModal isOpen={videoOpen} onClose={() => setVideoOpen(false)} />

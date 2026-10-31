@@ -503,7 +503,7 @@ export default function HelpPage() {
                 className="contact-action-card"
                 onClick={() => scrollToHumanTicket('Support question')}
               >
-                <h4>Meet an advisor</h4>
+                <h4>Book a Demo</h4>
                 <p>Schedule a 1-on-1 strategy call with an Oxoo solution architect.</p>
               </div>
 

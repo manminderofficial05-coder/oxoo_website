@@ -65,6 +65,32 @@ export default function AppShowcase() {
     setSubnavAppMenuOpen(false);
   };
 
+
+  // Check if current app is one of the project services (Websites & Apps, Marketing, WhatsApp Chat AI)
+  const PROJECT_SERVICE_SLUGS = [
+    'ai-website-builder', 'android-ios-apps', 'ecommerce-websites', '3d-websites', 'ai-chatbots', 'web-apps-other',
+    'social-marketing', 'email-marketing', 'sms-marketing', 'marketing-automation', 'whatsapp', 'surveys',
+    'whatsapp-ai-inbox', 'whatsapp-marketing-broadcasts', 'whatsapp-flow-builder', 'whatsapp-commerce',
+    'whatsapp-booking-reminders', 'whatsapp-integrations-settings'
+  ];
+  const PROJECT_SERVICE_CATEGORIES = [
+    'Websites & Apps', 'Marketing', 'WhatsApp Chat AI', 'WhatsApp AI', 'Website & Apps'
+  ];
+
+  const isProjectServiceApp = Boolean(
+    (app && (PROJECT_SERVICE_SLUGS.includes(app.slug) || PROJECT_SERVICE_SLUGS.includes(app.id) || PROJECT_SERVICE_CATEGORIES.includes(app.category))) ||
+    (appSlug && PROJECT_SERVICE_SLUGS.includes(appSlug.toLowerCase())) ||
+    (slug && PROJECT_SERVICE_SLUGS.includes(slug.toLowerCase()))
+  );
+
+  const handleSecondaryAction = () => {
+    if (isProjectServiceApp) {
+      navigate(`/projects?service=${encodeURIComponent(app.slug || app.name)}&action=start`);
+    } else {
+      navigate('/request-demo');
+    }
+  };
+
   return (
     <div className="app-showcase-page-root">
       {/* 1. MAIN GLOBAL NAVBAR */}
@@ -115,9 +141,9 @@ export default function AppShowcase() {
             <button
               type="button"
               className="showcase-btn-secondary"
-              onClick={() => navigate('/contact')}
+              onClick={handleSecondaryAction}
             >
-              Meet an advisor
+              {isProjectServiceApp ? 'Give Project' : 'Book a Demo'}
             </button>
           </div>
 

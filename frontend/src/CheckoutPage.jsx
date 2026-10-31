@@ -717,9 +717,9 @@ export default function CheckoutPage() {
           key: rzpKey,
           amount: orderRes.amountSmallestUnit || orderRes.amountPaise || Math.round(totals.totalAmount * 100),
           currency: orderRes.currency || totals.currency || 'INR',
-          name: 'OXOO Multiix',
+          name: 'OXOO',
           description: `${planNameFormatted} (${isYearly ? 'Annual' : 'Monthly'})`,
-          image: '/oxoo-icon.png',
+          image: typeof window !== 'undefined' ? `${window.location.origin}/oxoo-logo.png` : '/oxoo-logo.png',
           order_id: orderRes.razorpayOrderId || undefined,
           prefill: {
             name: formData.yourName || '',

@@ -23,6 +23,65 @@ import {
 import './dashboards.css';
 import { authStorage } from './authStorage';
 
+// Helper to format invoice and subscription activity dates nicely (e.g. 28 Oct 2026, 04:28 PM)
+function formatActivityDateTime(raw) {
+  if (!raw) return 'Recent';
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return String(raw);
+    return d.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) + ' • ' + d.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (e) {
+    return String(raw);
+  }
+}
+
+// Helper to format clean, human-readable date for tables
+function formatTableDate(raw) {
+  if (!raw) return '—';
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return String(raw);
+    return d.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return String(raw);
+  }
+}
+
+// Helper to clean generic legacy plan names ("Single Software", "Standard Software") into specific software names
+function cleanSoftwareTitle(planName, items = [], fallbackAppName = '') {
+  const p = String(planName || '').trim();
+  const isRenewal = p.toLowerCase().includes('renewal');
+
+  // If items array contains real software name, use that
+  if (Array.isArray(items) && items.length > 0) {
+    const validItems = items.filter(it => it && !String(it).toLowerCase().includes('single software'));
+    if (validItems.length > 0) {
+      const joined = validItems.map(it => typeof it === 'string' ? it : (it.name || it.id)).join(' & ');
+      return isRenewal ? `${joined} (Renewal)` : joined;
+    }
+  }
+
+  // If plan is literally "Single Software" or "Standard Software"
+  if (/^(single|standard)\s+(software|pack|plan)$/i.test(p) || p === 'Single Software (Renewal)') {
+    const softwareTitle = fallbackAppName || 'Supply Chain Software';
+    return isRenewal ? `${softwareTitle} (Renewal)` : softwareTitle;
+  }
+
+  return p || fallbackAppName || 'Business Application';
+}
+
 // Live Customer Brand Logo Preview Badge
 function CustomerBrandBadge({ companyName, workspaceDomain }) {
   const cleanName = (companyName || 'RetailMart Solutions').replace(/\.(oxoo|com|ai)$/i, '').trim();
@@ -99,6 +158,7 @@ export default function CustomerDashboard() {
   const [renewModalOpen, setRenewModalOpen] = useState(false);
   const [renewTargetApp, setRenewTargetApp] = useState(null);
   const [renewCycle, setRenewCycle] = useState('monthly');
+  const [renewSelectedAppIds, setRenewSelectedAppIds] = useState([]);
   const [isRenewing, setIsRenewing] = useState(false);
   const [renewSuccess, setRenewSuccess] = useState(null);
   const [renewPaymentError, setRenewPaymentError] = useState('');
@@ -172,10 +232,11 @@ export default function CustomerDashboard() {
   });
   const [profileErrors, setProfileErrors] = useState({});
 
-  // Invite Form State (with specific application access)
+  // Invite Form State (with custom/auto-generated password and application access)
   const [inviteForm, setInviteForm] = useState({
     name: '',
     email: '',
+    password: '',
     role: 'Member',
     appsAccess: ['sales']
   });
@@ -395,9 +456,16 @@ export default function CustomerDashboard() {
     return [...softNotifs, ...defaultNotifications];
   };
 
-  // Dynamic renewal price calculation matching active apps count
+  // Dynamic renewal price calculation matching customer-selected software for renewal
   const computeRenewalPricing = (cycle = renewCycle) => {
-    const activeApps = allDirectoryApps.filter(app => app.entitled);
+    // Selected apps for renewal
+    const availableApps = allDirectoryApps.filter(app => app.entitled);
+    const selectedApps = availableApps.filter(app => 
+      Array.isArray(renewSelectedAppIds) && renewSelectedAppIds.length > 0
+        ? renewSelectedAppIds.includes(app.id)
+        : (renewTargetApp ? app.id === renewTargetApp.id : true)
+    );
+    const activeApps = selectedApps.length > 0 ? selectedApps : (availableApps.length > 0 ? [availableApps[0]] : []);
     const activeCount = Math.max(1, activeApps.length);
     let baseMonthly = 740;
     let baseYearlyPerMonth = 560;
@@ -433,6 +501,14 @@ export default function CustomerDashboard() {
   const handleOpenRenewModal = (app = null) => {
     setRenewTargetApp(app);
     setRenewCycle('monthly');
+    const entitledApps = allDirectoryApps.filter(a => a.entitled);
+    if (app && app.id) {
+      setRenewSelectedAppIds([app.id]);
+    } else if (entitledApps.length > 0) {
+      setRenewSelectedAppIds(entitledApps.map(a => a.id));
+    } else {
+      setRenewSelectedAppIds(['supply-chain']);
+    }
     setRenewSuccess(null);
     setRenewPaymentError('');
     setRenewModalOpen(true);
@@ -809,30 +885,51 @@ export default function CustomerDashboard() {
 
     try {
       const res = await getCustomerPlans(app.id);
-      if (res && res.success && Array.isArray(res.plans) && res.plans.length > 0) {
-        setAvailablePlans(res.plans);
-        setSelectedPlan(res.plans[0]);
-      } else {
-        // Fallback standard plan for this application
-        const fallbackPlan = {
-          plan_code: `PLAN-${app.id.toUpperCase()}`,
-          name: `${app.name} Professional`,
-          app_id: app.id,
-          app_name: app.name,
-          monthly_price: 740,
-          annual_price: 560,
-          currency: 'INR',
-          features: [
-            `Full access to ${app.name}`,
-            'Automated daily data backups',
-            'Role-based permissions & audit logging',
-            'Priority 24/7 technical support',
-            'Seamless OXOO platform integrations'
-          ]
-        };
-        setAvailablePlans([fallbackPlan]);
-        setSelectedPlan(fallbackPlan);
-      }
+      const standardSinglePlan = {
+        id: 5,
+        plan_code: 'SINGLE',
+        name: `Standard Plan`,
+        app_id: app.id,
+        app_name: app.name,
+        description: `Full access to ${app.name} with updates and standard support.`,
+        monthly_price: 740,
+        annual_price: 560,
+        yearly_price: 6720,
+        currency: 'INR',
+        discount_percent: 24,
+        features: [
+          `Full access to ${app.name}`,
+          'Automated daily data backups',
+          'Role-based permissions & audit logging',
+          'Priority 24/7 technical support',
+          'Cancel anytime'
+        ]
+      };
+
+      // Ground individual software plans: show the dedicated software license plan
+      const softwarePlan = {
+        id: 5,
+        plan_code: 'SINGLE',
+        name: `${app.name} License`,
+        app_id: app.id,
+        app_name: app.name,
+        description: `Full access to ${app.name} (6 Apps Suite) with real-time updates and standard support.`,
+        monthly_price: 740,
+        annual_price: 560,
+        yearly_price: 6720,
+        currency: 'INR',
+        discount_percent: 24,
+        features: [
+          `Full access to ${app.name}`,
+          'Automated daily data backups',
+          'Role-based permissions & audit logging',
+          'Priority 24/7 technical support',
+          'Cancel anytime'
+        ]
+      };
+
+      setAvailablePlans([softwarePlan]);
+      setSelectedPlan(softwarePlan);
     } catch (err) {
       console.error('Failed to load plans:', err);
       setPurchaseError('Unable to load plans for this software. Please retry.');
@@ -993,15 +1090,17 @@ export default function CustomerDashboard() {
     }
     try {
       setTeamLoading(true);
+      const generatedPwd = inviteForm.password.trim() || ('Oxoo@' + Math.floor(1000 + Math.random() * 9000));
       const res = await inviteTeamMember({
         name: inviteForm.name.trim(),
         email: inviteForm.email.trim(),
+        password: generatedPwd,
         role: inviteForm.role,
         appsAccess: inviteForm.appsAccess
       });
-      showToast(res.message || 'Team member invited successfully!');
+      showToast(res.message || `Team member created! Login credentials sent to ${inviteForm.email.trim()}.`);
       setInviteModalOpen(false);
-      setInviteForm({ name: '', email: '', role: 'Member', appsAccess: ['sales'] });
+      setInviteForm({ name: '', email: '', password: '', role: 'Member', appsAccess: ['sales'] });
       const freshTeam = await getCustomerTeam();
       if (freshTeam && Array.isArray(freshTeam.team)) setTeamMembers(freshTeam.team);
     } catch (err) {
@@ -1872,18 +1971,88 @@ export default function CustomerDashboard() {
 
                   <div className="oxoo-activity-list">
                     {invoices && invoices.length > 0 ? (
-                      invoices.slice(0, 4).map((inv) => (
-                        <div key={inv.id || inv.invoice_number} className="oxoo-activity-item">
-                          <div className="oxoo-activity-icon-circle green" style={{ background: '#ecfdf5', color: '#10b981' }}>
-                            <Check size={16} />
+                      invoices.slice(0, 5).map((inv) => {
+                        const cleanTitle = cleanSoftwareTitle(inv.plan_name || inv.plan, inv.items, overview.currentPlan);
+                        const isRenewal = String(inv.plan || '').toLowerCase().includes('renewal') || String(inv.invoice_number || '').includes('RNW');
+                        const amountFormatted = Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const dateFormatted = formatActivityDateTime(inv.invoice_date || inv.date || inv.created_at);
+
+                        return (
+                          <div
+                            key={inv.id || inv.invoice_number}
+                            className="oxoo-activity-item"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '12px 14px',
+                              borderRadius: '10px',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                              <div
+                                style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '50%',
+                                  background: isRenewal ? '#f0fdf4' : '#eff6ff',
+                                  color: isRenewal ? '#16a34a' : '#0284c7',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  flexShrink: 0,
+                                  border: `1.5px solid ${isRenewal ? '#bbf7d0' : '#bfdbfe'}`
+                                }}
+                              >
+                                {isRenewal ? <RefreshCw size={17} /> : <CheckCircle2 size={18} />}
+                              </div>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <strong style={{ fontSize: '13px', color: '#0f172a' }}>
+                                    {isRenewal ? 'Subscription Renewed' : 'Payment Received'}
+                                  </strong>
+                                  <span style={{
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    color: '#64748b',
+                                    background: '#ffffff',
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #e2e8f0'
+                                  }}>
+                                    {inv.invoice_number}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '12.5px', color: '#334155', fontWeight: 600, marginTop: '2px' }}>
+                                  {cleanTitle}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                  {dateFormatted}
+                                </div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right', marginLeft: '12px', flexShrink: 0 }}>
+                              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
+                                ₹{amountFormatted}
+                              </div>
+                              <span style={{
+                                fontSize: '10.5px',
+                                fontWeight: 700,
+                                color: '#16a34a',
+                                background: '#dcfce7',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                display: 'inline-block',
+                                marginTop: '3px'
+                              }}>
+                                Paid &amp; Verified
+                              </span>
+                            </div>
                           </div>
-                          <div className="oxoo-activity-content">
-                            <span className="oxoo-activity-title">Payment Received ({inv.invoice_number})</span>
-                            <span className="oxoo-activity-desc">{inv.plan_name || inv.plan || 'Software Plan'} — ₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}</span>
-                          </div>
-                          <span className="oxoo-activity-time">{inv.invoice_date || inv.date || 'Recent'}</span>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div style={{ padding: '24px 16px', textAlign: 'center', color: '#64748b', fontSize: '12.5px' }}>
                         No billing or invoice activity recorded yet.
@@ -2193,9 +2362,11 @@ export default function CustomerDashboard() {
                           invoices.map((inv) => (
                             <tr key={inv.id || inv.invoice_number}>
                               <td className="oxoo-table-company">{inv.invoice_number}</td>
-                              <td>{inv.invoice_date || inv.date || '—'}</td>
-                              <td>{inv.plan_name || inv.plan || 'Software License'}</td>
-                              <td className="oxoo-table-amount">₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}</td>
+                              <td>{formatTableDate(inv.invoice_date || inv.date || inv.created_at)}</td>
+                              <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                                {cleanSoftwareTitle(inv.plan_name || inv.plan, inv.items, overview.currentPlan)}
+                              </td>
+                              <td className="oxoo-table-amount">₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td>
                                 <span className="oxoo-status-tag active">{inv.status || 'Paid'}</span>
                               </td>
@@ -2286,9 +2457,9 @@ export default function CustomerDashboard() {
                           invoices.map((inv) => (
                             <tr key={`pay-${inv.id || inv.invoice_number}`}>
                               <td className="oxoo-table-company">{inv.invoice_number}</td>
-                              <td>{inv.invoice_date || inv.date || '—'}</td>
+                              <td>{formatTableDate(inv.invoice_date || inv.date || inv.created_at)}</td>
                               <td>Razorpay (UPI / Card)</td>
-                              <td className="oxoo-table-amount">₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}</td>
+                              <td className="oxoo-table-amount">₹{Number(inv.total_amount || inv.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td>
                                 <span className="oxoo-status-tag active">Verified &amp; Settled</span>
                               </td>
@@ -3811,7 +3982,7 @@ export default function CustomerDashboard() {
                 </div>
 
                 <div className="oxoo-form-group">
-                  <label className="oxoo-form-label">Work Email *</label>
+                  <label className="oxoo-form-label">Work Email / User ID *</label>
                   <input
                     type="email"
                     required
@@ -3820,6 +3991,29 @@ export default function CustomerDashboard() {
                     value={inviteForm.email}
                     onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                   />
+                </div>
+
+                <div className="oxoo-form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="oxoo-form-label">Initial Password (Optional / Auto-Generated)</label>
+                    <button
+                      type="button"
+                      onClick={() => setInviteForm({ ...inviteForm, password: 'Oxoo@' + Math.floor(1000 + Math.random() * 9000) })}
+                      style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    >
+                      Generate Secure Password
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    className="oxoo-form-input"
+                    placeholder="Leave blank to auto-generate (e.g. Oxoo@5821)"
+                    value={inviteForm.password}
+                    onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })}
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                    This User ID and Password will be immediately emailed to the team member.
+                  </span>
                 </div>
 
                 <div className="oxoo-form-group">
@@ -5133,16 +5327,14 @@ export default function CustomerDashboard() {
                       </div>
                     )}
 
-                    {/* Active Software in this Subscription (Requirement: Show all active software) */}
+                    {/* Select Software to Renew First (Requirement: User firstly selects the software to renew) */}
                     <div style={{ marginBottom: '18px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', margin: 0 }}>
-                          Software in this Subscription ({allDirectoryApps.filter(a => a.entitled).length || 1})
+                        <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                          Select Software to Renew (Step 1):
                         </label>
-                        <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
-                          {allDirectoryApps.filter(a => a.entitled).length > 1
-                            ? `Custom Pack (${allDirectoryApps.filter(a => a.entitled).length} Softwares)`
-                            : 'Standard Pack (1 Software)'}
+                        <span style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: 700 }}>
+                          {renewSelectedAppIds.length} Selected
                         </span>
                       </div>
 
@@ -5150,60 +5342,81 @@ export default function CustomerDashboard() {
                         {(allDirectoryApps.filter(a => a.entitled).length > 0
                           ? allDirectoryApps.filter(a => a.entitled)
                           : (renewTargetApp ? [renewTargetApp] : [allDirectoryApps[0]])
-                        ).map((a) => (
-                          <div
-                            key={a.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '10px 14px',
-                              borderRadius: '10px',
-                              background: '#f8fafc',
-                              border: '1px solid #e2e8f0'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{
-                                width: '34px',
-                                height: '34px',
-                                borderRadius: '8px',
-                                background: a.id === 'sales' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
-                                  (a.id === 'human-resources' || a.id === 'hrms') ? '#f3e8ff' :
-                                  a.id === 'finance' ? '#ecfdf5' :
-                                  (a.id === 'supply-chain' || a.id === 'inventory') ? '#fff7ed' : '#faf5ff',
-                                color: a.id === 'sales' ? '#ffffff' :
-                                  (a.id === 'human-resources' || a.id === 'hrms') ? '#8b5cf6' :
-                                  a.id === 'finance' ? '#10b981' :
-                                  (a.id === 'supply-chain' || a.id === 'inventory') ? '#ea580c' : '#6d28d9',
-                                display: 'grid',
-                                placeItems: 'center',
-                                flexShrink: 0
+                        ).map((a) => {
+                          const isSelected = renewSelectedAppIds.includes(a.id);
+                          return (
+                            <div
+                              key={a.id}
+                              onClick={() => {
+                                setRenewSelectedAppIds(prev => {
+                                  if (prev.includes(a.id)) {
+                                    if (prev.length === 1) return prev; // Keep at least one selected
+                                    return prev.filter(x => x !== a.id);
+                                  } else {
+                                    return [...prev, a.id];
+                                  }
+                                });
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 14px',
+                                borderRadius: '10px',
+                                background: isSelected ? '#f0f9ff' : '#ffffff',
+                                border: `2px solid ${isSelected ? '#0284c7' : '#e2e8f0'}`,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {}} // handled by parent onClick
+                                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
+                                />
+                                <div style={{
+                                  width: '34px',
+                                  height: '34px',
+                                  borderRadius: '8px',
+                                  background: a.id === 'sales' ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' :
+                                    (a.id === 'human-resources' || a.id === 'hrms') ? '#f3e8ff' :
+                                    a.id === 'finance' ? '#ecfdf5' :
+                                    (a.id === 'supply-chain' || a.id === 'inventory') ? '#fff7ed' : '#faf5ff',
+                                  color: a.id === 'sales' ? '#ffffff' :
+                                    (a.id === 'human-resources' || a.id === 'hrms') ? '#8b5cf6' :
+                                    a.id === 'finance' ? '#10b981' :
+                                    (a.id === 'supply-chain' || a.id === 'inventory') ? '#ea580c' : '#6d28d9',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  {a.id === 'sales' && <Layers size={17} />}
+                                  {(a.id === 'human-resources' || a.id === 'hrms') && <Users size={17} />}
+                                  {a.id === 'finance' && <BarChart2 size={17} />}
+                                  {(a.id === 'supply-chain' || a.id === 'inventory') && <Package size={17} />}
+                                  {(a.id === 'productivity' || a.id === 'marketing') && <Sparkles size={17} />}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>{a.name}</div>
+                                  <div style={{ fontSize: '0.74rem', color: '#64748b' }}>6 Apps Suite &bull; Active License</div>
+                                </div>
+                              </div>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                background: isSelected ? '#dcfce7' : '#f1f5f9',
+                                color: isSelected ? '#15803d' : '#64748b',
+                                border: `1px solid ${isSelected ? '#bbf7d0' : '#e2e8f0'}`
                               }}>
-                                {a.id === 'sales' && <Layers size={17} />}
-                                {(a.id === 'human-resources' || a.id === 'hrms') && <Users size={17} />}
-                                {a.id === 'finance' && <BarChart2 size={17} />}
-                                {(a.id === 'supply-chain' || a.id === 'inventory') && <Package size={17} />}
-                                {(a.id === 'productivity' || a.id === 'marketing') && <Sparkles size={17} />}
-                              </div>
-                              <div>
-                                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>{a.name}</div>
-                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>6 Apps Suite &bull; Active License</div>
-                              </div>
+                                {isSelected ? 'Selected for Renewal' : 'Click to Select'}
+                              </span>
                             </div>
-                            <span style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              padding: '2px 8px',
-                              borderRadius: '9999px',
-                              background: '#dcfce7',
-                              color: '#15803d',
-                              border: '1px solid #bbf7d0'
-                            }}>
-                              Active
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
 

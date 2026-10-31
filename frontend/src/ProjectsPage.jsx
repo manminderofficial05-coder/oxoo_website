@@ -134,11 +134,25 @@ export default function ProjectsPage() {
     const actionParam = params.get('action');
 
     if (serviceSlugOrName) {
-      const matched = ALL_PROJECT_SERVICES.find(
-        (s) =>
-          s.slug.toLowerCase() === serviceSlugOrName.toLowerCase() ||
-          s.name.toLowerCase() === serviceSlugOrName.toLowerCase()
-      );
+      const cleanTarget = serviceSlugOrName.toLowerCase().trim();
+      const matched = ALL_PROJECT_SERVICES.find((s) => {
+        const slug = s.slug.toLowerCase();
+        const name = s.name.toLowerCase();
+        if (slug === cleanTarget || name === cleanTarget) return true;
+        // Also support common app showcase aliases:
+        if (cleanTarget === 'android-ios-apps' && (slug.includes('android') || slug.includes('ios'))) return true;
+        if (cleanTarget === 'ecommerce-websites' && slug.includes('ecommerce')) return true;
+        if (cleanTarget === '3d-websites' && slug.includes('3d')) return true;
+        if (cleanTarget === 'ai-chatbots' && (slug.includes('chatbot') || slug.includes('ai-inbox'))) return true;
+        if (cleanTarget === 'web-apps-other' && slug.includes('custom-web-applications')) return true;
+        if (cleanTarget === 'whatsapp' && slug.includes('whatsapp')) return true;
+        if (cleanTarget === 'whatsapp-marketing-broadcasts' && slug.includes('campaign')) return true;
+        if (cleanTarget === 'whatsapp-commerce' && slug.includes('whatsapp')) return true;
+        if (cleanTarget === 'whatsapp-booking-reminders' && slug.includes('whatsapp')) return true;
+        if (cleanTarget === 'whatsapp-flow-builder' && slug.includes('automation')) return true;
+        if (cleanTarget === 'whatsapp-integrations-settings' && slug.includes('crm-integration')) return true;
+        return false;
+      });
       if (matched) {
         setSelectedServices((prev) =>
           prev.includes(matched.name) ? prev : [...prev, matched.name]
@@ -153,11 +167,9 @@ export default function ProjectsPage() {
       }, 150);
     } else if (actionParam === 'start' || serviceSlugOrName) {
       setActiveMode('project');
-      if (actionParam === 'start') {
-        setTimeout(() => {
-          engagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-      }
+      setTimeout(() => {
+        engagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
     }
   }, [location.search]);
 
@@ -210,6 +222,18 @@ export default function ProjectsPage() {
   // Scroll helpers
   const scrollToEngagement = (mode) => {
     setActiveMode(mode);
+    setTimeout(() => {
+      engagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
+
+  // Immediate "Give Project" action from service card
+  const handleGiveProjectService = (serviceName) => {
+    setSelectedServices((prev) =>
+      prev.includes(serviceName) ? prev : [...prev, serviceName]
+    );
+    setActiveMode('project');
+    setCurrentStep(1);
     setTimeout(() => {
       engagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 60);
@@ -647,7 +671,6 @@ export default function ProjectsPage() {
                     </div>
                     <div>
                       <h3>{category.name || category.title}</h3>
-                      <p>{category.tagline || category.subtitle}</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -710,7 +733,6 @@ export default function ProjectsPage() {
                           </div>
 
                           <h4 className="oxoo-project-service-title">{service.name}</h4>
-                          <p className="oxoo-project-service-desc">{service.shortDesc || service.shortDescription}</p>
 
                           {Array.isArray(service.deliverables) && (
                             <div className="oxoo-project-service-deliverables">
@@ -723,26 +745,38 @@ export default function ProjectsPage() {
                           )}
                         </div>
 
-                        <button
-                          type="button"
-                          className="oxoo-project-service-select-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleService(service.name);
-                          }}
-                        >
-                          {isSelected ? (
-                            <>
-                              <Check size={16} />
-                              <span>Selected for Project</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Select Service</span>
-                              <ArrowRight size={15} />
-                            </>
-                          )}
-                        </button>
+                        <div className="oxoo-project-service-action-row" style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                          <button
+                            type="button"
+                            className="oxoo-project-service-select-btn"
+                            style={{ flex: 1 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGiveProjectService(service.name);
+                            }}
+                          >
+                            <span>Give Project</span>
+                            <ArrowRight size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className={`oxoo-project-service-select-btn ${isSelected ? 'selected' : ''}`}
+                            style={{
+                              width: 'auto',
+                              padding: '10px 14px',
+                              background: isSelected ? '#dbeafe' : '#f8fafc',
+                              color: isSelected ? '#1d4ed8' : '#64748b',
+                              borderColor: isSelected ? '#bfdbfe' : '#e2e8f0'
+                            }}
+                            title={isSelected ? 'Remove from Selection' : 'Select Service'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleService(service.name);
+                            }}
+                          >
+                            {isSelected ? <Check size={16} /> : <span style={{ fontSize: '12px' }}>+</span>}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

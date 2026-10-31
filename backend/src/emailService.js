@@ -3,6 +3,28 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const { generateInvoicePdf } = require('./invoicePdf');
 
+// Read official white OXOO logo as base64 data URI for crystal-clear email client rendering
+const fs_module = require('fs');
+const path_module = require('path');
+let OXOO_EMAIL_LOGO_SRC = 'https://oxoo.ai/oxoo-logo-white.png';
+try {
+  const logoP = path_module.resolve(__dirname, 'assets/oxoo-logo-white.png');
+  if (fs_module.existsSync(logoP)) {
+    const b64 = fs_module.readFileSync(logoP).toString('base64');
+    OXOO_EMAIL_LOGO_SRC = `data:image/png;base64,${b64}`;
+  }
+} catch (e) {}
+
+function getEmailHeaderLogo(subtitle = 'One Platform. Infinite Possibilities.') {
+  return `
+    <div style="text-align: center; margin-bottom: 6px;">
+      <img src="${OXOO_EMAIL_LOGO_SRC}" alt="OXOO" width="160" style="display: inline-block; max-width: 160px; height: auto; border: 0; vertical-align: middle;" />
+    </div>
+    ${subtitle ? `<span style="font-size: 12px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">${subtitle}</span>` : ''}
+  `.trim();
+}
+
+
 // In-memory OTP storage: Map<normalizedKey, { otp, smsOtp, phone, email, expiresAt, verified, attempts, requireBoth }>
 const otpStore = new Map();
 
@@ -345,9 +367,7 @@ async function sendOtpEmail({ email, phone = '', purpose = 'Verification', custo
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 32px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
-                OXOO <span style="font-size: 13px; font-weight: 500; color: #38bdf8; display: block; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase;">One Platform. Infinite Possibilities.</span>
-              </h1>
+              ${getEmailHeaderLogo('One Platform. Infinite Possibilities.')}
             </td>
           </tr>
 
@@ -600,12 +620,7 @@ async function sendInvoiceAndCredentialsEmail({
           <!-- Top Navy Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 34px 32px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">
-                OXOO
-              </h1>
-              <span style="font-size: 13px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">
-                Payment Confirmed · Subscription Active
-              </span>
+              ${getEmailHeaderLogo('Payment Confirmed · Subscription Active')}
             </td>
           </tr>
 
@@ -749,12 +764,7 @@ async function sendPasswordResetEmail({
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #091322 0%, #1e3a8a 100%); padding: 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
-                OXOO
-              </h1>
-              <span style="font-size: 12px; font-weight: 600; color: #38bdf8; display: block; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">
-                Account Security & Password Assistance
-              </span>
+              ${getEmailHeaderLogo('Account Security & Password Assistance')}
             </td>
           </tr>
 
@@ -851,8 +861,7 @@ async function sendAdminStaffCredentialsEmail({ to, name, role, email, employeeI
   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
     <tr>
       <td style="background: linear-gradient(135deg, #091322 0%, #0f172a 100%); padding: 32px 28px; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">OXOO</h1>
-        <div style="color: #38bdf8; font-size: 13px; font-weight: 600; margin-top: 6px; letter-spacing: 0.3px;">Enterprise Multi-App Platform</div>
+        ${getEmailHeaderLogo('Enterprise Multi-App Platform')}
       </td>
     </tr>
     <tr>
@@ -980,10 +989,7 @@ async function sendAdminSubscriptionDueEmail({
             <td style="background: linear-gradient(135deg, #091322 0%, #1e293b 100%); padding: 26px 30px; text-align: left;">
               <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div>
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">OXOO Admin Notification</h1>
-                  <span style="font-size: 12px; font-weight: 600; color: #38bdf8; display: block; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Subscription Lifecycle & Billing Alert
-                  </span>
+                  ${getEmailHeaderLogo('Subscription Lifecycle & Billing Alert')}
                 </div>
               </div>
             </td>
@@ -1097,8 +1103,7 @@ async function sendTicketAcknowledgementEmail({ to, customerName, ticketNumber, 
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
     <tr>
       <td style="padding: 28px 32px; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">OXOO Support Team</h1>
-        <p style="color: #e0f2fe; margin: 4px 0 0 0; font-size: 13px;">Official Ticket Confirmation · #${safeTicketNum}</p>
+        ${getEmailHeaderLogo(`Official Ticket Confirmation · #${safeTicketNum}`)}
       </td>
     </tr>
     <tr>
@@ -1166,8 +1171,7 @@ async function sendInquiryConfirmationEmail({ to, contactPerson, companyName, in
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
     <tr>
       <td style="padding: 28px 32px; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">OXOO Enterprise Solutions</h1>
-        <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 13px;">Inquiry Reference: ${safeRef}</p>
+        ${getEmailHeaderLogo(`Inquiry Reference: ${safeRef}`)}
       </td>
     </tr>
     <tr>
@@ -1260,8 +1264,7 @@ async function sendDemoRequestNotificationEmail({
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
     <tr>
       <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">New OXOO.ai Live Demo Request</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Demo: ${safeDemoLabel}</p>
+        ${getEmailHeaderLogo(`Live Demo Request · ${safeDemoLabel}`)}
       </td>
     </tr>
     <tr>
@@ -1395,8 +1398,7 @@ async function sendProjectRequestNotificationEmail({
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.04);">
     <tr>
       <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">We've Received Your Project Request</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: <strong>${safeRef}</strong></p>
+        ${getEmailHeaderLogo(`Project Request Received · Ref: ${safeRef}`)}
       </td>
     </tr>
     <tr>
@@ -1552,8 +1554,7 @@ async function sendConsultationRequestNotificationEmail({
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.04);">
     <tr>
       <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Consultation Call Request Received</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference ID: <strong>${safeRef}</strong></p>
+        ${getEmailHeaderLogo(`Consultation Request Received · Ref: ${safeRef}`)}
       </td>
     </tr>
     <tr>
@@ -1662,8 +1663,7 @@ async function sendProjectStatusUpdateEmail({
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
     <tr>
       <td style="padding: 24px 30px; background: linear-gradient(135deg, #091322 0%, #0284c7 100%);">
-        <h2 style="color: #ffffff; margin: 0; font-size: 19px; font-weight: 700;">OXOO.ai Request Update</h2>
-        <p style="color: #bae6fd; margin: 4px 0 0 0; font-size: 13px;">Reference: ${safeRef} · Status: ${newStatus}</p>
+        ${getEmailHeaderLogo(`Request Update (${newStatus}) · Ref: ${safeRef}`)}
       </td>
     </tr>
     <tr>
@@ -1707,6 +1707,109 @@ async function sendProjectStatusUpdateEmail({
   }
 }
 
+/**
+ * Send Team Member Invitation with Credentials (ID, Password, Login Link)
+ */
+async function sendTeamMemberCredentialsEmail({ to, name, role, email, password, companyName, appsAccess = [], loginUrl }) {
+  const normEmail = String(to || email || '').trim().toLowerCase();
+  const userName = name || 'Team Member';
+  const userRole = role || 'Member';
+  const userPwd = password || 'Welcome@2026';
+  const company = companyName || 'OXOO Workspace';
+  const assigned = Array.isArray(appsAccess) && appsAccess.length > 0 
+    ? appsAccess.map(a => typeof a === 'string' ? (a.charAt(0).toUpperCase() + a.slice(1).replace('-', ' ')) : a.name).join(', ')
+    : 'Assigned Business Applications';
+  
+  const portalUrl = loginUrl || process.env.CUSTOMER_LOGIN_URL || 'http://localhost:5173/customer/login';
+  const subject = `You have been added to ${company} on OXOO - Your Login Credentials`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #091322 0%, #0f172a 100%); padding: 32px 28px; text-align: center;">
+        ${getEmailHeaderLogo('Team Workspace Access')}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 32px 28px;">
+        <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 14px 0;">
+          Welcome to ${company}, ${userName}
+        </h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
+          You have been added as a <strong>${userRole}</strong> in the <strong>${company}</strong> team on OXOO. You can now log in and access your assigned applications.
+        </p>
+
+        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <div style="font-size: 11px; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;">
+            Your Login Credentials
+          </div>
+          <table width="100%" style="font-size: 13px; color: #1e293b; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 140px;">Organization:</td>
+              <td style="padding: 6px 0; font-weight: 600;">${company}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">User ID / Email:</td>
+              <td style="padding: 6px 0; font-weight: 700; color: #0f172a;">${normEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Password:</td>
+              <td style="padding: 6px 0; font-weight: 700; color: #0284c7; font-family: 'Courier New', monospace; font-size: 14px;">${userPwd}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Assigned Role:</td>
+              <td style="padding: 6px 0; font-weight: 600;">${userRole}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Software Access:</td>
+              <td style="padding: 6px 0; font-weight: 600; color: #059669;">${assigned}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${portalUrl}" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);">
+            Sign In to OXOO Portal &rarr;
+          </a>
+        </div>
+
+        <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; margin: 20px 0 0 0; text-align: center;">
+          For security, please change your password upon your first login under Account Settings.<br/>
+          Direct link: <a href="${portalUrl}" style="color: #0284c7; text-decoration: underline;">${portalUrl}</a>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #f8fafc; padding: 18px 28px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+        &copy; 2026 OXOO Multiix Enterprise Suite. All rights reserved.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const info = await sendMailWithFallback({
+      from: DEFAULT_FROM,
+      to: normEmail,
+      subject,
+      html
+    });
+    const isRealDelivery = Boolean(info?.messageId && !String(info.messageId).startsWith('mock-id-'));
+    return { success: true, delivered: isRealDelivery, messageId: info?.messageId || null };
+  } catch (err) {
+    console.error('[EmailService] sendTeamMemberCredentialsEmail error:', err.message);
+    return { success: false, delivered: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendOtpEmail,
   verifyOtp,
@@ -1720,5 +1823,6 @@ module.exports = {
   sendProjectRequestNotificationEmail,
   sendConsultationRequestNotificationEmail,
   sendProjectStatusUpdateEmail,
+  sendTeamMemberCredentialsEmail,
   sendMailWithFallback
 };
