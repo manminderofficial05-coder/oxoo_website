@@ -9,7 +9,7 @@ const pool = new Pool({
 async function runMigrations() {
   const client = await pool.connect();
   try {
-    console.log('--- Starting PrimePro Master Migrations ---');
+    console.log('--- Starting OXOO Master Migrations ---');
     await client.query('BEGIN');
 
     // 1. Create demo_inquiries table
@@ -93,7 +93,7 @@ async function runMigrations() {
     await client.query(`
       INSERT INTO organizations (name, plan, active_apps, member_count, status, subdomain, custom_domain)
       VALUES 
-        ('Maan Corp', 'Enterprise Plan', '["Finance", "HRMS", "CRM", "Inventory", "AI Sales Agent", "PrimePro Main Website"]'::jsonb, 15, 'Active', 'maan', 'maan.oxoo.ai'),
+        ('Maan Corp', 'Enterprise Plan', '["Finance", "HRMS", "CRM", "Inventory", "AI Sales Agent", "OXOO Main Website"]'::jsonb, 15, 'Active', 'maan', 'maan.oxoo.ai'),
         ('ABC Enterprises', 'Business Plan', '["Finance", "HRMS", "CRM"]'::jsonb, 8, 'Active', 'abc', 'abc.oxoo.ai')
       ON CONFLICT DO NOTHING;
     `);
@@ -107,7 +107,7 @@ async function runMigrations() {
       ) VALUES
         (
           'CST-MAAN-01', 'Maan Corp', 'Manminder Singh', 'admin@maan.oxoo.ai', '+91 98765 00001', 'Enterprise Plan',
-          'Active', 'Active', 'Paid', '["Finance", "HRMS", "CRM", "Inventory", "AI Sales Agent", "PrimePro Main Website"]'::jsonb, 49999.00, 'yearly',
+          'Active', 'Active', 'Paid', '["Finance", "HRMS", "CRM", "Inventory", "AI Sales Agent", "OXOO Main Website"]'::jsonb, 49999.00, 'yearly',
           'maan', 'maan.oxoo.ai'
         ),
         (
@@ -159,7 +159,7 @@ async function runMigrations() {
       },
       {
         id: 'APP-FIN',
-        name: 'PrimePro Finance',
+        name: 'OXOO Finance',
         slug: 'finance',
         category: 'Finance',
         icon: 'CreditCard',
@@ -172,7 +172,7 @@ async function runMigrations() {
       },
       {
         id: 'APP-CRM',
-        name: 'PrimePro CRM & Sales',
+        name: 'OXOO CRM & Sales',
         slug: 'crm',
         category: 'Sales',
         icon: 'TrendingUp',
@@ -185,7 +185,7 @@ async function runMigrations() {
       },
       {
         id: 'APP-INVENTORY',
-        name: 'PrimePro Inventory & SCM',
+        name: 'OXOO Inventory & SCM',
         slug: 'inventory',
         category: 'Inventory',
         icon: 'Package',
@@ -211,7 +211,7 @@ async function runMigrations() {
       },
       {
         id: 'APP-WEB',
-        name: 'PrimePro Main Website & Studio',
+        name: 'OXOO Main Website & Studio',
         slug: 'website',
         category: 'Websites',
         icon: 'Globe',
@@ -234,7 +234,7 @@ async function runMigrations() {
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8,
           $9, '/employee', '/admin', '/customer', '/logout', '/health',
-          'Cloud Web App', 'SSO Protected', 'PrimePro OAuth2 / JWT', 'sk_live_9f8d7e6c5b4a3e2d', true, 'https://oxoo.in/access-denied',
+          'Cloud Web App', 'SSO Protected', 'OXOO OAuth2 / JWT', 'sk_live_9f8d7e6c5b4a3e2d', true, 'https://oxoo.in/access-denied',
           'Business Plan', $10, $11, 24, '["*.oxoo.ai", "*.oxoo.in", "localhost"]'::jsonb, NOW()
         )
         ON CONFLICT (app_id) DO UPDATE SET
@@ -263,7 +263,7 @@ async function runMigrations() {
         ) VALUES
           (
             'INQ-2026-1001', 'Karan Varma', '[STAGING TEST] Apex Retailers', 'karan@apexretail.in', '+91 98201 11223', 'Website & Apps',
-            'PrimePro Website Builder Studio', 'Growth Plan', 'Looking to build a multi-page corporate website and client portal with custom domain.',
+            'OXOO Website Builder Studio', 'Growth Plan', 'Looking to build a multi-page corporate website and client portal with custom domain.',
             'New', 'Unassigned', 'Initial lead from Website Demo.',
             '[{"date": "2026-10-27T10:00:00Z", "note": "Inquiry submitted through Website Demo"}]'::jsonb,
             '[{"action": "Inquiry Created", "timestamp": "2026-10-27T10:00:00Z", "actor": "System"}]'::jsonb,

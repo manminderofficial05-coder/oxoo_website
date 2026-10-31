@@ -57,7 +57,7 @@ export const DEMO_CONFIGS = {
     badge: '📊 Finance & Accounting Demo',
     category: 'Finance',
     src: '/finance-demo/index.html',
-    title: 'PrimePro Accounting, GST Invoicing & Financial Reports',
+    title: 'Oxoo Accounting, GST Invoicing & Financial Reports',
     desc: 'Automated invoice generation, tax filing, balance sheet reconciliation, and cash flow reports.',
     accentColor: '#10b981',
     icon: '📊',
@@ -81,7 +81,7 @@ export const DEMO_CONFIGS = {
     badge: '🌐 Website Builder Studio Demo',
     category: 'Websites',
     src: '/website-builder-demo/index.html',
-    title: 'PrimePro Website Builder & eCommerce Digital Studio',
+    title: 'Oxoo Website Builder & eCommerce Digital Studio',
     desc: 'Drag-and-drop web page builder, storefront customization, and instant publishing.',
     accentColor: '#6366f1',
     icon: '🌐',
@@ -217,11 +217,11 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     return config.src;
   };
 
-  const PrimePro_FINANCE_SERVICE_KEY = "PrimePro-FIN-2026-SECURE-KEY";
+  const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
   const rawDemoSrc = resolveDemoSrc(activeDemoId, activeAppObj?.slug);
   const sep = rawDemoSrc.includes('?') ? '&' : '?';
-  const demoSrc = `${rawDemoSrc}${sep}service_key=${PrimePro_FINANCE_SERVICE_KEY}&role=admin&auto_login=true&company=${encodeURIComponent(company)}`;
-  const demoTitle = `${displayAppName ? `PrimePro ${displayAppName} · ` : ''}${activeConfig.title}`;
+  const demoSrc = `${rawDemoSrc}${sep}service_key=${OXOO_FINANCE_SERVICE_KEY}&role=admin&auto_login=true&company=${encodeURIComponent(company)}`;
+  const demoTitle = `${displayAppName ? `Oxoo ${displayAppName} · ` : ''}${activeConfig.title}`;
 
   // Demo Email OTP Verification Gate States (Enforces OTP verification before live demo begins!)
   const [isDemoVerified, setIsDemoVerified] = useState(() => {
@@ -292,20 +292,20 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     if (s.includes('marketplace')) {
       return {
         category: 'Marketplace',
-        productName: 'PrimePro Multi-Vendor Marketplace Platform',
+        productName: 'OXOO Multi-Vendor Marketplace Platform',
         availablePlans: ['Starter Marketplace', 'Growth Marketplace', 'Enterprise High-Volume Marketplace']
       };
     }
     if (s.includes('whatsapp')) {
       return {
         category: 'WhatsApp AI Chat',
-        productName: 'PrimePro WhatsApp AI Chat & Flow Automation',
+        productName: 'OXOO WhatsApp AI Chat & Flow Automation',
         availablePlans: ['Growth Bot Pack', 'Pro Team Inbox & Flows', 'Enterprise Meta Cloud Suite']
       };
     }
     return {
       category: 'Website & Apps',
-      productName: 'PrimePro Website Builder & Digital Studio',
+      productName: 'OXOO Website Builder & Digital Studio',
       availablePlans: ['Starter Builder', 'Growth Studio', 'Business eCommerce', 'Custom Enterprise Studio']
     };
   };
@@ -470,7 +470,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
     try {
       await sendEmailOtp({
         email: cleanEmail,
-        purpose: 'PrimePro Live Demo Access'
+        purpose: 'OXOO Live Demo Access'
       });
       setGateOtp(''); // Keep empty so user must enter code from email
       setIsGateOtpSent(true);
@@ -765,7 +765,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
             }
             if (cw) {
               cw.postMessage({
-                type: 'PrimePro_COMPANY_LOGO',
+                type: 'OXOO_COMPANY_LOGO',
                 company,
                 companyName: company.replace(/\.(oxoo|com|ai)$/i, '')
               }, '*');
@@ -807,7 +807,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
                 <p className="oxoo-plans-header-subtitle">
                   {isInquiryDemo(activeDemoId)
                     ? `Your preview session for ${activeConfig.name} has concluded. Submit an inquiry to receive a tailored solution blueprint and quote.`
-                    : `Your interactive session for ${activeConfig.name} has completed. Choose an official PrimePro software package or view our complete pricing catalog.`}
+                    : `Your interactive session for ${activeConfig.name} has completed. Choose an official Oxoo software package or view our complete pricing catalog.`}
                 </p>
               </div>
 
@@ -845,7 +845,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
                   </button>
                 </div>
               ) : (
-                /* Genuine PrimePro Software Plans */
+                /* Genuine OXOO Software Plans */
                 <div className="oxoo-plans-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', padding: '16px 20px' }}>
                   {/* Standard Pack */}
                   <div className="oxoo-plan-tile">
@@ -981,7 +981,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
                     {inquiryMeta.productName}
                   </h4>
                   <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0' }}>
-                    Speak with an PrimePro architect for customized templates, domain integrations, and workflow setups.
+                    Speak with an OXOO architect for customized templates, domain integrations, and workflow setups.
                   </p>
                   <button
                     type="button"
@@ -1124,7 +1124,7 @@ export default function WebsiteDemoViewer({ defaultDemo }) {
               Verify Email to Access Live Demo
             </h2>
             <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 20px 0', lineHeight: 1.5 }}>
-              Please verify your work email with a 6-digit OTP code to unlock and start the interactive PrimePro live demo.
+              Please verify your work email with a 6-digit OTP code to unlock and start the interactive OXOO live demo.
             </p>
 
             {gateSuccess && (

@@ -93,7 +93,7 @@ async function generateSchemaSql() {
     }
 
     let sql = `-- =============================================================================\n`;
-    sql += `-- Multiix / PrimePro Database Schema (Neon PostgreSQL)\n`;
+    sql += `-- Multiix / OXOO Database Schema (Neon PostgreSQL)\n`;
     sql += `-- Generated on: ${new Date().toISOString()}\n`;
     sql += `-- Target Database: Neon PostgreSQL Serverless\n`;
     sql += `-- Total Tables: ${tables.length}\n`;

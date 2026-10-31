@@ -8,32 +8,21 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  /* PrimePro Official Brand Identity */
-  --primepro-navy: #082B68;
-  --primepro-cyan: #12B5D8;
-  --primepro-navy-dark: #061B40;
-  --primepro-text: #26374D;
-  --primepro-white: #FFFFFF;
-  --primepro-bg-light: #F4F8FC;
-
-  --navy: #082B68;
-  --navy-dark: #061B40;
-  --navy-light: #103b82;
+  --navy: #0b1a3a;
+  --navy-light: #1e293b;
   --muted: #64748b;
   --emerald: #059669;
   --emerald-light: #10b981;
   --emerald-dark: #047857;
-  --cyan: #12B5D8;
-  --cyan-light: #38cbf0;
-  --blue: #082B68;
-  --bg-soft: #F4F8FC;
+  --cyan: #06b6d4;
+  --blue: #2563eb;
   --purple: #7c3aed;
   --purple-light: #8b5cf6;
   --pink: #ec4899;
   --orange: #f97316;
   --border: #e2e8f0;
   --border-light: #f1f5f9;
-  --bg-soft: #F4F8FC;
+  --bg-soft: #f8fafc;
   --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 10px 25px rgba(15, 23, 42, 0.06);
   --shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.1);
@@ -266,22 +255,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   gap: 8px;
   flex-shrink: 0;
   text-decoration: none;
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-  transition: transform 0.2s ease;
+  background: #ffffff;
+  padding: 7px 18px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .brand:hover {
   transform: translateY(-1px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.09);
 }
 
 .brand-logo-img {
-  height: 56px;
+  height: 28px;
   width: auto;
-  max-width: 220px;
+  max-width: 150px;
   object-fit: contain;
   display: block;
   transition: transform 0.22s ease;
@@ -293,8 +284,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .brand-logo-img.logo-stacked {
   height: auto;
-  max-height: 80px;
-  max-width: 200px;
+  max-height: 40px;
+  max-width: 175px;
 }
 
 .brand-logo-img.logo-icon-only {
@@ -2710,7 +2701,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .dash-top .brand-logo-img {
-  height: 40px;
+  height: 22px;
 }
 
 .dash-search-fake {
@@ -4758,7 +4749,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* =========================================================
-   PrimePro.ai RECREATED FOOTER (5-COLUMN DESKTOP + RESPONSIVE)
+   OXOO.AI RECREATED FOOTER (5-COLUMN DESKTOP + RESPONSIVE)
    ========================================================= */
 .oxoo-footer {
   position: relative;
@@ -4833,7 +4824,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   justify-content: flex-start;
 }
 
-/* Column 1: PrimePro Brand Logo */
+/* Column 1: OXOO Brand Logo */
 .oxoo-footer-logo-link {
   display: inline-flex;
   align-items: center;
@@ -4844,8 +4835,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .oxoo-footer-logo-img {
-  height: 96px;
-  max-width: 220px;
+  height: 38px;
   width: auto;
   display: block;
   object-fit: contain;
@@ -11654,7 +11644,7 @@ a.oxoo-footer-contact-item:hover {
 }
 
 /* =============================================================
-   12. START YOUR PrimePro DEMO MODAL (Exact Match to Image 3)
+   12. START YOUR OXOO DEMO MODAL (Exact Match to Image 3)
    ============================================================= */
 .oxoo-interactive-modal {
   background: #ffffff;

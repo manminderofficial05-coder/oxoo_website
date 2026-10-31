@@ -6,7 +6,7 @@ import {
   ExternalLink, Building, Lock, Mail, BadgeCheck, Sparkles
 } from 'lucide-react';
 
-const PrimePro_FINANCE_SERVICE_KEY = "PrimePro-FIN-2026-SECURE-KEY";
+const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
 
 export default function EmployeeLoginPage() {
   const [employeeId, setEmployeeId] = useState('');
@@ -24,7 +24,7 @@ export default function EmployeeLoginPage() {
   };
 
   const handleLaunchFinanceEmployeePortal = () => {
-    const targetUrl = `https://oxoo-finance.onrender.com/?service_key=${PrimePro_FINANCE_SERVICE_KEY}&role=employee&view=employee-login&mode=employee&login_type=employee`;
+    const targetUrl = `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&role=employee&view=employee-login&mode=employee&login_type=employee`;
     window.open(targetUrl, '_blank');
   };
 
@@ -46,7 +46,7 @@ export default function EmployeeLoginPage() {
         employeeId: employeeId.toUpperCase(),
         role: 'employee',
         department: 'Operations & HR',
-        serviceKey: PrimePro_FINANCE_SERVICE_KEY
+        serviceKey: OXOO_FINANCE_SERVICE_KEY
       };
 
       try {
@@ -57,7 +57,7 @@ export default function EmployeeLoginPage() {
       setSuccessMsg(`Authenticated as ${empUser.name}. Opening Finance Employee Suite...`);
       setLoading(false);
 
-      const targetUrl = `https://oxoo-finance.onrender.com/?service_key=${PrimePro_FINANCE_SERVICE_KEY}&role=employee&view=employee-portal&user=${encodeURIComponent(empUser.email)}&name=${encodeURIComponent(empUser.name)}&auto_login=true`;
+      const targetUrl = `https://oxoo-finance.onrender.com/?service_key=${OXOO_FINANCE_SERVICE_KEY}&role=employee&view=employee-portal&user=${encodeURIComponent(empUser.email)}&name=${encodeURIComponent(empUser.name)}&auto_login=true`;
       window.open(targetUrl, '_blank');
     }, 600);
   };
@@ -142,7 +142,7 @@ export default function EmployeeLoginPage() {
               color: '#047857',
               fontWeight: 700
             }}>
-              {PrimePro_FINANCE_SERVICE_KEY}
+              {OXOO_FINANCE_SERVICE_KEY}
             </span>
           </div>
 

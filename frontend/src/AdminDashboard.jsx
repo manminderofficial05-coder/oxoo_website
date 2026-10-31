@@ -112,10 +112,10 @@ export default function AdminDashboard() {
 
   // Platform standard products & plans
   const [productsPlans, setProductsPlans] = useState([
-    { id: 1, product: 'PrimePro Business Suite', plan: 'Single Software', price: '₹660.8', cycle: 'Monthly', status: 'Active' },
-    { id: 2, product: 'PrimePro Business Suite', plan: 'Starter Plan', price: '₹4,999', cycle: 'Monthly', status: 'Active' },
-    { id: 3, product: 'PrimePro Business Suite', plan: 'Professional Plan', price: '₹9,499', cycle: 'Monthly', status: 'Active' },
-    { id: 4, product: 'PrimePro Business Suite', plan: 'Enterprise Plan', price: '₹14,999', cycle: 'Monthly', status: 'Active' },
+    { id: 1, product: 'OXOO Business Suite', plan: 'Single Software', price: '₹660.8', cycle: 'Monthly', status: 'Active' },
+    { id: 2, product: 'OXOO Business Suite', plan: 'Starter Plan', price: '₹4,999', cycle: 'Monthly', status: 'Active' },
+    { id: 3, product: 'OXOO Business Suite', plan: 'Professional Plan', price: '₹9,499', cycle: 'Monthly', status: 'Active' },
+    { id: 4, product: 'OXOO Business Suite', plan: 'Enterprise Plan', price: '₹14,999', cycle: 'Monthly', status: 'Active' },
     { id: 5, product: 'Finance Pro', plan: 'Finance Plan', price: '₹4,999', cycle: 'Monthly', status: 'Active' },
     { id: 6, product: 'HRMS Pro', plan: 'HRMS Plan', price: '₹4,999', cycle: 'Monthly', status: 'Active' }
   ]);
@@ -244,15 +244,15 @@ export default function AdminDashboard() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   // Form states for adding items
-  const [newSubForm, setNewSubForm] = useState({ customer: '', plan: 'PrimePro Business Suite', cycle: 'Monthly', users: '1', startDate: '2026-10-23', nextDate: '2026-11-23', status: 'Active' });
+  const [newSubForm, setNewSubForm] = useState({ customer: '', plan: 'OXOO Business Suite', cycle: 'Monthly', users: '1', startDate: '2026-10-23', nextDate: '2026-11-23', status: 'Active' });
   const [newProdForm, setNewProdForm] = useState({ name: '', code: '', desc: '', category: 'Business', appUrl: '', status: 'Active' });
-  const [newPlanForm, setNewPlanForm] = useState({ name: '', code: '', product: 'PrimePro Business Suite', cycle: 'Monthly', price: '₹4,999', users: '10', status: 'Active' });
+  const [newPlanForm, setNewPlanForm] = useState({ name: '', code: '', product: 'OXOO Business Suite', cycle: 'Monthly', price: '₹4,999', users: '10', status: 'Active' });
   const [newInvoiceForm, setNewInvoiceForm] = useState({ customer: '', email: '', number: `INV-${Date.now().toString().slice(-8)}`, date: '2026-10-23', dueDate: '2026-11-05', amount: '₹660.8', status: 'Paid' });
   const [newUserForm, setNewUserForm] = useState({ name: '', email: '', phone: '', role: 'Staff', status: 'Active', sendInvite: true });
   const [newTicketForm, setNewTicketForm] = useState({ customer: '', subject: '', category: 'Technical', priority: 'High', agent: 'Manminder Singh', desc: '' });
 
   // -------------------------------------------------------------
-  // PRODUCTS & PLANS STATE (PrimePro)
+  // PRODUCTS & PLANS STATE (OXOO)
   // -------------------------------------------------------------
   const [prodPlanSubTab, setProdPlanSubTab] = useState('products'); // 'products' | 'plans'
   const [prodSummary, setProdSummary] = useState({ totalProducts: 9, totalPlans: 24, activePlans: 18, draftPlans: 3 });
@@ -1317,13 +1317,13 @@ export default function AdminDashboard() {
           <Link to="/" className="oxoo-sidebar-v2-brand" style={{ textDecoration: 'none', display: 'block' }}>
             <div className="oxoo-brand-title-wrap" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <img
-                src="/primepro-logo-sidebar-white.png"
-                alt="PrimePro"
+                src="/oxoo-logo-sidebar.png"
+                alt="OXOO"
                 style={{ height: '28px', width: 'auto', display: 'block', objectFit: 'contain' }}
               />
             </div>
             <span className="oxoo-brand-tagline-v2" style={{ display: 'block', fontSize: '10.5px', color: '#38bdf8', marginTop: '4px', letterSpacing: '0.2px' }}>
-              Your 24/7 Workspace Is Here.
+              One Platform. Infinite Possibilities.
             </span>
           </Link>
 
@@ -1344,7 +1344,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab('customers')}
             >
               <Users className="oxoo-nav-v2-icon" />
-              <span>PrimePro Customer Management</span>
+              <span>Customers</span>
             </button>
 
             {/* Users & Roles Tab (RBAC & Multiple Admin User Management) */}
@@ -1385,7 +1385,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab('subscriptions')}
             >
               <CreditCard className="oxoo-nav-v2-icon" />
-              <span>PrimePro Billing & Subscriptions</span>
+              <span>Subscriptions</span>
             </button>
 
             <button
@@ -1873,10 +1873,10 @@ export default function AdminDashboard() {
               {/* Header Title Row */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.4px' }}>
-                  PrimePro Admin Dashboard
+                  Admin Dashboard
                 </h1>
                 <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
-                  PrimePro Control Center — Platform management, customer subscriptions, revenue analytics & operations.
+                  Real-time overview of your OXOO platform, customers, revenue and applications.
                 </p>
               </div>
 
@@ -2638,7 +2638,7 @@ export default function AdminDashboard() {
                         <thead>
                           <tr>
                             <th>Country</th>
-                            <th style={{ textAlign: 'right' }}>PrimePro Customer Management</th>
+                            <th style={{ textAlign: 'right' }}>Customers</th>
                             <th style={{ textAlign: 'right' }}>Percentage</th>
                           </tr>
                         </thead>
@@ -4181,7 +4181,7 @@ export default function AdminDashboard() {
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '22px' }}>
                 <div>
-                  <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>PrimePro Billing & Subscriptions</h1>
+                  <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Subscriptions</h1>
                   <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', marginBottom: 0 }}>
                     Manage customer subscriptions, renewal dates, billing cycles, payment status, and upcoming expirations.
                   </p>
@@ -5607,7 +5607,7 @@ export default function AdminDashboard() {
           )}
 
           {/* -------------------------------------------------------
-              4. PRODUCTS & PLANS MANAGEMENT (PrimePro)
+              4. PRODUCTS & PLANS MANAGEMENT (OXOO)
               ------------------------------------------------------- */}
           {activeTab === 'products' && (
             <div className="oxoo-prod-container">
@@ -6626,7 +6626,7 @@ export default function AdminDashboard() {
                       {addPlanStep === 2 && (
                         <div>
                           <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-                            Select the registered PrimePro software products to bundle in this subscription plan:
+                            Select the registered OXOO software products to bundle in this subscription plan:
                           </p>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                             {prodList.map((pr) => {
@@ -8002,7 +8002,7 @@ export default function AdminDashboard() {
                 <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div className="oxoo-form-group">
                     <label className="oxoo-form-label">Service URL</label>
-                    <input type="text" className="oxoo-form-input" defaultValue={`https://${selectedAppConfig.id}.primepro.ai`} />
+                    <input type="text" className="oxoo-form-input" defaultValue={`https://${selectedAppConfig.id}.oxoo.ai`} />
                   </div>
                   <div className="oxoo-form-group">
                     <label className="oxoo-form-label">Authentication Method</label>
@@ -8178,7 +8178,7 @@ export default function AdminDashboard() {
                       <input
                         type="email"
                         className="oxoo-form-input"
-                        placeholder="staff@primepro.ai"
+                        placeholder="staff@oxoo.ai"
                         value={newUserForm.email}
                         onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
                       />
@@ -8316,7 +8316,7 @@ export default function AdminDashboard() {
                           showToast('Please enter subject');
                           return;
                         }
-                        const newId = `PrimePro-${Math.floor(1000 + Math.random() * 9000)}`;
+                        const newId = `OXOO-${Math.floor(1000 + Math.random() * 9000)}`;
                         setTickets([{
                           id: newId,
                           customer: newTicketForm.customer || 'Customer',

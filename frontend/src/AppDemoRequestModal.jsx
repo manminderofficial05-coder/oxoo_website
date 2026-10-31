@@ -89,7 +89,7 @@ export default function AppDemoRequestModal({
   useEffect(() => {
     if (cleanSubdomain) {
       try {
-        localStorage.setItem('oxoo_demo_company', `${cleanSubdomain}.primepro.ai`);
+        localStorage.setItem('oxoo_demo_company', `${cleanSubdomain}.oxoo`);
         localStorage.setItem('oxoo_company_name', cleanSubdomain);
       } catch (e) {}
     }
@@ -140,7 +140,7 @@ export default function AppDemoRequestModal({
   if (!isOpen) return null;
 
   const handleCelebrationComplete = () => {
-    const targetPath = `/apps/${currentApp.slug}/live-demo?company=${encodeURIComponent(`${cleanSubdomain}.primepro.ai`)}`;
+    const targetPath = `/apps/${currentApp.slug}/live-demo?company=${encodeURIComponent(`${cleanSubdomain}.oxoo`)}`;
     onClose();
     if (onSuccess) {
       onSuccess(currentApp);
@@ -199,7 +199,7 @@ export default function AppDemoRequestModal({
       const resp = await sendEmailOtp({
         email: cleanEmail,
         phone: phoneNumber.trim(),
-        purpose: 'PrimePro Live Demo Access',
+        purpose: 'OXOO Live Demo Access',
         customerName: fullName.trim()
       });
 
@@ -225,7 +225,7 @@ export default function AppDemoRequestModal({
       const resp = await sendEmailOtp({
         email: workEmail.trim(),
         phone: phoneNumber.trim(),
-        purpose: 'PrimePro Live Demo Access',
+        purpose: 'OXOO Live Demo Access',
         customerName: fullName.trim()
       });
       setOtpSuccess(resp.message || `A fresh verification code was sent to ${workEmail.trim()}`);
@@ -260,7 +260,7 @@ export default function AppDemoRequestModal({
         name: fullName.trim(),
         email: workEmail.trim(),
         phone: `+91 ${cleanPhone}`,
-        company: `${cleanSubdomain}.primepro.ai`,
+        company: `${cleanSubdomain}.oxoo`,
         country,
         language,
         app: currentApp.name,
@@ -274,7 +274,7 @@ export default function AppDemoRequestModal({
         localStorage.setItem('oxoo_demo_verified', 'true');
         localStorage.setItem('oxoo_demo_user', fullName.trim());
         localStorage.setItem('oxoo_demo_email', workEmail.trim());
-        localStorage.setItem('oxoo_demo_company', `${cleanSubdomain}.primepro.ai`);
+        localStorage.setItem('oxoo_demo_company', `${cleanSubdomain}.oxoo`);
         localStorage.setItem('oxoo_demo_app', currentApp.slug);
       } catch (err) {}
 
@@ -765,7 +765,7 @@ export default function AppDemoRequestModal({
                     </div>
                   )}
 
-                  {/* Subdomain URL display with pencil edit button (.primepro.ai) - shows when company is typed */}
+                  {/* Subdomain URL display with pencil edit button (.oxoo) - shows when company is typed */}
                   {cleanSubdomain && (
                     <div className="company-subdomain-preview-row">
                       <div className="company-subdomain-left">
@@ -778,11 +778,11 @@ export default function AppDemoRequestModal({
                               onChange={(e) => setCustomSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                               autoFocus
                             />
-                            <span className="subdomain-domain-suffix">.primepro.ai</span>
+                            <span className="subdomain-domain-suffix">.oxoo</span>
                           </div>
                         ) : (
                           <span className="company-subdomain-url">
-                            {cleanSubdomain}.primepro.ai
+                            {cleanSubdomain}.oxoo
                           </span>
                         )}
                       </div>

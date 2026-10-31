@@ -16,7 +16,7 @@ export default function LiveDemoExperience() {
   const navigate = useNavigate();
 
   const queryParams = new URLSearchParams(location.search);
-  const companyParam = queryParams.get('company') || 'abcd.primepro.ai';
+  const companyParam = queryParams.get('company') || 'abcd.oxoo';
 
   // Selected suite
   const initialApp = getAppBySlug(appSlug || 'website-builder') || APPS_DATA[0];
@@ -31,8 +31,8 @@ export default function LiveDemoExperience() {
     const isFinanceApp = financeSlugs.includes(selectedApp.slug?.toLowerCase()) || selectedApp.category === 'Finance';
 
     const target = (isWebsiteApp || isFinanceApp)
-      ? `/apps/${selectedApp.slug}/live-demo?company=demo.primepro.ai`
-      : `/apps/${selectedApp.slug}/portal?company=demo.primepro.ai`;
+      ? `/apps/${selectedApp.slug}/live-demo?company=demo.oxoo`
+      : `/apps/${selectedApp.slug}/portal?company=demo.oxoo`;
     navigate(target, { replace: true });
   }, [selectedApp, navigate]);
 
@@ -41,7 +41,7 @@ export default function LiveDemoExperience() {
   const [workEmail, setWorkEmail] = useState('');
   const [phonePrefix, setPhonePrefix] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [companyName, setCompanyName] = useState('abcd.primepro.ai');
+  const [companyName, setCompanyName] = useState('abcd.oxoo');
   const [country, setCountry] = useState('India');
   const [language, setLanguage] = useState('English');
   const [agreed, setAgreed] = useState(true);
@@ -118,12 +118,12 @@ export default function LiveDemoExperience() {
     }
 
     setSubmitting(true);
-    const cleanCompany = (companyName.trim() || 'abcd.primepro.ai').toLowerCase();
-    const formattedDomain = cleanCompany.endsWith('.primepro.ai') ? cleanCompany : `${cleanCompany}.primepro.ai`;
+    const cleanCompany = (companyName.trim() || 'abcd.oxoo').toLowerCase();
+    const formattedDomain = cleanCompany.endsWith('.oxoo') ? cleanCompany : `${cleanCompany}.oxoo`;
 
     try {
       localStorage.setItem('oxoo_demo_company', formattedDomain);
-      localStorage.setItem('oxoo_demo_user', fullName || 'PrimePro Guest');
+      localStorage.setItem('oxoo_demo_user', fullName || 'Oxoo Guest');
       localStorage.setItem('oxoo_demo_app', selectedApp.slug);
     } catch (err) {
       // safe fallback
@@ -131,13 +131,13 @@ export default function LiveDemoExperience() {
 
     try {
       await submitLead({
-        name: fullName || 'PrimePro Demo Guest',
+        name: fullName || 'Oxoo Demo Guest',
         email: workEmail || `${formattedDomain.replace(/[^a-z0-9]/g, '') || 'guest'}@company.com`,
         phone: `${phonePrefix} ${phoneNumber}`,
         company: formattedDomain,
         service: suiteDetails.title,
-        message: `PrimePro Demo requested for ${suiteDetails.title} (Country: ${country}, Language: ${language})`,
-        source: 'primepro-start-demo-form'
+        message: `Oxoo Demo requested for ${suiteDetails.title} (Country: ${country}, Language: ${language})`,
+        source: 'oxoo-start-demo-form'
       });
     } catch (err) {
       console.warn('Lead submit note:', err);
@@ -158,11 +158,11 @@ export default function LiveDemoExperience() {
           ============================================================== */}
       <header className="oxoo-tab-nav">
         <div className="oxoo-tab-nav-inner">
-          {/* Left: PrimePro Logo with Tagline */}
+          {/* Left: Oxoo Logo with Tagline */}
           <Link to="/" className="oxoo-tab-brand-link">
             <img
-              src="/primepro-logo.png"
-              alt="PrimePro"
+              src="/oxoo-logo.png"
+              alt="Oxoo"
               className="oxoo-tab-brand-img"
             />
           </Link>
@@ -221,7 +221,7 @@ export default function LiveDemoExperience() {
               </button>
               {navDropdown === 'resources' && (
                 <div className="oxoo-nav-popover">
-                  <a href="#docs" onClick={(e) => { e.preventDefault(); alert('PrimePro API & Documentation hub'); }} className="oxoo-popover-item">
+                  <a href="#docs" onClick={(e) => { e.preventDefault(); alert('Oxoo API & Documentation hub'); }} className="oxoo-popover-item">
                     <strong>Documentation</strong>
                     <span>Quickstart guides, APIs, and release notes</span>
                   </a>
@@ -248,7 +248,7 @@ export default function LiveDemoExperience() {
               {navDropdown === 'company' && (
                 <div className="oxoo-nav-popover">
                   <Link to="/services" className="oxoo-popover-item">
-                    <strong>About PrimePro</strong>
+                    <strong>About Oxoo</strong>
                     <span>Our mission, global team, and cloud architecture</span>
                   </Link>
                   <Link to="/contact" className="oxoo-popover-item">
@@ -316,8 +316,8 @@ export default function LiveDemoExperience() {
             Start Your{' '}
             <span className="oxoo-headline-brand-anchor">
               <img
-                src="/primepro-logo.png"
-                alt="PrimePro"
+                src="/oxoo-logo.png"
+                alt="oxoo"
                 className="oxoo-headline-logo-img"
               />
               <svg
@@ -344,7 +344,7 @@ export default function LiveDemoExperience() {
 
           {/* Subtitle */}
           <p className="oxoo-tab-subtitle">
-            See how PrimePro connects your business in one workspace.
+            See how Oxoo connects your business in one workspace.
           </p>
 
           {/* ==========================================================
@@ -481,7 +481,7 @@ export default function LiveDemoExperience() {
                 >
                   <X size={18} />
                 </button>
-                <h2 className="oxoo-purchase-title">Choose Your PrimePro Subscription</h2>
+                <h2 className="oxoo-purchase-title">Choose Your Oxoo Subscription</h2>
                 <p className="oxoo-purchase-desc">
                   Immediate activation for {suiteDetails.title} with full platform integrations.
                 </p>
@@ -514,7 +514,7 @@ export default function LiveDemoExperience() {
                     price: '₹1,24,000',
                     cycle: '/mo',
                     popular: false,
-                    features: ['Unlimited Seats', 'All 24 PrimePro Apps', 'Dedicated Cloud Server', 'Custom Integrations']
+                    features: ['Unlimited Seats', 'All 24 Oxoo Apps', 'Dedicated Cloud Server', 'Custom Integrations']
                   }
                 ].map((plan) => (
                   <div
@@ -569,7 +569,7 @@ export default function LiveDemoExperience() {
                 <Search size={20} color="#00bcd4" />
                 <input
                   type="text"
-                  placeholder="Search PrimePro apps, solutions, documentation..."
+                  placeholder="Search Oxoo apps, solutions, documentation..."
                   autoFocus
                   className="oxoo-search-input"
                 />

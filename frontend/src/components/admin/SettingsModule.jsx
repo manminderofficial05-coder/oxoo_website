@@ -22,13 +22,13 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
   // Settings state by category
   const [categoryData, setCategoryData] = useState({
     general: {
-      platformName: 'PrimePro',
-      tagline: 'Your 24/7 Workspace Is Here.',
+      platformName: 'OXOO',
+      tagline: 'One Platform. Infinite Possibilities.',
       defaultCurrency: 'INR (₹)',
       timezone: 'Asia/Kolkata',
-      supportEmail: 'support@primepro.ai',
+      supportEmail: 'support@oxoo.ai',
       supportPhone: '+91 80 4567 8900',
-      publicWebsiteUrl: 'https://primepro.ai'
+      publicWebsiteUrl: 'https://oxoo.ai'
     },
     branding: {
       primaryColor: '#0284c7',
@@ -40,9 +40,9 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
     },
     email: {
       provider: 'Brevo',
-      senderName: 'PrimePro Platform',
+      senderName: 'OXOO Platform',
       senderEmail: 'manminder.singh@primepro.ai',
-      replyToEmail: 'support@primepro.ai',
+      replyToEmail: 'support@oxoo.ai',
       smtpHost: 'smtp-relay.brevo.com',
       smtpPort: 587
     },
@@ -64,7 +64,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
       lockoutDurationMins: 15
     },
     api: {
-      webhookUrl: 'https://api.primepro.ai/api/webhooks/v1',
+      webhookUrl: 'https://api.oxoo.ai/api/webhooks/v1',
       webhookEvents: ['payment.succeeded', 'customer.created', 'subscription.renewed', 'ticket.created'],
       signingKeyMasked: 'whsec_••••••••••••••••••••••••••••••••',
       rateLimitPerMinute: 600
@@ -79,15 +79,15 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
       maintenanceMode: false,
       debugLogging: false,
       databaseStatus: 'Healthy (PostgreSQL Neon)',
-      systemVersion: 'PrimePro v2.4.1',
+      systemVersion: 'OXOO v2.4.1',
       uptime: '99.98%'
     },
     agent: {
       enabled: true,
-      agentName: 'PrimePro Agent',
-      welcomeMessage: "Hi! I'm PrimePro Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
+      agentName: 'OXOO Agent',
+      welcomeMessage: "Hi! I'm OXOO Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
       suggestedQuestions: [
-        'Explore PrimePro applications',
+        'Explore OXOO applications',
         'Compare pricing plans',
         'Find a website development package',
         'Explore Android and iOS app development',
@@ -101,7 +101,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
       aiApiKey: '',
       rateLimitPerMinute: 30,
       retentionDays: 90,
-      supportEscalationEmail: 'support@primepro.ai',
+      supportEscalationEmail: 'support@oxoo.ai',
       supportEscalationPhone: '+91 80 4567 8900',
       allowCustomerActions: true
     }
@@ -207,7 +207,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
           { id: 'api', label: 'API & Webhooks', icon: Key },
           { id: 'billing', label: 'Billing', icon: FileText },
           { id: 'system', label: 'System', icon: Server },
-          { id: 'agent', label: 'PrimePro Agent (AI)', icon: Bot }
+          { id: 'agent', label: 'OXOO Agent (AI)', icon: Bot }
         ].map((t) => {
 
           const Icon = t.icon;
@@ -665,7 +665,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
                       type="text"
                       disabled
                       className="oxoo-form-input"
-                      value={currentSettings.systemVersion || 'PrimePro v2.4.1'}
+                      value={currentSettings.systemVersion || 'OXOO v2.4.1'}
                       style={{ background: '#f8fafc' }}
                     />
                   </div>
@@ -694,7 +694,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
               </>
             )}
 
-            {/* TAB 9: PrimePro AGENT (AI ASSISTANT) SETTINGS */}
+            {/* TAB 9: OXOO AGENT (AI ASSISTANT) SETTINGS */}
             {activeTab === 'agent' && (
               <>
                 {/* 1. Real Usage Analytics Header Cards */}
@@ -735,7 +735,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
                       onChange={(e) => handleUpdateField('enabled', e.target.checked)}
                       style={{ width: '16px', height: '16px' }}
                     />
-                    <span>Enable PrimePro Agent Floating Widget across Website</span>
+                    <span>Enable OXOO Agent Floating Widget across Website</span>
                   </label>
                   <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#64748b' }}>
                     When disabled, the chatbot icon will not appear on public website pages.
@@ -749,7 +749,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
                     <input
                       type="text"
                       className="oxoo-form-input"
-                      value={currentSettings.agentName || 'PrimePro Agent'}
+                      value={currentSettings.agentName || 'OXOO Agent'}
                       onChange={(e) => handleUpdateField('agentName', e.target.value)}
                     />
                   </div>
@@ -758,7 +758,7 @@ export default function SettingsModule({ showToast, logAuditEvent }) {
                     <input
                       type="email"
                       className="oxoo-form-input"
-                      value={currentSettings.supportEscalationEmail || 'support@primepro.ai'}
+                      value={currentSettings.supportEscalationEmail || 'support@oxoo.ai'}
                       onChange={(e) => handleUpdateField('supportEscalationEmail', e.target.value)}
                     />
                   </div>

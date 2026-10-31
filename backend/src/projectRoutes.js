@@ -444,7 +444,7 @@ publicProjectsRouter.post('/requests', projectSubmissionLimiter, async (req, res
         fromStatus: null,
         toStatus: 'New',
         changedBy: customerName,
-        note: 'Project request submitted via PrimePro.ai Projects Hub',
+        note: 'Project request submitted via OXOO.ai Projects Hub',
         changedAt: new Date().toISOString()
       }
     ];
@@ -722,7 +722,7 @@ publicProjectsRouter.post('/consultations', projectSubmissionLimiter, async (req
         date: preferredDate || 'Flexible',
         time: preferredTime || 'Flexible',
         actor: customerName,
-        note: `Preferred contact method: ${preferredContactMethod}. Pending confirmation by PrimePro.ai team.`,
+        note: `Preferred contact method: ${preferredContactMethod}. Pending confirmation by OXOO.ai team.`,
         timestamp: new Date().toISOString()
       }
     ];
@@ -1093,7 +1093,7 @@ adminProjectsRouter.get('/requests/export/csv', async (req, res, next) => {
     }
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="PrimePro-Project-Requests-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="OXOO-Project-Requests-${new Date().toISOString().slice(0, 10)}.csv"`);
     return res.send(lines.join('\n'));
   } catch (err) {
     next(err);

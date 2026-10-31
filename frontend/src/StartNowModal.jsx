@@ -73,7 +73,7 @@ export default function StartNowModal({
 
     // Save demo user & app to localStorage
     try {
-      localStorage.setItem('oxoo_demo_company', 'demo.primepro.ai');
+      localStorage.setItem('oxoo_demo_company', 'demo.oxoo');
       localStorage.setItem('oxoo_demo_user', 'Demo User');
       localStorage.setItem('oxoo_demo_app', app.slug);
     } catch (err) {}
@@ -101,8 +101,8 @@ export default function StartNowModal({
         const isWebsiteApp = websiteSlugs.includes(app.slug) || app.category === 'Websites' || app.category === 'Websites & Apps';
 
         const targetPath = isWebsiteApp
-          ? `/apps/${app.slug}/live-demo?company=demo.primepro.ai`
-          : `/apps/${app.slug}/portal?company=demo.primepro.ai`;
+          ? `/apps/${app.slug}/live-demo?company=demo.oxoo`
+          : `/apps/${app.slug}/portal?company=demo.oxoo`;
 
         onClose();
         setIsLaunching(false);
@@ -187,7 +187,7 @@ export default function StartNowModal({
                       src={launchingApp.iconSrc || launchingApp.svgSrc}
                       alt={launchingApp.name}
                       className="formal-app-img"
-                      onError={(e) => { e.currentTarget.src = '/primepro-icon.png'; }}
+                      onError={(e) => { e.currentTarget.src = '/oxoo-icon.png'; }}
                     />
                   </div>
                 </div>
@@ -312,7 +312,7 @@ export default function StartNowModal({
                         src={app.iconSrc || app.svgSrc}
                         alt={app.name}
                         className="modal-app-icon-img"
-                        onError={(e) => { e.currentTarget.src = '/primepro-icon.png'; }}
+                        onError={(e) => { e.currentTarget.src = '/oxoo-icon.png'; }}
                       />
                     </div>
                     <div className="modal-app-card-info">

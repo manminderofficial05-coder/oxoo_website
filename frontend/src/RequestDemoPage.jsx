@@ -202,7 +202,7 @@ export default function RequestDemoPage() {
     }
 
     if (!getSafeDemoConfig(interestedDemo)) {
-      errors.interestedDemo = 'Please select a valid PrimePro.ai product demo.';
+      errors.interestedDemo = 'Please select a valid OXOO.ai product demo.';
     }
 
     if (!privacyConsent) {
@@ -348,7 +348,7 @@ export default function RequestDemoPage() {
               <div className="request-demo-side-card">
                 <h2 className="request-demo-side-heading">Switch Demo Category</h2>
                 <p className="request-demo-side-desc">
-                  Choose any of the 6 core PrimePro.ai enterprise suites below to preselect your interactive demo:
+                  Choose any of the 6 core OXOO.ai enterprise suites below to preselect your interactive demo:
                 </p>
                 <div className="request-demo-category-list" role="radiogroup" aria-label="Demo Categories">
                   {LIVE_DEMO_LIST.map((item) => {
@@ -392,7 +392,7 @@ export default function RequestDemoPage() {
                   <div>
                     <strong>Enterprise Privacy & Security</strong>
                     <p>
-                      Your information is encrypted and used strictly to configure your demo session and connect you with an PrimePro.ai specialist.
+                      Your information is encrypted and used strictly to configure your demo session and connect you with an OXOO.ai specialist.
                     </p>
                   </div>
                 </div>
@@ -781,7 +781,7 @@ export default function RequestDemoPage() {
                         <span>
                           I agree to the{' '}
                           <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer">
-                            PrimePro.ai Privacy Policy
+                            OXOO.ai Privacy Policy
                           </Link>{' '}
                           and consent to being contacted regarding my live demo request and product evaluation.{' '}
                           <span className="req-star">*</span>

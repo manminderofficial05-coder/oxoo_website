@@ -72,8 +72,8 @@ export async function loginUser(email, password, clientCountryOverride) {
       throw new Error(data.message || 'Invalid email, Storage ID, or password.');
     }
 
-    if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@primepro.ai') &&
-        (password === 'primepro123' || password === 'oxoo123' || password === 'demo123')) {
+    if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@oxoo.ai') &&
+        (password === 'oxoo123' || password === 'demo123')) {
       if (isOutsideIndia && (emailNorm === 'priya@retailmart.in' || emailNorm.endsWith('.in'))) {
         throw new Error(
           'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
@@ -94,11 +94,11 @@ export async function loginUser(email, password, clientCountryOverride) {
         message: 'Login successful as Customer.'
       };
     }
-    if ((emailNorm === 'admin@primepro.ai' || emailNorm === 'admin@multiix.io') &&
-        (password === 'primepro123' || password === 'oxoo123' || password === 'admin123')) {
+    if ((emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io') &&
+        (password === 'oxoo123' || password === 'admin123')) {
       return {
         token: 'demo-admin-jwt-token-88',
-        user: { id: 1, name: 'Root Administrator', email: emailNorm, role: 'admin', organization: 'PrimePro.ai Core Corp' },
+        user: { id: 1, name: 'Root Administrator', email: emailNorm, role: 'admin', organization: 'Oxoo.ai Core Corp' },
         message: 'Login successful as Administrator.'
       };
     }
@@ -108,8 +108,8 @@ export async function loginUser(email, password, clientCountryOverride) {
     if (err.message && (err.message.includes('Access Restricted') || err.message.includes('Invalid'))) {
       throw err;
     }
-    if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@primepro.ai') &&
-        (password === 'primepro123' || password === 'oxoo123' || password === 'demo123')) {
+    if ((emailNorm === 'priya@retailmart.in' || emailNorm === 'customer@oxoo.ai') &&
+        (password === 'oxoo123' || password === 'demo123')) {
       if (isOutsideIndia && (emailNorm === 'priya@retailmart.in' || emailNorm.endsWith('.in'))) {
         throw new Error(
           'Access Restricted: Indian accounts (INR ₹) cannot be used outside India. Please sign in or create an International (USD $) account.'
@@ -130,11 +130,11 @@ export async function loginUser(email, password, clientCountryOverride) {
         message: 'Login successful as Customer.'
       };
     }
-    if ((emailNorm === 'admin@primepro.ai' || emailNorm === 'admin@multiix.io') &&
-        (password === 'primepro123' || password === 'oxoo123' || password === 'admin123')) {
+    if ((emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io') &&
+        (password === 'oxoo123' || password === 'admin123')) {
       return {
         token: 'demo-admin-jwt-token-88',
-        user: { id: 1, name: 'Root Administrator', email: emailNorm, role: 'admin', organization: 'PrimePro.ai Core Corp' },
+        user: { id: 1, name: 'Root Administrator', email: emailNorm, role: 'admin', organization: 'Oxoo.ai Core Corp' },
         message: 'Login successful as Administrator.'
       };
     }
@@ -204,22 +204,22 @@ export async function loginAdminUser(email, password) {
     }
 
     // Demo admin fallback
-    if ((emailNorm === 'admin@primepro.ai' || emailNorm === 'admin@multiix.io' || emailNorm === 'manminder.singh@primepro.ai') &&
-        (password === 'primepro123' || password === 'oxoo123' || password === 'admin123' || password === 'multiix123')) {
+    if ((emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io' || emailNorm === 'manminder.singh@primepro.ai') &&
+        (password === 'oxoo123' || password === 'admin123' || password === 'multiix123')) {
       return {
         token: 'demo-admin-jwt-token-88',
-        user: { id: 1, name: 'Manminder Singh', email: emailNorm, role: 'super_admin', organization: 'PrimePro Core Platform' },
+        user: { id: 1, name: 'Manminder Singh', email: emailNorm, role: 'super_admin', organization: 'OXOO Core Platform' },
         message: 'Admin authorization successful.'
       };
     }
 
     throw new Error(data.message || 'Invalid administrator email or password.');
   } catch (err) {
-    if ((emailNorm === 'admin@primepro.ai' || emailNorm === 'admin@multiix.io' || emailNorm === 'manminder.singh@primepro.ai') &&
-        (password === 'primepro123' || password === 'oxoo123' || password === 'admin123' || password === 'multiix123')) {
+    if ((emailNorm === 'admin@oxoo.ai' || emailNorm === 'admin@multiix.io' || emailNorm === 'manminder.singh@primepro.ai') &&
+        (password === 'oxoo123' || password === 'admin123' || password === 'multiix123')) {
       return {
         token: 'demo-admin-jwt-token-88',
-        user: { id: 1, name: 'Manminder Singh', email: emailNorm, role: 'super_admin', organization: 'PrimePro Core Platform' },
+        user: { id: 1, name: 'Manminder Singh', email: emailNorm, role: 'super_admin', organization: 'OXOO Core Platform' },
         message: 'Admin authorization successful.'
       };
     }
@@ -1782,7 +1782,7 @@ export async function deleteAdminLead(id) {
 }
 
 // -------------------------------------------------------------
-// MODULE 8: PrimePro AGENT (AI CUSTOMER ASSISTANT) API
+// MODULE 8: OXOO AGENT (AI CUSTOMER ASSISTANT) API
 // -------------------------------------------------------------
 export async function getAgentConfig() {
   try {
@@ -1793,10 +1793,10 @@ export async function getAgentConfig() {
     return {
       success: true,
       enabled: true,
-      agentName: 'PrimePro Agent',
-      welcomeMessage: "Hi! I'm PrimePro Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
+      agentName: 'OXOO Agent',
+      welcomeMessage: "Hi! I'm OXOO Agent. How can I help you today? Ask me about our software, pricing plans, website and app development, AI solutions, subscriptions, or support.",
       suggestedQuestions: [
-        'Explore PrimePro applications',
+        'Explore OXOO applications',
         'Compare pricing plans',
         'Find a website development package',
         'Explore Android and iOS app development',
@@ -1819,7 +1819,7 @@ export async function sendAgentChat({ message, conversationId, sessionId }) {
     body: JSON.stringify({ message, conversationId, sessionId })
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.message || 'Unable to send message to PrimePro Agent.');
+  if (!r.ok) throw new Error(data.message || 'Unable to send message to OXOO Agent.');
   return data;
 }
 
@@ -2193,7 +2193,7 @@ export async function exportAdminProjectRequestsCsv(params = {}) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `PrimePro-Project-Requests-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `OXOO-Project-Requests-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();

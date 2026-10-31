@@ -27,7 +27,7 @@ import { authStorage } from './authStorage';
 function CustomerBrandBadge({ companyName, workspaceDomain }) {
   const cleanName = (companyName || 'RetailMart Solutions').replace(/\.(oxoo|com|ai)$/i, '').trim();
   const initial = cleanName.charAt(0).toUpperCase() || 'R';
-  const displayHost = workspaceDomain || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}.primepro.ai`;
+  const displayHost = workspaceDomain || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}.oxoo.ai`;
   return (
     <div style={{
       display: 'inline-flex',
@@ -63,7 +63,7 @@ function CustomerBrandBadge({ companyName, workspaceDomain }) {
 export default function CustomerDashboard() {
   const navigate = useNavigate();
 
-  // Resolved Customer Workspace (e.g. maan.primepro.ai, abc.primepro.ai)
+  // Resolved Customer Workspace (e.g. maan.oxoo.ai, abc.oxoo.ai)
   const [resolvedWorkspace, setResolvedWorkspace] = useState(null);
 
   // Navigation tabs:
@@ -233,7 +233,7 @@ export default function CustomerDashboard() {
     e.target.value = '';
   };
 
-  // 5 Core Software Modules Available on PrimePro Platform (matching Pricing / Checkout)
+  // 5 Core Software Modules Available on OXOO Platform (matching Pricing / Checkout)
   const BASE_DIRECTORY_APPS = [
     {
       id: 'finance',
@@ -333,7 +333,7 @@ export default function CustomerDashboard() {
   const [overview, setOverview] = useState({
     customerName: 'Customer',
     company: 'RetailMart Solutions',
-    email: 'customer@primepro.ai',
+    email: 'customer@oxoo.ai',
     avatar: 'C',
     currentPlan: 'Single Software',
     nextBillingDate: '30 Days',
@@ -473,7 +473,7 @@ export default function CustomerDashboard() {
         amount: totalAmount
       });
 
-      const orderNumber = orderRes.orderNumber || `PrimePro-RNW-${Date.now().toString().slice(-6)}`;
+      const orderNumber = orderRes.orderNumber || `OXOO-RNW-${Date.now().toString().slice(-6)}`;
       const targetName = activeSoftwareNames;
 
       // Finalize renewal callback — strictly triggered ONLY AFTER payment is confirmed
@@ -538,9 +538,9 @@ export default function CustomerDashboard() {
           key: rzpKey,
           amount: orderRes.amountPaise || Math.round(totalAmount * 100),
           currency: 'INR',
-          name: 'PrimePro Multiix',
+          name: 'OXOO Multiix',
           description: `Subscription Renewal: ${targetName} (${renewCycle === 'yearly' ? 'Annual / 12 Mos' : 'Monthly'})`,
-          image: '/primepro-icon.png',
+          image: '/oxoo-icon.png',
           order_id: orderRes.razorpayOrderId || undefined,
           prefill: {
             name: profileData.name || overview.name || 'Priya Sharma',
@@ -614,7 +614,7 @@ export default function CustomerDashboard() {
 
       let effectiveName = storedUser?.name || 'Customer';
       let effectiveComp = customCompany || storedUser?.organization || storedUser?.company || 'My Organization';
-      let effectiveEmail = storedUser?.email || 'customer@primepro.ai';
+      let effectiveEmail = storedUser?.email || 'customer@oxoo.ai';
       let effectivePlan = storedUser?.plan || 'Single Software';
 
       let appsList = storedUser?.purchasedApps || storedUser?.apps || storedUser?.active_apps || [];
@@ -827,7 +827,7 @@ export default function CustomerDashboard() {
             'Automated daily data backups',
             'Role-based permissions & audit logging',
             'Priority 24/7 technical support',
-            'Seamless PrimePro platform integrations'
+            'Seamless OXOO platform integrations'
           ]
         };
         setAvailablePlans([fallbackPlan]);
@@ -869,7 +869,7 @@ export default function CustomerDashboard() {
         force: true
       });
 
-      const orderNumber = orderRes.orderNumber || `PrimePro-APP-${Date.now().toString().slice(-6)}`;
+      const orderNumber = orderRes.orderNumber || `OXOO-APP-${Date.now().toString().slice(-6)}`;
 
       // Finalize verified payment & entitlement activation
       const completePurchaseWithPayment = async (realPaymentId, rzpOrderId, rzpSignature) => {
@@ -927,9 +927,9 @@ export default function CustomerDashboard() {
           key: rzpKey,
           amount: orderRes.amountPaise || Math.round(totalAmount * 100),
           currency: 'INR',
-          name: 'PrimePro Multiix',
+          name: 'OXOO Multiix',
           description: `Software Purchase: ${selectedAppForPlans.name} (${selectedPlan.name})`,
-          image: '/primepro-icon.png',
+          image: '/oxoo-icon.png',
           order_id: orderRes.razorpayOrderId || undefined,
           prefill: {
             name: profileData.name || overview.customerName,
@@ -1155,8 +1155,8 @@ export default function CustomerDashboard() {
     }
   };
 
-  // Shared secret service key matching PrimePro Finance & other software
-  const PrimePro_FINANCE_SERVICE_KEY = "PrimePro-FIN-2026-SECURE-KEY";
+  // Shared secret service key matching Oxoo Finance & other software
+  const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
 
   // App Launch Handler: Passes Finance Service Key and automatically detects as Admin to open Admin Dashboard without login
   const handleOpenApp = (app) => {
@@ -1171,7 +1171,7 @@ export default function CustomerDashboard() {
     // Unified SSO & Service Key parameters:
     // Automatically detected by destination software as Admin, immediately opening Admin Dashboard without login
     const ssoParams = new URLSearchParams({
-      service_key: PrimePro_FINANCE_SERVICE_KEY,
+      service_key: OXOO_FINANCE_SERVICE_KEY,
       user: overview.email || '',
       email: overview.email || '',
       name: overview.customerName || 'Customer Admin',
@@ -1191,14 +1191,14 @@ export default function CustomerDashboard() {
       app: app.id
     });
 
-    // 1. Finance Software (Opens PrimePro Finance directly into Admin Dashboard)
+    // 1. Finance Software (Opens Oxoo Finance directly into Admin Dashboard)
     if (app.id === 'finance') {
       const financeUrl = `https://oxoo-finance.onrender.com/#/admin?${ssoParams.toString()}`;
       window.open(financeUrl, '_blank');
       return;
     }
 
-    // 2. HRMS / Human Resources Software (Opens PrimePro Finance Employee Login)
+    // 2. HRMS / Human Resources Software (Opens Oxoo Finance Employee Login)
     if (app.id === 'hrms' || app.id === 'human-resources') {
       window.open('https://oxoo-finance.onrender.com/', '_blank');
       return;
@@ -1247,11 +1247,11 @@ export default function CustomerDashboard() {
   return (
     <div className="oxoo-dashboard-layout">
       {/* ---------------------------------------------------------
-          1. SIDEBAR (Dark Navy, PrimePro Brand Logo, 8 Navigation Items)
+          1. SIDEBAR (Dark Navy, OXOO Brand Logo, 8 Navigation Items)
           --------------------------------------------------------- */}
       <aside className={`oxoo-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="oxoo-sidebar-top">
-          {/* Logo & Tagline: Prominently displays Company Workspace & Smaller Powered by PrimePro. */}
+          {/* Logo & Tagline: Prominently displays Company Workspace & Smaller Powered by OXOO */}
           <Link to="/" className="oxoo-brand-container" style={{ textDecoration: 'none', display: 'block', padding: '16px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
@@ -1275,8 +1275,8 @@ export default function CustomerDashboard() {
                   {overview.company || 'Customer Workspace'}
                 </div>
                 <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
-                  <img src="/primepro-logo-white.png" alt="PrimePro" style={{ height: '14px', width: 'auto', opacity: 0.95 }} />
-                  <span style={{ fontWeight: 500 }}>Powered by PrimePro.</span>
+                  <img src="/oxoo-logo-white.png" alt="OXOO" style={{ height: '9px', opacity: 0.85 }} />
+                  <span style={{ fontWeight: 500 }}>Powered by OXOO</span>
                 </div>
               </div>
             </div>
@@ -1297,7 +1297,7 @@ export default function CustomerDashboard() {
               onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
             >
               <LayoutDashboard className="oxoo-nav-icon" />
-              <span>My PrimePro Workspace</span>
+              <span>Dashboard</span>
             </button>
 
             <button
@@ -1315,7 +1315,7 @@ export default function CustomerDashboard() {
               onClick={() => { setActiveTab('billing'); setMobileMenuOpen(false); }}
             >
               <CreditCard className="oxoo-nav-icon" />
-              <span>My Subscription & Invoices</span>
+              <span>Billing & Subscriptions</span>
             </button>
 
             <button
@@ -1324,7 +1324,7 @@ export default function CustomerDashboard() {
               onClick={() => { setActiveTab('team'); setMobileMenuOpen(false); }}
             >
               <Users className="oxoo-nav-icon" />
-              <span>My Team</span>
+              <span>Team Management</span>
             </button>
 
             <button
@@ -1333,7 +1333,7 @@ export default function CustomerDashboard() {
               onClick={() => { setActiveTab('support'); setMobileMenuOpen(false); }}
             >
               <HelpCircle className="oxoo-nav-icon" />
-              <span>My Support Tickets</span>
+              <span>Support</span>
             </button>
 
             <button
@@ -1360,7 +1360,7 @@ export default function CustomerDashboard() {
               onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
             >
               <Settings className="oxoo-nav-icon" />
-              <span>Account Settings</span>
+              <span>Settings</span>
             </button>
           </nav>
         </div>
@@ -1564,10 +1564,10 @@ export default function CustomerDashboard() {
               <div className="oxoo-welcome-row">
                 <div>
                   <h1 className="oxoo-welcome-title">
-                    Welcome to PrimePro, {overview.customerName.split(' ')[0]}!
+                    Welcome back, {overview.customerName.split(' ')[0]}!
                   </h1>
                   <p className="oxoo-welcome-subtitle">
-                    My PrimePro Workspace — Your 24/7 Workspace Is Here.
+                    Manage your business with OXOO. Access all your purchased apps in one place.
                   </p>
                 </div>
 
@@ -2711,7 +2711,7 @@ export default function CustomerDashboard() {
                         }
 
                         return filtered.map((t) => {
-                          const ticketNum = t.ticket_number || t.number || `PrimePro-${t.id}`;
+                          const ticketNum = t.ticket_number || t.number || `OXOO-${t.id}`;
                           const statusLower = (t.status || 'open').toLowerCase();
                           return (
                             <tr key={t.id || ticketNum}>
@@ -2792,7 +2792,7 @@ export default function CustomerDashboard() {
                         <td colSpan="6" style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
                           <HelpCircle size={36} color="#94a3b8" style={{ margin: '0 auto 10px', display: 'block' }} />
                           <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>No Support Tickets Yet</div>
-                          <div style={{ fontSize: '12px', marginTop: '4px' }}>Have questions or encounter issues? Click "+ Create Ticket" to chat directly with PrimePro support engineers.</div>
+                          <div style={{ fontSize: '12px', marginTop: '4px' }}>Have questions or encounter issues? Click "+ Create Ticket" to chat directly with OXOO support engineers.</div>
                         </td>
                       </tr>
                     )}
@@ -3795,7 +3795,7 @@ export default function CustomerDashboard() {
             <form onSubmit={handleInviteTeamMember}>
               <div className="oxoo-modal-body">
                 <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px', lineHeight: 1.5 }}>
-                  Add a colleague to your organization account and assign them to specific purchased applications. Team members log in using the standard PrimePro login page.
+                  Add a colleague to your organization account and assign them to specific purchased applications. Team members log in using the standard OXOO login page.
                 </p>
 
                 <div className="oxoo-form-group">
@@ -4203,7 +4203,7 @@ export default function CustomerDashboard() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: '#0284c7', background: '#e0f2fe', padding: '3px 8px', borderRadius: '6px', fontFamily: 'monospace' }}>
-                    {activeTicketChat.ticket_number || activeTicketChat.number || `PrimePro-${activeTicketChat.id}`}
+                    {activeTicketChat.ticket_number || activeTicketChat.number || `OXOO-${activeTicketChat.id}`}
                   </span>
                   <span className="oxoo-status-tag" style={{
                     fontSize: '11px',
@@ -4316,7 +4316,7 @@ export default function CustomerDashboard() {
                             padding: isStaff ? '2px 6px' : '0',
                             borderRadius: '4px'
                           }}>
-                            {isStaff ? (rep.sender || 'PrimePro Support Staff') : 'You'}
+                            {isStaff ? (rep.sender || 'OXOO Support Staff') : 'You'}
                           </span>
                           <span style={{ fontSize: '10.5px', color: isStaff ? '#94a3b8' : '#bae6fd' }}>
                             {rep.timestamp || (rep.created_at ? new Date(rep.created_at).toLocaleString('en-GB') : (rep.time || 'Recent'))}
@@ -4474,7 +4474,7 @@ export default function CustomerDashboard() {
                 <div>
                   <h3 className="oxoo-modal-title">{selectedAppForPlans.name}</h3>
                   <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0' }}>
-                    Select an official plan to activate software access on your existing PrimePro account.
+                    Select an official plan to activate software access on your existing OXOO account.
                   </p>
                 </div>
               </div>
@@ -4663,7 +4663,7 @@ export default function CustomerDashboard() {
                   </button>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '10px', fontSize: '11.5px', color: '#64748b' }}>
                     <ShieldCheck size={14} color="#16a34a" />
-                    <span>Razorpay Verified &bull; Uses existing PrimePro account (No duplicate login created)</span>
+                    <span>Razorpay Verified &bull; Uses existing OXOO account (No duplicate login created)</span>
                   </div>
                 </>
               )}
@@ -4710,7 +4710,7 @@ export default function CustomerDashboard() {
               {/* Line item breakdown */}
               <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#0f172a', fontWeight: 600, marginBottom: '6px' }}>
-                  <span>{selectedInvoice.plan_name || 'PrimePro Multiix Software Subscription'}</span>
+                  <span>{selectedInvoice.plan_name || 'OXOO Multiix Software Subscription'}</span>
                   <span>₹{Number(selectedInvoice.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>

@@ -1,4 +1,4 @@
-// Complete metadata, sample data, and configurations for all 24 PrimePro.ai business applications
+// Complete metadata, sample data, and configurations for all 24 Oxoo.ai business applications
 
 export const CATEGORIES_LIST = [
   'All Categories',
@@ -27,7 +27,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-accounting.png?v=clean',
     svgSrc: '/app-logos/accounting.svg',
     tagline: 'Invoicing, payments, tax compliance, and automated financial reports.',
-    description: 'PrimePro.ai Accounting gives you full control of cash flow, automated bank reconciliation, GST & tax compliance, journal entries, and real-time P&L reporting in one integrated workspace.',
+    description: 'Oxoo.ai Accounting gives you full control of cash flow, automated bank reconciliation, GST & tax compliance, journal entries, and real-time P&L reporting in one integrated workspace.',
     features: ['Bank Reconciliation', 'Automated Invoicing', 'GST & Multi-currency', 'P&L and Balance Sheet', 'Audit Trail'],
     kpis: [
       { label: 'Revenue (MTD)', value: '₹4,82,500', change: '+14.2%' },
@@ -79,7 +79,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-sign.png?v=clean',
     svgSrc: '/app-logos/sign.svg',
     tagline: 'Legally compliant electronic signatures, document routing, and signing status.',
-    description: 'Send, track, and complete agreements in seconds. PrimePro.ai Sign provides encrypted PDF signing, automated recipient sequencing, audit certificates, and workflow triggers.',
+    description: 'Send, track, and complete agreements in seconds. Oxoo.ai Sign provides encrypted PDF signing, automated recipient sequencing, audit certificates, and workflow triggers.',
     features: ['E-Sign Compliance', 'Sequential Signers', 'PDF Drag-and-Drop Fields', 'Automated Reminders', 'Audit Certificate'],
     kpis: [
       { label: 'Completed Docs', value: '1,280', change: '+19%' },
@@ -131,7 +131,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-studio.png?v=clean',
     svgSrc: '/app-logos/studio.svg',
     tagline: 'No-code customization for forms, automated fields, views, and workflows.',
-    description: 'Tailor PrimePro.ai to your company’s unique business logic. Add custom fields, build bespoke approval workflows, configure user access permissions, and generate custom reports in minutes.',
+    description: 'Tailor Oxoo.ai to your company’s unique business logic. Add custom fields, build bespoke approval workflows, configure user access permissions, and generate custom reports in minutes.',
     features: ['Drag-and-Drop Forms', 'Custom Fields & Relations', 'Automated Workflows', 'Role-Based Permissions', 'View Generator'],
     kpis: [
       { label: 'Active Workflows', value: '86', change: '+12' },
@@ -239,7 +239,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-discuss.png?v=clean',
     svgSrc: '/app-logos/discuss.svg',
     tagline: 'Team chat, company channels, direct messages, and voice threads.',
-    description: 'Ditch fragmented messaging tools. PrimePro.ai Discuss keeps conversations tied directly to leads, projects, invoices, and tasks, eliminating context switching across your organization.',
+    description: 'Ditch fragmented messaging tools. Oxoo.ai Discuss keeps conversations tied directly to leads, projects, invoices, and tasks, eliminating context switching across your organization.',
     features: ['Team Channels & DMs', 'Attached Record Discussions', 'Rich Markdown & Code', 'Voice & Video Calls', 'Notification Controls'],
     kpis: [
       { label: 'Messages Sent (Today)', value: '3,840', change: '+18%' },
@@ -399,7 +399,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-helpdesk.png?v=clean',
     svgSrc: '/app-logos/helpdesk.svg',
     tagline: 'Omnichannel ticketing, automated SLA timers, live customer portal, and CSAT metrics.',
-    description: 'Deliver world-class support across email, website chat, phone, and WhatsApp. PrimePro.ai Helpdesk automates ticket routing, enforces SLA commitments, and measures customer satisfaction.',
+    description: 'Deliver world-class support across email, website chat, phone, and WhatsApp. Oxoo.ai Helpdesk automates ticket routing, enforces SLA commitments, and measures customer satisfaction.',
     features: ['Omnichannel Intake', 'Automated SLA Escalation', 'Canned Responses', 'Customer Portal', 'CSAT & First Response Stats'],
     kpis: [
       { label: 'Open Tickets', value: '28', change: '-14%' },
@@ -425,7 +425,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-ecommerce.png?v=clean',
     svgSrc: '/app-logos/ecommerce.svg',
     tagline: 'High-converting online store with real-time inventory, payment gateways, and shipping.',
-    description: 'Sell products online with a modern, lightning-fast storefront. Syncs directly with PrimePro.ai Inventory and Accounting, provides SEO-optimized product pages, and supports localized payment methods.',
+    description: 'Sell products online with a modern, lightning-fast storefront. Syncs directly with Oxoo.ai Inventory and Accounting, provides SEO-optimized product pages, and supports localized payment methods.',
     features: ['Instant Checkout', 'Auto Inventory Sync', 'Multi-currency & UPI', 'Abandoned Cart Recovery', 'Shipping API Integrations'],
     kpis: [
       { label: 'Online Sales (Today)', value: '₹3,42,800', change: '+22.4%' },
@@ -637,7 +637,7 @@ export const APPS_DATA = [
     iconSrc: '/apps/logo-dashboard.png?v=clean',
     svgSrc: '/app-logos/dashboard.svg',
     tagline: 'Executive real-time business health, cross-module analytics, and custom widgets.',
-    description: 'See your whole business at a glance. PrimePro.ai Dashboard aggregates data across sales, finance, operations, customer support, and HR into beautiful, interactive, drillable widgets.',
+    description: 'See your whole business at a glance. Oxoo.ai Dashboard aggregates data across sales, finance, operations, customer support, and HR into beautiful, interactive, drillable widgets.',
     features: ['Cross-Module KPI Summary', 'Interactive Visual Charts', 'Custom Widget Layouts', 'Scheduled PDF Reports', 'Mobile Real-Time Sync'],
     kpis: [
       { label: 'Total Platform ARR', value: '₹1.84 Cr', change: '+28.4%' },
@@ -749,7 +749,7 @@ export function getAppBySlug(slug) {
       category: alias.category,
       iconSrc: alias.iconSrc || baseApp.iconSrc,
       tagline: alias.tagline,
-      description: `PrimePro.ai ${alias.name} provides end-to-end tooling to streamline team productivity, eliminate repetitive tasks, and scale operations seamlessly.`
+      description: `Oxoo.ai ${alias.name} provides end-to-end tooling to streamline team productivity, eliminate repetitive tasks, and scale operations seamlessly.`
     };
   }
 
@@ -770,7 +770,7 @@ export function getAppBySlug(slug) {
     iconSrc: `/apps/logo-accounting.png?v=clean`,
     svgSrc: `/app-logos/accounting.svg`,
     tagline: `Unified ${formattedName} management, real-time collaboration, and automated business operations.`,
-    description: `PrimePro.ai ${formattedName} provides end-to-end tooling to streamline team productivity, eliminate repetitive tasks, and scale business operations seamlessly.`,
+    description: `Oxoo.ai ${formattedName} provides end-to-end tooling to streamline team productivity, eliminate repetitive tasks, and scale business operations seamlessly.`,
     features: ['Workflow Automation', 'Real-Time Sync', 'Custom Permissions', 'Audit Logging', 'Enterprise Export'],
     kpis: [
       { label: 'Active Items', value: '184', change: '+12.4%' },

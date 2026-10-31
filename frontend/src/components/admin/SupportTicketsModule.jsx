@@ -719,7 +719,7 @@ export default function SupportTicketsModule({ showToast, logAuditEvent }) {
                         <div><strong>Created:</strong> {new Date(selectedTicket.created_at || Date.now()).toLocaleString('en-GB')}</div>
                         <div><strong>Last Updated:</strong> {new Date(selectedTicket.updated_at || Date.now()).toLocaleString('en-GB')}</div>
                         <div><strong>Assigned Support Agent:</strong> {selectedTicket.assigned_to || 'Unassigned'}</div>
-                        <div><strong>Related App:</strong> {selectedTicket.related_app || 'PrimePro Business Suite'}</div>
+                        <div><strong>Related App:</strong> {selectedTicket.related_app || 'OXOO Business Suite'}</div>
                       </div>
 
                       {selectedTicket.resolution_notes && (
@@ -930,7 +930,7 @@ export default function SupportTicketsModule({ showToast, logAuditEvent }) {
                       <span style={{ color: '#64748b' }}>Contact:</span> {selectedTicket.contact_name || selectedTicket.user_name || 'Rahul Verma'}
                     </div>
                     <div>
-                      <span style={{ color: '#64748b' }}>Email:</span> {selectedTicket.contact_email || selectedTicket.user_email || 'customer@primepro.ai'}
+                      <span style={{ color: '#64748b' }}>Email:</span> {selectedTicket.contact_email || selectedTicket.user_email || 'customer@oxoo.ai'}
                     </div>
                     <div>
                       <span style={{ color: '#64748b' }}>Active Plan:</span> <span style={{ fontWeight: 700, color: '#0284c7' }}>Enterprise Plan</span>

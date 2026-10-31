@@ -45,11 +45,11 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
     health_url: '/health',
     app_type: 'Cloud Web App',
     access_mode: 'SSO Protected',
-    auth_method: 'PrimePro OAuth2 / JWT',
+    auth_method: 'OXOO OAuth2 / JWT',
     subscription_required: 'Business Plan',
     status: 'Active',
     access_protection: true,
-    warning_page_url: 'https://primepro.ai/access-denied'
+    warning_page_url: 'https://oxoo.in/access-denied'
   });
 
   // Fetch summary and apps
@@ -220,7 +220,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
             <div>
               <h2 className="oxoo-section-title" style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>Applications</h2>
               <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748b' }}>
-                Manage all applications in your PrimePro platform. Configure URLs, access, service keys and settings.
+                Manage all applications in your OXOO platform. Configure URLs, access, service keys and settings.
               </p>
             </div>
           </div>
@@ -472,7 +472,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>+ Add Application</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>Provision a new SaaS application in the PrimePro ecosystem.</p>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>Provision a new SaaS application in the OXOO ecosystem.</p>
               </div>
               <button onClick={() => setShowAddDrawer(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={20} /></button>
             </div>
@@ -542,7 +542,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                   <input
                     type="url"
                     required
-                    placeholder="https://hrms.primepro.ai"
+                    placeholder="https://hrms.oxoo.in"
                     value={newAppForm.main_url}
                     onChange={(e) => setNewAppForm({ ...newAppForm, main_url: e.target.value })}
                     style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', marginTop: '4px' }}
@@ -609,7 +609,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                 <div style={{ padding: '14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Access Protection</div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>Unauthorized visitors are routed to the PrimePro Access Denied page</div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>Unauthorized visitors are routed to the OXOO Access Denied page</div>
                   </div>
                   <input
                     type="checkbox"
@@ -846,11 +846,11 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                       <div>
                         <label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>Auth Method</label>
                         <select
-                          value={selectedApp.auth_method || 'PrimePro OAuth2 / JWT'}
+                          value={selectedApp.auth_method || 'OXOO OAuth2 / JWT'}
                           onChange={(e) => setSelectedApp({ ...selectedApp, auth_method: e.target.value })}
                           style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px' }}
                         >
-                          <option>PrimePro OAuth2 / JWT</option>
+                          <option>OXOO OAuth2 / JWT</option>
                           <option>SAML 2.0</option>
                           <option>OpenID Connect (OIDC)</option>
                         </select>
@@ -902,7 +902,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>Warning Page Redirect (Access Denied)</label>
                     <input
                       type="url"
-                      value={selectedApp.warning_page_url || 'https://primepro.ai/access-denied'}
+                      value={selectedApp.warning_page_url || 'https://oxoo.in/access-denied'}
                       onChange={(e) => setSelectedApp({ ...selectedApp, warning_page_url: e.target.value })}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', marginTop: '4px' }}
                     />
@@ -973,7 +973,7 @@ export default function ApplicationsModule({ showToast, logAuditEvent }) {
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>Approved Domains & CORS Origins</label>
                     <textarea
                       rows={3}
-                      value={typeof selectedApp.allowed_domains === 'string' ? selectedApp.allowed_domains : JSON.stringify(selectedApp.allowed_domains || ["*.primepro.ai", "localhost"])}
+                      value={typeof selectedApp.allowed_domains === 'string' ? selectedApp.allowed_domains : JSON.stringify(selectedApp.allowed_domains || ["*.oxoo.in", "localhost"])}
                       onChange={(e) => setSelectedApp({ ...selectedApp, allowed_domains: e.target.value })}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', marginTop: '4px', fontFamily: 'monospace' }}
                     />

@@ -195,11 +195,11 @@ router.post('/applications', async (req, res, next) => {
       health_url = '/health',
       app_type = 'Cloud Web App',
       access_mode = 'SSO Protected',
-      auth_method = 'PrimePro OAuth2 / JWT',
+      auth_method = 'OXOO OAuth2 / JWT',
       subscription_required = 'Business Plan',
       status = 'Active',
       access_protection = true,
-      warning_page_url = 'https://primepro.ai/access-denied'
+      warning_page_url = 'https://oxoo.in/access-denied'
     } = req.body;
 
     if (!name || !main_url) {
@@ -628,8 +628,8 @@ router.get('/invoices/:id/download-pdf', async (req, res, next) => {
       <body>
         <div class="header">
           <div>
-            <div class="logo">PrimePro</div>
-            <p style="margin: 4px 0; color: #64748b; font-size: 13px;">Your 24/7 Workspace Is Here.</p>
+            <div class="logo">OXOO</div>
+            <p style="margin: 4px 0; color: #64748b; font-size: 13px;">One Intelligent Platform. Every Business.</p>
           </div>
           <div style="text-align: right;">
             <h2 style="margin: 0; color: #0f172a;">INVOICE</h2>
@@ -740,7 +740,7 @@ router.get('/staff', async (req, res, next) => {
   try {
     const { search = '', role = 'All', status = 'All', department = 'All' } = req.query;
     const requesterRole = (req.user?.role || req.headers['x-admin-role'] || 'super_admin').toString();
-    const requesterEmail = (req.user?.email || req.headers['x-admin-email'] || 'admin@primepro.ai').toString().toLowerCase();
+    const requesterEmail = (req.user?.email || req.headers['x-admin-email'] || 'admin@oxoo.ai').toString().toLowerCase();
 
     let sql = `SELECT * FROM platform_staff WHERE 1=1`;
     const params = [];
@@ -809,7 +809,7 @@ router.post('/staff', async (req, res, next) => {
 
     const emailNorm = email.trim().toLowerCase();
     const requesterRole = (req.user?.role || req.headers['x-admin-role'] || 'super_admin').toString().toLowerCase();
-    const requesterEmail = (req.user?.email || req.headers['x-admin-email'] || 'admin@primepro.ai').toString().toLowerCase();
+    const requesterEmail = (req.user?.email || req.headers['x-admin-email'] || 'admin@oxoo.ai').toString().toLowerCase();
 
     // Role Hierarchy Validation:
     // Software Admin can ONLY create Manager and Employee
@@ -832,7 +832,7 @@ router.post('/staff', async (req, res, next) => {
     // Prepare credentials: ID and Password
     const plainPassword = (password && password.trim())
       ? password.trim()
-      : `PrimePro@${Math.random().toString(36).slice(-6)}!`;
+      : `Oxoo@${Math.random().toString(36).slice(-6)}!`;
 
     const staffEmpId = (employeeId && employeeId.trim())
       ? employeeId.trim().toUpperCase()
@@ -1309,7 +1309,7 @@ router.post('/tickets/:id/reply', async (req, res, next) => {
 
       if (targetCompany || targetEmail) {
         try {
-          const emailVal = targetEmail || 'customer@primepro.ai';
+          const emailVal = targetEmail || 'customer@oxoo.ai';
           await query(
             `INSERT INTO customer_notifications (company_name, user_email, customer_email, title, message, type, link)
              VALUES ($1, $2, $2, $3, $4, 'support', '/customer?tab=support')`,
@@ -1332,7 +1332,7 @@ router.post('/tickets/:id/reply', async (req, res, next) => {
               subject: `Support Update: Ticket ${updatedTicket.ticket_number || tId} - ${updatedTicket.subject}`,
               html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                  <h2 style="color: #0284c7; margin-top: 0;">PrimePro Support Team Update</h2>
+                  <h2 style="color: #0284c7; margin-top: 0;">OXOO Support Team Update</h2>
                   <p>Hello,</p>
                   <p>Our support team has posted a reply regarding ticket <strong>#${updatedTicket.ticket_number || tId}</strong> (<em>${updatedTicket.subject}</em>):</p>
                   <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
@@ -1343,7 +1343,7 @@ router.post('/tickets/:id/reply', async (req, res, next) => {
                     <a href="${origin}/customer?tab=support" style="background-color: #0284c7; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Conversation in Support Center</a>
                   </p>
                   <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-                  <p style="font-size: 12px; color: #94a3b8; margin: 0;">PrimePro Technologies Inc. • Enterprise Cloud Platform</p>
+                  <p style="font-size: 12px; color: #94a3b8; margin: 0;">OXOO Technologies Inc. • Enterprise Cloud Platform</p>
                 </div>
               `
             });
@@ -1496,7 +1496,7 @@ router.post('/customer/tickets', async (req, res, next) => {
       customer_id = 'CST-0001',
       company_name = 'Customer Organization',
       user_name = 'Customer Admin',
-      user_email = 'customer@primepro.ai',
+      user_email = 'customer@oxoo.ai',
       related_app = ''
     } = req.body;
 
@@ -1794,15 +1794,15 @@ router.get('/reports/export', async (req, res, next) => {
     } else {
       // General overview export
       csvData = 'Report,Generated At,Generated By,Format\n' +
-        `"PrimePro Executive Report","${new Date().toISOString()}","Super Administrator","CSV"\n\n` +
+        `"OXOO Executive Report","${new Date().toISOString()}","Super Administrator","CSV"\n\n` +
         'Metric,Value\n' +
         '"Report Category","' + category + '"\n' +
-        '"Platform","PrimePro Multiix Enterprise"\n' +
+        '"Platform","OXOO Multiix Enterprise"\n' +
         '"Status","Verified Live Production Telemetry"\n';
     }
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="primepro-${category}-report-${Date.now()}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="oxoo-${category}-report-${Date.now()}.csv"`);
     res.send(csvData);
   } catch (err) {
     next(err);
@@ -1912,8 +1912,8 @@ router.post('/email-templates/test', async (req, res, next) => {
 
     const tRes = await query(`SELECT * FROM email_templates WHERE template_key = $1 OR id::text = $1 LIMIT 1`, [template_key]);
     const tpl = tRes.rows[0] || {
-      subject: 'PrimePro Test Email',
-      body_html: '<p>This is a test notification from PrimePro.</p>'
+      subject: 'OXOO Test Email',
+      body_html: '<p>This is a test notification from OXOO.</p>'
     };
 
     let subject = tpl.subject;
@@ -1939,7 +1939,7 @@ router.post('/email-templates/test', async (req, res, next) => {
     let sendResult = null;
     try {
       sendResult = await sendMailWithFallback({
-        from: '"PrimePro Platform" <manminder.singh@primepro.ai>',
+        from: '"OXOO Platform" <manminder.singh@primepro.ai>',
         to: targetEmail,
         subject,
         html
@@ -2049,9 +2049,9 @@ router.get('/notifications/settings', async (_req, res, next) => {
     const result = await query(`SELECT settings FROM platform_settings WHERE category = 'email' LIMIT 1`);
     const settings = result.rows[0]?.settings || {
       provider: 'Brevo',
-      senderName: 'PrimePro Platform',
+      senderName: 'OXOO Platform',
       senderEmail: 'manminder.singh@primepro.ai',
-      replyToEmail: 'support@primepro.ai',
+      replyToEmail: 'support@oxoo.ai',
       smtpHost: 'smtp-relay.brevo.com',
       smtpPort: 587
     };

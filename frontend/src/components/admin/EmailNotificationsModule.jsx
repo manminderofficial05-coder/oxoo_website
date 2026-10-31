@@ -57,9 +57,9 @@ export default function EmailNotificationsModule({ showToast, logAuditEvent }) {
   // -------------------------------------------------------------
   const [settings, setSettings] = useState({
     provider: 'Brevo',
-    senderName: 'PrimePro Platform',
+    senderName: 'OXOO Platform',
     senderEmail: 'manminder.singh@primepro.ai',
-    replyToEmail: 'support@primepro.ai',
+    replyToEmail: 'support@oxoo.ai',
     smtpHost: 'smtp-relay.brevo.com',
     smtpPort: 587
   });

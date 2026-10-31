@@ -212,7 +212,7 @@ export default function CustomerLoginPage() {
               {isSignUp ? 'Create Customer Account' : 'Customer Sign In'}
             </h1>
             <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-              {isSignUp ? 'Start your 14-day free trial with full access to the PrimePro platform.' : 'Access your active multi-app subscriptions, billing history, invoices, and support tickets.'}
+              {isSignUp ? 'Start your 14-day free trial with full access to the OXOO platform.' : 'Access your active multi-app subscriptions, billing history, invoices, and support tickets.'}
             </p>
           </div>
 
@@ -708,7 +708,7 @@ export default function CustomerLoginPage() {
             gap: '6px'
           }}>
             <Lock size={12} color="#0284c7" />
-            <span>Secure 256-Bit SSL Customer Portal • Protected by PrimePro Shield</span>
+            <span>Secure 256-Bit SSL Customer Portal • Protected by OXOO Shield</span>
           </div>
         </div>
       </main>

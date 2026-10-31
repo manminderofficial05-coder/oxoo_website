@@ -7,13 +7,13 @@
 export const GLOBAL_OFFICES_HEADER = {
   eyebrow: "OUR GLOBAL OFFICES",
   title: "Connecting Businesses Across Borders.",
-  description: "PrimePro.ai brings connected business technology and support closer to organisations around the world."
+  description: "OXOO.ai brings connected business technology and support closer to organisations around the world."
 };
 
 export const GLOBAL_OFFICES = [
   {
     id: "india-hq",
-    company: "PrimePro.ai",
+    company: "OXOO.ai",
     countryCode: "IN",
     countryName: "India",
     location: "Bengaluru, Karnataka, India",
@@ -31,7 +31,7 @@ export const GLOBAL_OFFICES = [
   },
   {
     id: "hyderabad-office",
-    company: "PrimePro.ai",
+    company: "OXOO.ai",
     countryCode: "IN",
     countryName: "India",
     location: "Hyderabad, Telangana, India",
@@ -48,7 +48,7 @@ export const GLOBAL_OFFICES = [
   },
   {
     id: "us-office",
-    company: "PrimePro.ai",
+    company: "OXOO.ai",
     countryCode: "US",
     countryName: "United States",
     location: "United States",

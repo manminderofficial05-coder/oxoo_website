@@ -22,7 +22,7 @@ export default function UsersRolesModule({ showToast, logAuditEvent, currentUser
   })();
 
   const currentRole = (currentUser?.role || storedUser?.role || 'Super Administrator').toString();
-  const currentEmail = (currentUser?.email || storedUser?.email || 'admin@primepro.ai').toString();
+  const currentEmail = (currentUser?.email || storedUser?.email || 'admin@oxoo.ai').toString();
   const isSuperAdmin = currentRole.toLowerCase().includes('super');
 
   const [summary, setSummary] = useState({
@@ -692,7 +692,7 @@ export default function UsersRolesModule({ showToast, logAuditEvent, currentUser
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>Work Email Address *</label>
                     <input
                       type="email"
-                      placeholder="e.g. gurpreet@primepro.ai"
+                      placeholder="e.g. gurpreet@oxoo.in"
                       value={newStaffForm.email}
                       onChange={(e) => setNewStaffForm({ ...newStaffForm, email: e.target.value })}
                       style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', marginTop: '4px' }}
@@ -1060,7 +1060,7 @@ export default function UsersRolesModule({ showToast, logAuditEvent, currentUser
                 type="button"
                 className="oxoo-outline-btn"
                 onClick={() => {
-                  const text = `PrimePro Credentials:\nRole: ${credentialsSuccessModal.role}\nEmail: ${credentialsSuccessModal.email}\nID: ${credentialsSuccessModal.employeeId}\nPassword: ${credentialsSuccessModal.password}`;
+                  const text = `OXOO Credentials:\nRole: ${credentialsSuccessModal.role}\nEmail: ${credentialsSuccessModal.email}\nID: ${credentialsSuccessModal.employeeId}\nPassword: ${credentialsSuccessModal.password}`;
                   copyToClipboard(text, 'Full credentials');
                 }}
               >

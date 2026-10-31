@@ -105,7 +105,7 @@ export default function ResetPasswordPage() {
               Set New Password
             </h1>
             <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-              Create a new secure password for your PrimePro customer account.
+              Create a new secure password for your OXOO customer account.
             </p>
           </div>
 

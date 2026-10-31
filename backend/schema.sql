@@ -1,5 +1,5 @@
 -- =============================================================================
--- Multiix / PrimePro Database Schema (Neon PostgreSQL)
+-- Multiix / OXOO Database Schema (Neon PostgreSQL)
 -- Generated on: 2026-10-27T06:15:51.652Z
 -- Target Database: Neon PostgreSQL Serverless
 -- Total Tables: 26
@@ -342,7 +342,7 @@ CREATE TABLE IF NOT EXISTS platform_applications (
   health_url                   VARCHAR(255) DEFAULT '/health'::character varying,
   app_type                     VARCHAR(50) DEFAULT 'Cloud Web App'::character varying,
   access_mode                  VARCHAR(50) DEFAULT 'SSO Protected'::character varying,
-  auth_method                  VARCHAR(50) DEFAULT 'PrimePro OAuth2 / JWT'::character varying,
+  auth_method                  VARCHAR(50) DEFAULT 'OXOO OAuth2 / JWT'::character varying,
   service_key                  VARCHAR(255) DEFAULT 'sk_live_9f8d7e6c5b4a3e2d'::character varying,
   access_protection            BOOLEAN DEFAULT true,
   warning_page_url             VARCHAR(255) DEFAULT 'https://oxoo.in/access-denied'::character varying,
@@ -384,7 +384,7 @@ CREATE TABLE IF NOT EXISTS platform_staff (
   updated_at                   TIMESTAMPTZ DEFAULT now(),
   assigned_software            JSONB DEFAULT '["all"]'::jsonb,
   employee_id                  VARCHAR(50),
-  created_by                   VARCHAR(150) DEFAULT 'admin@primepro.ai'::character varying
+  created_by                   VARCHAR(150) DEFAULT 'admin@oxoo.ai'::character varying
 );
 
 -- -----------------------------------------------------------------------------
@@ -568,7 +568,7 @@ CREATE TABLE IF NOT EXISTS users (
   email                        VARCHAR(255) NOT NULL,
   password                     VARCHAR(255) NOT NULL,
   role                         VARCHAR(50) DEFAULT 'member'::character varying,
-  organization                 VARCHAR(255) DEFAULT 'PrimePro.ai Tenant'::character varying,
+  organization                 VARCHAR(255) DEFAULT 'Oxoo.ai Tenant'::character varying,
   active                       BOOLEAN DEFAULT true,
   avatar                       VARCHAR(255) DEFAULT ''::character varying,
   last_login                   TIMESTAMPTZ,

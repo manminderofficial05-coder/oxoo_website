@@ -34,7 +34,7 @@ export default function ChooseAppsPage() {
 
     const slugs = selectedApps.map((a) => a.slug);
     try {
-      localStorage.setItem('oxoo_demo_company', 'demo.primepro.ai');
+      localStorage.setItem('oxoo_demo_company', 'demo.oxoo');
       localStorage.setItem('oxoo_selected_apps', JSON.stringify(slugs));
     } catch (e) {}
 
@@ -128,7 +128,7 @@ export default function ChooseAppsPage() {
                           className="one-need-icon-img"
                           loading="lazy"
                           onError={(e) => {
-                            e.currentTarget.src = '/primepro-icon.png';
+                            e.currentTarget.src = '/oxoo-icon.png';
                           }}
                         />
                       </div>
@@ -162,7 +162,7 @@ export default function ChooseAppsPage() {
                       alt=""
                       className="sidebar-app-icon"
                       onError={(e) => {
-                        e.currentTarget.src = '/primepro-icon.png';
+                        e.currentTarget.src = '/oxoo-icon.png';
                       }}
                     />
                     <span className="sidebar-app-name">{app.name}</span>

@@ -9,7 +9,7 @@
 const env = (typeof import.meta !== 'undefined' && import.meta.env) || {};
 
 export const LEGAL_TRUST_CONFIG = {
-  websiteUrl: env.VITE_PUBLIC_WEBSITE_URL || 'https://primepro.ai',
+  websiteUrl: env.VITE_PUBLIC_WEBSITE_URL || 'https://oxoo.ai',
   effectiveDate: env.VITE_LEGAL_EFFECTIVE_DATE || 'October 29, 2026',
   lastUpdated: env.VITE_LEGAL_LAST_UPDATED || 'October 29, 2026',
 

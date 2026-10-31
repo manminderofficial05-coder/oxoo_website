@@ -245,7 +245,7 @@ export default function PricingPage() {
           {/* Card 1: Free Demo */}
           <div className="pricing-card">
             <div className="card-top-banner banner-blue">
-              Try PrimePro Without Any Cost
+              Try OXOO Without Any Cost
             </div>
             <div className="card-content-body">
               <h2 className="card-plan-title">Free Demo</h2>
@@ -385,7 +385,7 @@ export default function PricingPage() {
         isOpen={inquiryModalOpen}
         onClose={() => setInquiryModalOpen(false)}
         category="Website & Apps"
-        productName="PrimePro Custom Digital Platform & WhatsApp AI"
+        productName="OXOO Custom Digital Platform & WhatsApp AI"
         defaultPlan="Growth Plan"
         availablePlans={['Starter Plan', 'Growth Studio', 'Business eCommerce', 'Custom Enterprise Platform']}
       />

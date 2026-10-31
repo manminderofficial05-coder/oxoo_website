@@ -1,6 +1,6 @@
 # SCHEMA.md — Database Architecture & Data Dictionary
 
-> **Platform:** Multiix / PrimePro All-in-One Enterprise Platform  
+> **Platform:** Multiix / OXOO All-in-One Enterprise Platform  
 > **Database Engine:** Neon PostgreSQL (Serverless / Auto-scaling)  
 > **Target Schema:** `public`  
 > **Schema SQL File:** [`schema.sql`](file:///e:/bennn/multiix/schema.sql) | [`backend/schema.sql`](file:///e:/bennn/multiix/backend/schema.sql)  
@@ -149,7 +149,7 @@ Stores encrypted credentials for all system logins (Super Admins, Tenant Admins,
 | `email` | `VARCHAR(255)` | `NOT NULL UNIQUE` | Normalized login email address |
 | `password` | `VARCHAR(255)` | `NOT NULL` | Bcrypt hashed password (`$2a$10$...`) |
 | `role` | `VARCHAR(50)` | `DEFAULT 'member'` | Authority: `Super Admin`, `admin`, `member`, `customer` |
-| `organization` | `VARCHAR(255)` | `DEFAULT 'PrimePro.ai Tenant'` | Company or workspace name |
+| `organization` | `VARCHAR(255)` | `DEFAULT 'Oxoo.ai Tenant'` | Company or workspace name |
 | `active` | `BOOLEAN` | `DEFAULT true` | Account active flag |
 | `avatar` | `VARCHAR(255)` | `DEFAULT ''` | Profile image URL |
 | `last_login` | `TIMESTAMPTZ` | `DEFAULT NULL` | Last authenticated login timestamp |
@@ -174,7 +174,7 @@ Detailed directory of administrators, software admins, managers, and support age
 | `access_level` | `VARCHAR(50)` | `DEFAULT 'Full Platform'` | Granular security level |
 | `permissions` | `JSONB` | `DEFAULT '[]'` | Specific RBAC permission strings array |
 | `assigned_software` | `JSONB` | `DEFAULT '["all"]'` | Software scopes granted to this admin |
-| `created_by` | `VARCHAR(150)` | `DEFAULT 'admin@primepro.ai'` | Creator email / system actor |
+| `created_by` | `VARCHAR(150)` | `DEFAULT 'admin@oxoo.ai'` | Creator email / system actor |
 | `joined_at` | `TIMESTAMPTZ` | `DEFAULT NOW()` | Date joined |
 | `updated_at` | `TIMESTAMPTZ` | `DEFAULT NOW()` | Last permission update |
 
@@ -271,7 +271,7 @@ The primary customer ledger capturing client companies, contract terms, billing 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | `SERIAL` | `PRIMARY KEY` | Order ID |
-| `order_number` | `VARCHAR(100)` | `NOT NULL UNIQUE` | Public checkout order number (e.g. `PrimePro-ORD-9281`) |
+| `order_number` | `VARCHAR(100)` | `NOT NULL UNIQUE` | Public checkout order number (e.g. `OXOO-ORD-9281`) |
 | `payment_id` | `VARCHAR(100)` | `NULLABLE` | Razorpay payment ID (`pay_...`) |
 | `subtotal` | `NUMERIC(12,2)` | `NOT NULL` | Order subtotal |
 | `tax_amount` | `NUMERIC(12,2)` | `DEFAULT 0` | GST tax component |
@@ -418,7 +418,7 @@ Customer service tickets, priority triage, internal private notes, and customer 
 ```json
 [
   {
-    "description": "PrimePro Enterprise Suite (Yearly Contract)",
+    "description": "OXOO Enterprise Suite (Yearly Contract)",
     "quantity": 1,
     "unit_price": 24999.00,
     "total": 24999.00

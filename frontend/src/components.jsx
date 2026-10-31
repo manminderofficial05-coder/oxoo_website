@@ -57,22 +57,20 @@ const HRMS_EMPLOYEE_LOGIN_URL =
   import.meta.env.VITE_HRMS_EMPLOYEE_LOGIN_URL || 'https://oxoo-finance.onrender.com/';
 
 export function Logo({ light = false, withTagline = false, stacked = false, iconOnly = false, className = '' }) {
-  let src = '/primepro-logo-tight.png?v=2';
+  let src = '/oxoo-logo.png?v=navy';
   if (iconOnly) {
-    src = '/primepro-icon.png?v=clean';
-  } else if (stacked) {
-    src = light ? '/primepro-logo-white.png?v=clean' : '/primepro-logo-tight.png?v=2';
+    src = '/oxoo-icon.png?v=navy';
   } else if (light) {
-    src = '/primepro-logo-horizontal-white.png?v=clean';
+    src = '/oxoo-logo-white.png?v=navy';
   } else {
-    src = '/primepro-logo-tight.png?v=2';
+    src = '/oxoo-logo.png?v=navy';
   }
 
   return (
-    <Link className={`brand ${light ? 'brand-light' : ''} ${className}`} to="/" aria-label="PrimePro Home">
+    <Link className={`brand ${light ? 'brand-light' : ''} ${className}`} to="/" aria-label="Oxoo Home">
       <img
         src={src}
-        alt="PrimePro"
+        alt="Oxoo"
         className={`brand-logo-img ${stacked ? 'logo-stacked' : ''} ${iconOnly ? 'logo-icon-only' : ''}`}
       />
     </Link>
@@ -785,7 +783,7 @@ export function Header() {
                         <div className="nav-profile-menu-name">{currentUser.name}</div>
                         <div className="nav-profile-menu-email">{currentUser.email}</div>
                         <div className="nav-profile-menu-org">
-                          {currentUser.organization || (currentUser.role === 'admin' ? 'PrimePro Core Platform' : 'Client Organization')}
+                          {currentUser.organization || (currentUser.role === 'admin' ? 'Oxoo Core Platform' : 'Client Organization')}
                         </div>
                       </div>
                     </div>
@@ -859,7 +857,7 @@ export function Header() {
               <Link
                 to="/choose-apps"
                 className="nav-try-free-btn"
-                title="Try PrimePro.ai Free"
+                title="Try OXOO.ai Free"
               >
                 <span>Try it free</span>
               </Link>
@@ -901,7 +899,7 @@ export function Header() {
             >
               <div className="mega-top">
                 <div className="mega-title-block">
-                  <span className="eyebrow">PrimePro.ai BUSINESS SUITE</span>
+                  <span className="eyebrow">OXOO.AI BUSINESS SUITE</span>
                   <h3>{searchQuery ? `Search results for "${searchQuery}"` : 'Explore All Apps & Services'}</h3>
                 </div>
                 <div className="mega-search-box">
@@ -1019,7 +1017,7 @@ export function Header() {
               ref={projectsMegaRef}
               className="mega-menu projects-mega-menu"
               role="region"
-              aria-label="PrimePro.ai Projects & Services Menu"
+              aria-label="OXOO.ai Projects & Services Menu"
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -1301,13 +1299,13 @@ export function Footer() {
 
       <div className="oxoo-footer-container">
         <div className="oxoo-footer-grid">
-          {/* Column 1 — PrimePro Brand and Contact */}
+          {/* Column 1 — OXOO Brand and Contact */}
           <div className="oxoo-footer-col oxoo-footer-brand-col">
-            <Link to="/" className="oxoo-footer-logo-link" aria-label="PrimePro Home">
-              <img src="/primepro-logo-tight.png?v=2" alt="PrimePro" className="oxoo-footer-logo-img" />
+            <Link to="/" className="oxoo-footer-logo-link" aria-label="OXOO Home">
+              <img src="/oxoo-logo.png" alt="OXOO" className="oxoo-footer-logo-img" />
             </Link>
 
-            <p className="oxoo-footer-tagline">Your 24/7 Workspace Is Here.</p>
+            <p className="oxoo-footer-tagline">One Platform. Every Business Workflow.</p>
 
             <p className="oxoo-footer-description">
               Powering businesses with connected AI-driven software, professional implementation, and ongoing support.
@@ -1321,11 +1319,11 @@ export function Footer() {
                 <span>+91 79 4050 0100</span>
               </a>
 
-              <a href="mailto:hello@primepro.ai" className="oxoo-footer-contact-item">
+              <a href="mailto:hello@oxoo.ai" className="oxoo-footer-contact-item">
                 <span className="oxoo-footer-contact-icon" aria-hidden="true">
                   <Mail size={15} />
                 </span>
-                <span>hello@primepro.ai</span>
+                <span>hello@oxoo.ai</span>
               </a>
 
               <div className="oxoo-footer-contact-item">
@@ -1345,7 +1343,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="oxoo-footer-social-btn"
-                aria-label="PrimePro.ai on LinkedIn"
+                aria-label="OXOO.ai on LinkedIn"
                 title="LinkedIn"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -1362,7 +1360,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="oxoo-footer-social-btn"
-                aria-label="PrimePro.ai on Instagram"
+                aria-label="OXOO.ai on Instagram"
                 title="Instagram"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -1387,7 +1385,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="oxoo-footer-social-btn"
-                aria-label="PrimePro.ai on YouTube"
+                aria-label="OXOO.ai on YouTube"
                 title="YouTube"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -1404,7 +1402,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="oxoo-footer-social-btn"
-                aria-label="PrimePro.ai on Facebook"
+                aria-label="OXOO.ai on Facebook"
                 title="Facebook"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -1420,7 +1418,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="oxoo-footer-social-btn"
-                aria-label="PrimePro.ai on X (Twitter)"
+                aria-label="OXOO.ai on X (Twitter)"
                 title="X (Twitter)"
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -1510,7 +1508,7 @@ export function Footer() {
               <span className="oxoo-footer-cta-eyebrow">LET&apos;S GROW TOGETHER</span>
               <h4 className="oxoo-footer-cta-heading">Ready to transform your business?</h4>
               <p className="oxoo-footer-cta-desc">
-                Get a personalized demo and see how PrimePro.ai can simplify your operations and accelerate your growth.
+                Get a personalized demo and see how OXOO.ai can simplify your operations and accelerate your growth.
               </p>
               <a
                 href={DEMO_FLOW_CONFIG.requestFormRoute}
@@ -1529,7 +1527,7 @@ export function Footer() {
       <div className="oxoo-footer-bottom-wrap">
         <div className="oxoo-footer-bottom">
           <div className="oxoo-footer-copyright">
-            © 2026 PrimePro.ai Inc. All rights reserved.
+            © 2026 OXOO.ai Inc. All rights reserved.
           </div>
 
           <nav className="oxoo-footer-legal-nav" aria-label="Legal and Compliance Links">
@@ -1554,7 +1552,7 @@ export function Footer() {
 
           <div className="oxoo-footer-status-slot">
             {healthState.connected && healthState.status === 'operational' && (
-              <span className="oxoo-footer-live-status" title="Connected to live PrimePro.ai health monitor">
+              <span className="oxoo-footer-live-status" title="Connected to live OXOO.ai health monitor">
                 <span className="oxoo-footer-status-dot" aria-hidden="true" />
                 <span>Cloud services operational</span>
               </span>
@@ -1660,7 +1658,7 @@ export function PartnerLogos() {
 
 export function CTA({
   title = "Ready to Transform Your Business?",
-  description = "Join 10,000+ businesses already growing with PrimePro.ai. Get a free consultation and see how we can help you.",
+  description = "Join 10,000+ businesses already growing with Oxoo.ai. Get a free consultation and see how we can help you.",
   button = "Get a Free Consultation"
 }) {
   const [email, setEmail] = useState('');
@@ -1736,7 +1734,7 @@ export function VideoModal({ isOpen, onClose }) {
               <div className="play-pulse">
                 <Play size={36} fill="#fff" />
               </div>
-              <h3>PrimePro.ai Platform Overview</h3>
+              <h3>Oxoo.ai Platform Overview</h3>
               <p>See how CRM, Accounting, Inventory, and HRMS connect into one unified flow.</p>
               <div className="video-duration">3:24 mins • Product Tour</div>
             </div>
