@@ -12746,7 +12746,7 @@ a.oxoo-footer-contact-item:hover {
 /* =============================================================
    15. PRIMEPRO X FUELO SPLIT-SCREEN PORTAL (Exact Match to User Reference)
    ============================================================= */
-.primepro-portal-root {
+.oxoo-portal-root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -12832,7 +12832,7 @@ a.oxoo-footer-contact-item:hover {
 }
 
 /* Main Split Screen Container */
-.primepro-split-container {
+.oxoo-split-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   flex: 1;
@@ -13260,7 +13260,7 @@ a.oxoo-footer-contact-item:hover {
 
 /* Responsive Grid */
 @media (max-width: 1024px) {
-  .primepro-split-container {
+  .oxoo-split-container {
     grid-template-columns: 1fr;
   }
   .portal-left-panel,

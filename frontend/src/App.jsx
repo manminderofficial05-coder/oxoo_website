@@ -481,7 +481,7 @@ function Home() {
                 </div>
                 <img
                   src="/persona_bill.png"
-                  alt="CEO, PrimePro.ai Technologies"
+                  alt="CEO, OXOO Technologies"
                   className="persona-avatar-img"
                   loading="lazy"
                 />
@@ -493,7 +493,7 @@ function Home() {
                   “When business becomes connected, possibilities become limitless.”
                 </span>
                 <span className="persona-quote-author">
-                  — CEO, PrimePro.ai Technologies
+                  — CEO, OXOO Technologies
                 </span>
               </div>
             </div>
@@ -664,7 +664,7 @@ function Home() {
                   We're united by the spirit of open source, and a common vision: "to transform companies, empower employees".
                 </p>
                 <div className="bento-editions-sub">
-                  <p>PrimePro is available in two editions:</p>
+                  <p>OXOO is available in two editions:</p>
                   <p>• <strong>Community:</strong> Open Source, 100% free.</p>
                   <p>• <strong>Enterprise:</strong> extra apps, infrastructure and professional services.</p>
                 </div>
@@ -694,10 +694,10 @@ function Home() {
               <div className="bento-card bento-card-ai">
                 <h3>Open Source + AI = ❤️</h3>
                 <p>
-                  Use PrimePro.sh to develop or vibe-code tailored modules. As we are open source, LLMs are already trained on our source code.
+                  Use OXOO.sh to develop or vibe-code tailored modules. As we are open source, LLMs are already trained on our source code.
                 </p>
                 <div className="bento-code-img-frame">
-                  <img src="/home/claude.webp" alt="PrimePro AI vibe-coding terminal" loading="lazy" />
+                  <img src="/home/claude.webp" alt="OXOO AI vibe-coding terminal" loading="lazy" />
                 </div>
                 <Link to="/apps" className="bento-purple-btn">
                   Browse Community Apps
@@ -727,7 +727,7 @@ function Home() {
               <div className="bento-card bento-card-quote">
                 <h3>No corporate bullsh*t</h3>
                 <blockquote className="competitor-quote">
-                  “With most systems, you get 70% of what you hoped. With PrimePro, you get more than what you expected. You, guys, will transform the market.”
+                  “With most systems, you get 70% of what you hoped. With OXOO, you get more than what you expected. You, guys, will transform the market.”
                 </blockquote>
                 <span className="competitor-author">- Anonymous competitor</span>
               </div>
@@ -811,7 +811,7 @@ function Home() {
                 <span className="happy-cursive-word">happy</span>
               </div>
               <h3 className="join-users-title">Join 28 million users</h3>
-              <p className="join-users-caption">who grow their business with PrimePro</p>
+              <p className="join-users-caption">who grow their business with OXOO</p>
             </div>
           </div>
         </section>}

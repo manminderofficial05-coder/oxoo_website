@@ -52,7 +52,7 @@ export default function PrimeProPortal() {
   };
 
   return (
-    <div className={`primepro-portal-root ${activePortalMode === 'hr' ? 'hr-theme' : 'billing-theme'}`}>
+    <div className={`oxoo-portal-root ${activePortalMode === 'hr' ? 'hr-theme' : 'billing-theme'}`}>
       {/* 1. TOP DEDICATED SUBDOMAIN BAR */}
       <div className="portal-subdomain-bar">
         <div className="subdomain-bar-inner">
@@ -424,7 +424,7 @@ export default function PrimeProPortal() {
         /* ==============================================================
             B. SMART BILLING / FINANCE PORTAL (Previous Reference Screenshot)
            ============================================================== */
-        <main className="primepro-split-container">
+        <main className="oxoo-split-container">
           {/* LEFT PANEL: DARK EMERALD FOREST COMMAND CENTRE */}
           <section className="portal-left-panel">
             <div className="portal-left-grid-bg" />
@@ -437,7 +437,7 @@ export default function PrimeProPortal() {
                   <span>PP</span>
                 </div>
                 <div className="portal-brand-text">
-                  <h3 className="portal-brand-title">PrimePro x Fuelo</h3>
+                  <h3 className="portal-brand-title">OXOO x Fuelo</h3>
                   <p className="portal-brand-subtitle">Oxoo Management System</p>
                 </div>
               </div>
@@ -535,7 +535,7 @@ export default function PrimeProPortal() {
                     <div className="action-info">
                       <h3 className="action-title">Free Demo</h3>
                       <p className="action-desc">
-                        See how PrimePro x Fuelo can simplify your oxoo process.
+                        See how OXOO x Fuelo can simplify your oxoo process.
                       </p>
                     </div>
                   </div>
