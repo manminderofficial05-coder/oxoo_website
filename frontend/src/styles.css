@@ -255,24 +255,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   gap: 8px;
   flex-shrink: 0;
   text-decoration: none;
-  background: #ffffff;
-  padding: 7px 18px;
-  border-radius: 9999px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .brand:hover {
   transform: translateY(-1px);
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.09);
+  border-color: transparent;
+  box-shadow: none;
+  opacity: 0.92;
 }
 
 .brand-logo-img {
-  height: 28px;
+  height: 32px;
   width: auto;
-  max-width: 150px;
+  max-width: 160px;
   object-fit: contain;
   display: block;
   transition: transform 0.22s ease;
