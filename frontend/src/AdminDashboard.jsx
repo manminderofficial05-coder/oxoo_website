@@ -181,6 +181,7 @@ export default function AdminDashboard() {
   const [selectedCustIds, setSelectedCustIds] = useState(new Set());
   const [selectedCustomerDetail, setSelectedCustomerDetail] = useState(null);
   const [drawerSubTab, setDrawerSubTab] = useState('overview');
+  const [drawerAppsViewFilter, setDrawerAppsViewFilter] = useState('all');
   const [activeCardFilter, setActiveCardFilter] = useState('all');
   const [actionReasonModal, setActionReasonModal] = useState({ open: false, type: '', customerId: '', company: '' });
   const [actionReasonText, setActionReasonText] = useState('');
@@ -3992,44 +3993,374 @@ export default function AdminDashboard() {
                       )}
 
                       {/* TAB 4: APPLICATIONS */}
-                      {drawerSubTab === 'applications' && (
-                        <div className="oxoo-drawer-section">
-                          <span className="oxoo-drawer-sec-title" style={{ display: 'block', marginBottom: '12px' }}>
-                            Purchased Applications ({selectedCustomerDetail.applications?.length || 3})
-                          </span>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {(selectedCustomerDetail.applications || [
-                              { name: 'Finance Software', status: 'Active', accessEnabled: true, activatedDate: selectedCustomerDetail.joined },
-                              { name: 'HRMS Software', status: 'Active', accessEnabled: true, activatedDate: selectedCustomerDetail.joined },
-                              { name: 'Marketing Software', status: 'Active', accessEnabled: true, activatedDate: selectedCustomerDetail.joined }
-                            ]).map((app, idx) => (
-                              <div key={idx} style={{
-                                padding: '12px 14px',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '10px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                background: '#ffffff'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Layers size={16} />
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#0f172a' }}>{app.name}</div>
-                                    <div style={{ fontSize: '11px', color: '#64748b' }}>Activated: {app.activatedDate}</div>
-                                  </div>
-                                </div>
-                                <span className={`oxoo-badge-pill ${String(app.status || 'active').toLowerCase()}`}>
-                                  {app.status || 'Active'}
+                      {drawerSubTab === 'applications' && (() => {
+                        const OXOO_ALL_SUITES_DEFAULT = [
+                          {
+                            id: 'finance',
+                            name: 'Finance Software',
+                            category: 'Finance & Accounts',
+                            icon: '/apps/logo-accounting.png?v=clean',
+                            desc: 'Accounting, Invoicing, Expenses, Sign, Spreadsheet, ESG',
+                            apps: ['Accounting', 'Invoicing', 'Expenses', 'Sign', 'Spreadsheet', 'ESG']
+                          },
+                          {
+                            id: 'sales',
+                            name: 'Sales Software',
+                            category: 'Sales & CRM',
+                            icon: '/apps/logo-sales.png?v=clean',
+                            desc: 'CRM, Sales, Subscriptions, POS Shop, POS Restaurant, Rental',
+                            apps: ['CRM', 'Sales', 'Subscriptions', 'POS Shop', 'POS Restaurant', 'Rental']
+                          },
+                          {
+                            id: 'websites',
+                            name: 'Websites & Apps Software',
+                            category: 'Websites & Mobile Apps',
+                            icon: '/apps/logo-website.png?v=clean',
+                            desc: 'AI Website Builder, Android & iOS Apps, eCommerce Websites, 3D Websites, AI Chatbots, Web Apps & Other',
+                            apps: ['AI Website Builder', 'Android & iOS Apps', 'eCommerce Websites', '3D Websites', 'AI Chatbots', 'Web Apps & Other']
+                          },
+                          {
+                            id: 'supply-chain',
+                            name: 'Supply Chain Software',
+                            category: 'Supply Chain & Inventory',
+                            icon: '/apps/logo-inventory.png?v=clean',
+                            desc: 'Inventory, Manufacturing, Maintenance, PLM, Quality, Purchase',
+                            apps: ['Inventory', 'Manufacturing', 'Maintenance', 'PLM', 'Quality', 'Purchase']
+                          },
+                          {
+                            id: 'human-resources',
+                            name: 'Human Resources Software',
+                            category: 'Human Resources & Payroll',
+                            icon: '/apps/logo-hr.png?v=clean',
+                            desc: 'Employees, Payroll, Recruitment, Time Off, Appraisals, Fleet',
+                            apps: ['Employees', 'Payroll', 'Recruitment', 'Time Off', 'Appraisals', 'Fleet']
+                          },
+                          {
+                            id: 'marketing',
+                            name: 'Marketing Software',
+                            category: 'Marketing Automation',
+                            icon: '/apps/logo-email-marketing.png?v=clean',
+                            desc: 'Social Marketing, Email Marketing, SMS Marketing, Marketing Automation, WhatsApp, Surveys',
+                            apps: ['Social Marketing', 'Email Marketing', 'SMS Marketing', 'Marketing Automation', 'WhatsApp', 'Surveys']
+                          },
+                          {
+                            id: 'whatsapp-chat-ai',
+                            name: 'WhatsApp Chat AI Software',
+                            category: 'WhatsApp & Communication',
+                            icon: '/apps/logo-discuss.png?v=clean',
+                            desc: 'WhatsApp AI Inbox, WhatsApp Marketing & Broadcasts, WhatsApp Flow Builder, WhatsApp Commerce, WhatsApp Booking & Reminders, WhatsApp Integrations & Settings',
+                            apps: ['WhatsApp AI Inbox', 'WhatsApp Marketing & Broadcasts', 'WhatsApp Flow Builder', 'WhatsApp Commerce', 'WhatsApp Booking & Reminders', 'WhatsApp Integrations & Settings']
+                          },
+                          {
+                            id: 'productivity',
+                            name: 'Productivity Software',
+                            category: 'Productivity & AI',
+                            icon: '/apps/logo-ai.png?v=clean',
+                            desc: 'Artificial Intelligence, Discuss, VoIP, IoT, Documents, Knowledge',
+                            apps: ['Artificial Intelligence', 'Discuss', 'VoIP', 'IoT', 'Documents', 'Knowledge']
+                          }
+                        ];
+
+                        const rawPurchased = [
+                          ...(Array.isArray(selectedCustomerDetail.apps) ? selectedCustomerDetail.apps : []),
+                          ...(Array.isArray(selectedCustomerDetail.applications) ? selectedCustomerDetail.applications.map(a => a.name) : []),
+                          ...(Array.isArray(selectedCustomerDetail.selected_apps) ? selectedCustomerDetail.selected_apps : [])
+                        ].map(s => String(s || '').toLowerCase().trim());
+
+                        const catalogSuites = (selectedCustomerDetail.allCatalogSuites && selectedCustomerDetail.allCatalogSuites.length > 0)
+                          ? selectedCustomerDetail.allCatalogSuites
+                          : OXOO_ALL_SUITES_DEFAULT.map(suite => {
+                              const isPurchased = rawPurchased.some(p => {
+                                const normSuiteName = suite.name.toLowerCase().trim();
+                                const normSuiteId = suite.id.toLowerCase().trim();
+                                return p === normSuiteName ||
+                                       p === normSuiteId ||
+                                       normSuiteName.includes(p) ||
+                                       p.includes(normSuiteId) ||
+                                       suite.apps.some(a => a.toLowerCase().trim() === p);
+                              });
+                              const isActive = isPurchased && selectedCustomerDetail.accountStatus !== 'Suspended';
+                              return {
+                                ...suite,
+                                isPurchased,
+                                isActive,
+                                status: isActive ? 'Active' : (isPurchased ? 'Suspended' : 'Not Subscribed'),
+                                activatedDate: isPurchased ? (selectedCustomerDetail.joined || 'Active') : null,
+                                renewalDate: isPurchased ? (selectedCustomerDetail.renewalDate || null) : null,
+                                appsCount: suite.apps.length,
+                                appsList: suite.apps.map(a => ({ name: a, status: isActive ? 'Active' : 'Available', isActive }))
+                              };
+                            });
+
+                        const activeSuites = catalogSuites.filter(s => s.isPurchased && s.isActive);
+                        const totalActiveAppsCount = activeSuites.reduce((acc, s) => acc + (s.appsCount || s.appsList?.length || 6), 0);
+
+                        const suitesToDisplay = drawerAppsViewFilter === 'purchased'
+                          ? catalogSuites.filter(s => s.isPurchased)
+                          : (drawerAppsViewFilter === 'available'
+                              ? catalogSuites.filter(s => !s.isPurchased)
+                              : catalogSuites);
+
+                        return (
+                          <div className="oxoo-drawer-section">
+                            {/* Summary & Metrics Header */}
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '12px',
+                              marginBottom: '16px'
+                            }}>
+                              <div>
+                                <span className="oxoo-drawer-sec-title" style={{ display: 'block', marginBottom: '4px' }}>
+                                  Applications & Entitlements ({activeSuites.length} Active Suite{activeSuites.length !== 1 ? 's' : ''})
+                                </span>
+                                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                  Showing software suites and individual business applications active for <strong>{selectedCustomerDetail.company}</strong>.
                                 </span>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '4px 10px',
+                                  borderRadius: '20px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  background: '#dcfce7',
+                                  color: '#15803d',
+                                  border: '1px solid #86efac'
+                                }}>
+                                  ✓ {activeSuites.length} Active Suite{activeSuites.length !== 1 ? 's' : ''}
+                                </span>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '4px 10px',
+                                  borderRadius: '20px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  background: '#e0f2fe',
+                                  color: '#0369a1',
+                                  border: '1px solid #bae6fd'
+                                }}>
+                                  ⚡ {totalActiveAppsCount} Apps Active
+                                </span>
+                              </div>
+                            </div>
 
+                            {/* View Filter Pills */}
+                            <div style={{
+                              display: 'flex',
+                              gap: '8px',
+                              marginBottom: '16px',
+                              background: '#f8fafc',
+                              padding: '4px',
+                              borderRadius: '10px',
+                              border: '1px solid #e2e8f0',
+                              width: 'fit-content'
+                            }}>
+                              <button
+                                type="button"
+                                onClick={() => setDrawerAppsViewFilter('all')}
+                                style={{
+                                  padding: '6px 14px',
+                                  borderRadius: '7px',
+                                  border: 'none',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  background: drawerAppsViewFilter === 'all' ? '#ffffff' : 'transparent',
+                                  color: drawerAppsViewFilter === 'all' ? '#0f172a' : '#64748b',
+                                  boxShadow: drawerAppsViewFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                All Applications (8 Suites / 48 Apps)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDrawerAppsViewFilter('purchased')}
+                                style={{
+                                  padding: '6px 14px',
+                                  borderRadius: '7px',
+                                  border: 'none',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  background: drawerAppsViewFilter === 'purchased' ? '#ffffff' : 'transparent',
+                                  color: drawerAppsViewFilter === 'purchased' ? '#15803d' : '#64748b',
+                                  boxShadow: drawerAppsViewFilter === 'purchased' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                Active & Purchased ({activeSuites.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDrawerAppsViewFilter('available')}
+                                style={{
+                                  padding: '6px 14px',
+                                  borderRadius: '7px',
+                                  border: 'none',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  background: drawerAppsViewFilter === 'available' ? '#ffffff' : 'transparent',
+                                  color: drawerAppsViewFilter === 'available' ? '#0284c7' : '#64748b',
+                                  boxShadow: drawerAppsViewFilter === 'available' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                Available to Purchase ({8 - activeSuites.length})
+                              </button>
+                            </div>
+
+                            {/* Software Suites & Applications Cards */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {suitesToDisplay.map((suite, idx) => {
+                                const isSuiteActive = suite.isActive;
+                                return (
+                                  <div
+                                    key={suite.id || idx}
+                                    style={{
+                                      padding: '16px 18px',
+                                      border: "1.5px solid " + (isSuiteActive ? '#bbf7d0' : '#e2e8f0'),
+                                      borderRadius: '12px',
+                                      background: isSuiteActive ? '#ffffff' : '#fafafa',
+                                      boxShadow: isSuiteActive ? '0 2px 8px rgba(22, 163, 74, 0.05)' : 'none',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  >
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      flexWrap: 'wrap',
+                                      gap: '12px',
+                                      marginBottom: '12px'
+                                    }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <img
+                                          src={suite.icon}
+                                          alt={suite.name}
+                                          style={{
+                                            width: 38,
+                                            height: 38,
+                                            objectFit: 'contain',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 2px 5px rgba(0,0,0,0.08)'
+                                          }}
+                                          onError={(e) => { e.currentTarget.src = '/oxoo-icon.png'; }}
+                                        />
+                                        <div>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontWeight: 700, fontSize: '14.5px', color: '#0f172a' }}>
+                                              {suite.name}
+                                            </span>
+                                            <span style={{
+                                              fontSize: '11px',
+                                              color: '#64748b',
+                                              background: '#f1f5f9',
+                                              padding: '2px 8px',
+                                              borderRadius: '6px',
+                                              fontWeight: 600
+                                            }}>
+                                              {suite.category}
+                                            </span>
+                                          </div>
+                                          <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                                            {isSuiteActive ? (
+                                              <span>
+                                                Activated: <strong>{suite.activatedDate || selectedCustomerDetail.joined}</strong>
+                                                {suite.renewalDate && <> &bull; Renews: <strong>{suite.renewalDate}</strong></>}
+                                              </span>
+                                            ) : (
+                                              <span>Included in Custom Pack & Enterprise upgrades</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span className={"oxoo-badge-pill " + (isSuiteActive ? 'active' : 'inactive')} style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '5px',
+                                          fontSize: '12px',
+                                          fontWeight: 700,
+                                          padding: '5px 12px',
+                                          borderRadius: '8px',
+                                          background: isSuiteActive ? '#dcfce7' : '#f1f5f9',
+                                          color: isSuiteActive ? '#15803d' : '#64748b',
+                                          border: isSuiteActive ? '1px solid #86efac' : '1px solid #cbd5e1'
+                                        }}>
+                                          {isSuiteActive ? '✓ Active & Entitled' : 'Not Subscribed'}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Included Business Applications Chips */}
+                                    <div style={{
+                                      background: isSuiteActive ? '#f8fafc' : '#f1f5f9',
+                                      borderRadius: '10px',
+                                      padding: '12px 14px',
+                                      border: '1px solid #e2e8f0'
+                                    }}>
+                                      <div style={{
+                                        fontSize: '11.5px',
+                                        fontWeight: 700,
+                                        color: '#475569',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.4px',
+                                        marginBottom: '8px'
+                                      }}>
+                                        {isSuiteActive ? 'Included Active Applications (6)' : 'Included Applications (6)'}
+                                      </div>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {(suite.appsList || (suite.apps || []).map(a => ({ name: a, isActive: isSuiteActive }))).map((subApp, subIdx) => {
+                                          const appActive = isSuiteActive;
+                                          return (
+                                            <span
+                                              key={subIdx}
+                                              style={{
+                                                fontSize: '12px',
+                                                fontWeight: 600,
+                                                padding: '4px 10px',
+                                                borderRadius: '6px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                background: appActive ? '#ecfdf5' : '#ffffff',
+                                                color: appActive ? '#065f46' : '#64748b',
+                                                border: "1px solid " + (appActive ? '#a7f3d0' : '#e2e8f0'),
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                                              }}
+                                            >
+                                              <span style={{
+                                                width: '6px',
+                                                height: '6px',
+                                                borderRadius: '50%',
+                                                background: appActive ? '#10b981' : '#94a3b8'
+                                              }} />
+                                              {subApp.name || subApp}
+                                              {appActive && <span style={{ fontSize: '10px', fontWeight: 700, color: '#059669' }}>Active</span>}
+                                            </span>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      
                       {/* TAB 5: TEAM */}
                       {drawerSubTab === 'team' && (
                         <div className="oxoo-drawer-section">

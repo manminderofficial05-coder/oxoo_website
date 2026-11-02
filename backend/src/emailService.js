@@ -482,10 +482,11 @@ async function sendInvoiceAndCredentialsEmail({
   billingCycle = 'monthly',
   planName = 'Standard Pack',
   selectedApps = [],
-  password = 'oxoo123',
+  password = '',
   loginUrl = 'http://localhost:5173/login',
   customerPhone = '',
-  includeCredentials = false
+  includeCredentials = false,
+  isRenewalOrAdditional = false
 }) {
   if (!toEmail) throw new Error('Recipient email is required.');
   const normEmail = toEmail.trim().toLowerCase();
@@ -530,12 +531,21 @@ async function sendInvoiceAndCredentialsEmail({
       }).join('')
     : '<li style="padding: 4px 0; font-weight: 600; color: #0f172a;">Business Application Suite</li>';
 
-  const subject = includeCredentials
-    ? `Order Confirmed: ${invoiceNumber} & Your OXOO Customer Login Credentials`
-    : `Tax Invoice Confirmed: ${invoiceNumber} - ${companyName}`;
+  const isFirstTime = Boolean(includeCredentials);
+  const subject = isFirstTime
+    ? `🎉 Congratulations on Your OXOO Subscription! Order Confirmed: ${invoiceNumber} & Your Login Details`
+    : `🎉 Congratulations! Your OXOO Order Confirmed: ${invoiceNumber} · Tax Invoice Attached`;
 
-  const credentialsBlock = includeCredentials ? `
-              <!-- Credentials Card (Highlighted Box) -->
+  const congratsHeading = isFirstTime
+    ? `🎉 Congratulations, ${customerName}! Welcome to OXOO.ai!`
+    : `🎉 Congratulations, ${customerName}! Your Order is Confirmed!`;
+
+  const congratsMessage = isFirstTime
+    ? `Congratulations on subscribing to <strong>OXOO.ai</strong> for <strong>${companyName}</strong>! Your software suite and cloud workspace have been successfully activated. Below are your official account login credentials (User ID & Password) and software applications details. Your official Tax Invoice & Bill has been attached as a PDF document to this email.`
+    : `Congratulations on expanding / renewing your <strong>OXOO.ai</strong> subscription for <strong>${companyName}</strong>! Your payment for <strong>${planName}</strong> was verified and processed successfully. Your updated software applications are now active in your workspace. Your official Tax Invoice & Bill is attached as a PDF document below.`;
+
+  const credentialsBlock = isFirstTime ? `
+              <!-- Credentials Card (Highlighted Box - FIRST TIME ONLY) -->
               <div style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border: 2px solid #38bdf8; border-radius: 14px; padding: 24px; margin-bottom: 28px;">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                   <span style="font-size: 16px; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -543,7 +553,7 @@ async function sendInvoiceAndCredentialsEmail({
                   </span>
                 </div>
                 <p style="font-size: 13px; color: #334155; margin-top: 0; margin-bottom: 16px;">
-                  Use these credentials to sign in to your Customer Dashboard, view your bills, and access your active software:
+                  Use these credentials to sign in to your Customer Dashboard, view your bills, and access your active software applications:
                 </p>
                 <table width="100%" cellpadding="6" cellspacing="0" style="background: #ffffff; border-radius: 10px; border: 1px solid #bae6fd; font-size: 14px;">
                   <tr>
@@ -588,10 +598,10 @@ async function sendInvoiceAndCredentialsEmail({
                   </a>
                 </div>
               </div>` : `
-              <!-- Existing Account Portal Access Box (No passwords sent) -->
+              <!-- Existing Account Portal Access Box (RENEWALS / BUY AGAIN - No passwords sent) -->
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 24px;">
                 <span style="font-size: 15px; font-weight: 800; color: #0f172a; display: block; margin-bottom: 6px;">
-                  Access Your Software & Subscriptions
+                  Access Your Active Applications & Workspace
                 </span>
                 <p style="font-size: 13px; color: #475569; margin: 0 0 16px; line-height: 1.5;">
                   Your purchased software and entitlements are now active on your organization account. You can log in to your OXOO Customer Dashboard using your existing OXOO login credentials:
@@ -628,10 +638,10 @@ async function sendInvoiceAndCredentialsEmail({
           <tr>
             <td style="padding: 36px 32px;">
               <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 8px;">
-                Thank you, ${customerName}!
+                ${congratsHeading}
               </h2>
               <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">
-                Thank you for subscribing to <strong>OXOO</strong> for <strong>${companyName}</strong>. Your payment was verified and processed successfully. Your official Tax Invoice is attached as a PDF document to this email.
+                ${congratsMessage}
               </p>
 
               ${credentialsBlock}

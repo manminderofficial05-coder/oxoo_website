@@ -1037,8 +1037,9 @@ app.post('/api/customer/setup-password', async (req, res, next) => {
         planName: planName || 'Standard Pack',
         selectedApps: selectedApps || [],
         password: cleanPassword,
-        loginUrl: `${origin}/login`,
-        customerPhone: phone || ''
+        loginUrl: `${origin}/customer/login`,
+        customerPhone: phone || '',
+        includeCredentials: true
       });
     } catch (eErr) {
       console.error('[setup-password] Error sending credentials & invoice email:', eErr.message);
@@ -4984,10 +4985,180 @@ app.get('/api/admin/customers/:id', requireAdminAuth, async (req, res, next) => 
       [c.company_name]
     );
 
+    // Invoices for this customer
+    const invRes = await query(
+      `SELECT * FROM invoices WHERE company_name ILIKE $1 ORDER BY invoice_date DESC`,
+      [c.company_name]
+    );
+
+    // Orders for this customer to gather all purchased software/apps
+    let ordersRows = [];
+    try {
+      const ordRes = await query(
+        `SELECT * FROM orders WHERE (LOWER(customer_email) = LOWER($1) OR company_name ILIKE $2) AND status = 'Paid' ORDER BY id DESC`,
+        [c.email, c.company_name]
+      );
+      ordersRows = ordRes.rows || [];
+    } catch (e) {}
+
+    // Gather all purchased applications across customers table, subscriptions, orders, and invoices
+    const allPurchasedAppsSet = new Set();
+    if (Array.isArray(apps)) {
+      apps.forEach(a => { if (a) allPurchasedAppsSet.add(typeof a === 'string' ? a.trim() : (a.name || a.id)); });
+    }
+    subRes.rows.forEach(s => {
+      if (s.active_apps) {
+        try {
+          const arr = Array.isArray(s.active_apps) ? s.active_apps : JSON.parse(s.active_apps);
+          arr.forEach(a => { if (a) allPurchasedAppsSet.add(typeof a === 'string' ? a.trim() : (a.name || a.id)); });
+        } catch (e) {}
+      }
+    });
+    ordersRows.forEach(o => {
+      if (o.selected_apps) {
+        try {
+          const arr = Array.isArray(o.selected_apps) ? o.selected_apps : JSON.parse(o.selected_apps);
+          arr.forEach(a => { if (a) allPurchasedAppsSet.add(typeof a === 'string' ? a.trim() : (a.name || a.id)); });
+        } catch (e) {}
+      }
+    });
+
+    const PLATFORM_SOFTWARE_SUITES = [
+      {
+        id: 'finance',
+        name: 'Finance Software',
+        category: 'Finance & Accounts',
+        icon: '/apps/logo-accounting.png?v=clean',
+        desc: 'Accounting, Invoicing, Expenses, Sign, Spreadsheet, ESG',
+        apps: ['Accounting', 'Invoicing', 'Expenses', 'Sign', 'Spreadsheet', 'ESG']
+      },
+      {
+        id: 'sales',
+        name: 'Sales Software',
+        category: 'Sales & CRM',
+        icon: '/apps/logo-sales.png?v=clean',
+        desc: 'CRM, Sales, Subscriptions, POS Shop, POS Restaurant, Rental',
+        apps: ['CRM', 'Sales', 'Subscriptions', 'POS Shop', 'POS Restaurant', 'Rental']
+      },
+      {
+        id: 'websites',
+        name: 'Websites & Apps Software',
+        category: 'Websites & Mobile Apps',
+        icon: '/apps/logo-website.png?v=clean',
+        desc: 'AI Website Builder, Android & iOS Apps, eCommerce Websites, 3D Websites, AI Chatbots, Web Apps & Other',
+        apps: ['AI Website Builder', 'Android & iOS Apps', 'eCommerce Websites', '3D Websites', 'AI Chatbots', 'Web Apps & Other']
+      },
+      {
+        id: 'supply-chain',
+        name: 'Supply Chain Software',
+        category: 'Supply Chain & Inventory',
+        icon: '/apps/logo-inventory.png?v=clean',
+        desc: 'Inventory, Manufacturing, Maintenance, PLM, Quality, Purchase',
+        apps: ['Inventory', 'Manufacturing', 'Maintenance', 'PLM', 'Quality', 'Purchase']
+      },
+      {
+        id: 'human-resources',
+        name: 'Human Resources Software',
+        category: 'Human Resources & Payroll',
+        icon: '/apps/logo-hr.png?v=clean',
+        desc: 'Employees, Payroll, Recruitment, Time Off, Appraisals, Fleet',
+        apps: ['Employees', 'Payroll', 'Recruitment', 'Time Off', 'Appraisals', 'Fleet']
+      },
+      {
+        id: 'marketing',
+        name: 'Marketing Software',
+        category: 'Marketing Automation',
+        icon: '/apps/logo-email-marketing.png?v=clean',
+        desc: 'Social Marketing, Email Marketing, SMS Marketing, Marketing Automation, WhatsApp, Surveys',
+        apps: ['Social Marketing', 'Email Marketing', 'SMS Marketing', 'Marketing Automation', 'WhatsApp', 'Surveys']
+      },
+      {
+        id: 'whatsapp-chat-ai',
+        name: 'WhatsApp Chat AI Software',
+        category: 'WhatsApp & Communication',
+        icon: '/apps/logo-discuss.png?v=clean',
+        desc: 'WhatsApp AI Inbox, WhatsApp Marketing & Broadcasts, WhatsApp Flow Builder, WhatsApp Commerce, WhatsApp Booking & Reminders, WhatsApp Integrations & Settings',
+        apps: ['WhatsApp AI Inbox', 'WhatsApp Marketing & Broadcasts', 'WhatsApp Flow Builder', 'WhatsApp Commerce', 'WhatsApp Booking & Reminders', 'WhatsApp Integrations & Settings']
+      },
+      {
+        id: 'productivity',
+        name: 'Productivity Software',
+        category: 'Productivity & AI',
+        icon: '/apps/logo-ai.png?v=clean',
+        desc: 'Artificial Intelligence, Discuss, VoIP, IoT, Documents, Knowledge',
+        apps: ['Artificial Intelligence', 'Discuss', 'VoIP', 'IoT', 'Documents', 'Knowledge']
+      }
+    ];
+
+    const customerIsSuspended = c.account_status === 'Suspended';
+    const rawPurchasedList = Array.from(allPurchasedAppsSet);
+
+    const allCatalogSuites = PLATFORM_SOFTWARE_SUITES.map(suite => {
+      const isPurchased = rawPurchasedList.some(p => {
+        const normP = String(p).toLowerCase().trim();
+        const normSuiteName = suite.name.toLowerCase().trim();
+        const normSuiteId = suite.id.toLowerCase().trim();
+        return normP === normSuiteName ||
+               normP === normSuiteId ||
+               normSuiteName.includes(normP) ||
+               normP.includes(normSuiteId) ||
+               suite.apps.some(a => a.toLowerCase().trim() === normP);
+      });
+
+      const isActive = isPurchased && !customerIsSuspended;
+      const status = isActive ? 'Active' : (isPurchased && customerIsSuspended ? 'Suspended' : 'Not Subscribed');
+
+      return {
+        id: suite.id,
+        name: suite.name,
+        category: suite.category,
+        icon: suite.icon,
+        desc: suite.desc,
+        isPurchased,
+        isActive,
+        status,
+        activatedDate: isPurchased ? (c.joined_date ? new Date(c.joined_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Active') : null,
+        renewalDate: isPurchased ? (c.renewal_date ? new Date(c.renewal_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null) : null,
+        appsCount: suite.apps.length,
+        appsList: suite.apps.map(appName => ({
+          name: appName,
+          status: isActive ? 'Active' : 'Available',
+          isActive
+        }))
+      };
+    });
+
+    const purchasedSuites = allCatalogSuites.filter(s => s.isPurchased);
+
+    // Fallback: If no suite matched but rawPurchasedList has items, preserve them
+    let applications = purchasedSuites.map(s => ({
+      name: s.name,
+      category: s.category,
+      icon: s.icon,
+      status: s.status,
+      accessEnabled: s.isActive,
+      activatedDate: s.activatedDate,
+      renewalDate: s.renewalDate,
+      apps: s.appsList
+    }));
+
+    if (applications.length === 0 && rawPurchasedList.length > 0) {
+      applications = rawPurchasedList.map(appName => ({
+        name: appName,
+        category: 'Business Application',
+        icon: '/apps/logo-accounting.png?v=clean',
+        status: !customerIsSuspended ? 'Active' : 'Suspended',
+        accessEnabled: !customerIsSuspended,
+        activatedDate: c.joined_date ? new Date(c.joined_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Active',
+        renewalDate: c.renewal_date ? new Date(c.renewal_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Active',
+        apps: []
+      }));
+    }
+
     let subscriptions = subRes.rows.map((s, idx) => ({
       id: `SUB-000${s.id || idx + 1}`,
       plan: s.plan || c.plan,
-      apps: apps.length > 0 ? apps : ['Finance', 'HRMS', 'Marketing'],
+      apps: applications.length > 0 ? applications.map(a => a.name) : ['Finance', 'HRMS', 'Marketing'],
       billingCycle: s.billing_cycle || c.billing_cycle || 'Yearly',
       startDate: s.start_date ? new Date(s.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '12 Oct 2026',
       renewalDate: s.renewal_date ? new Date(s.renewal_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '12 Oct 2027',
@@ -4996,12 +5167,6 @@ app.get('/api/admin/customers/:id', requireAdminAuth, async (req, res, next) => 
       amount: `₹${Number(s.amount || c.amount || 24999).toLocaleString('en-IN')}`,
       period: c.billing_cycle === 'Yearly' ? 'year' : 'month'
     }));
-
-    // Invoices for this customer
-    const invRes = await query(
-      `SELECT * FROM invoices WHERE company_name ILIKE $1 ORDER BY invoice_date DESC`,
-      [c.company_name]
-    );
 
     let invoices = invRes.rows.map(inv => ({
       id: inv.invoice_number,
@@ -5012,16 +5177,6 @@ app.get('/api/admin/customers/:id', requireAdminAuth, async (req, res, next) => 
       status: inv.status || 'Pending',
       paymentMethod: inv.payment_method || 'Razorpay',
       currency: inv.currency || 'INR'
-    }));
-
-    // Purchased Applications
-    const allApps = apps.length > 0 ? apps : [];
-    const applications = allApps.map(appName => ({
-      name: appName,
-      status: c.account_status === 'Active' ? 'Active' : (c.account_status === 'Suspended' ? 'Suspended' : 'Inactive'),
-      accessEnabled: c.account_status === 'Active',
-      activatedDate: c.joined_date ? new Date(c.joined_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
-      renewalDate: c.renewal_date ? new Date(c.renewal_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
     }));
 
     // Team Members
@@ -5085,6 +5240,10 @@ app.get('/api/admin/customers/:id', requireAdminAuth, async (req, res, next) => 
         subscriptions,
         invoices,
         applications,
+        allCatalogSuites,
+        purchasedSuites,
+        totalActiveSuites: purchasedSuites.length,
+        totalActiveApps: purchasedSuites.reduce((acc, s) => acc + (s.appsCount || 6), 0),
         team,
         activity
       }
@@ -7339,11 +7498,53 @@ app.post('/api/payment/verify', async (req, res, next) => {
       userAlreadyRegistered = true;
     }
 
+    const clientProvidedPassword = req.body?.password ? String(req.body.password).trim() : '';
+
     if (customerEmail) {
       try {
         if (!userAlreadyRegistered) {
-          console.log(`[Payment Verify] New customer purchase verified for ${normEmail}. Awaiting customer password creation.`);
+          if (clientProvidedPassword && clientProvidedPassword.length >= 10) {
+            // First time purchase: Create customer user account with password directly!
+            const passwordHash = await bcrypt.hash(clientProvidedPassword, 10);
+            await query(
+              `INSERT INTO users (name, email, password, role, organization, active, storage_id, last_login)
+               VALUES ($1, $2, $3, 'customer', $4, true, $5, NOW())
+               ON CONFLICT (email) DO UPDATE
+               SET password = EXCLUDED.password,
+                   organization = EXCLUDED.organization,
+                   name = EXCLUDED.name,
+                   storage_id = COALESCE(users.storage_id, EXCLUDED.storage_id),
+                   last_login = NOW()`,
+              [customerName || companyName || 'Customer Admin', normEmail, passwordHash, companyName || 'My Organization', effectiveStorageId]
+            );
+            userAlreadyRegistered = true;
+
+            // Send first-time email with User ID, Password, and attached Tax Invoice PDF!
+            try {
+              const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+              await sendInvoiceAndCredentialsEmail({
+                toEmail: normEmail,
+                customerName: customerName || companyName || 'Customer',
+                companyName: companyName || 'My Organization',
+                invoiceNumber,
+                orderNumber,
+                storageId: effectiveStorageId,
+                amount: safeTotalAmount,
+                billingCycle,
+                planName,
+                selectedApps,
+                password: clientProvidedPassword,
+                loginUrl: `${origin}/customer/login`,
+                includeCredentials: true
+              });
+            } catch (emailErr) {
+              console.error('Error sending first-time credentials & invoice email:', emailErr.message);
+            }
+          } else {
+            console.log(`[Payment Verify] New customer purchase verified for ${normEmail}. Awaiting customer password creation.`);
+          }
         } else {
+          // Existing customer: Renewing or buying another software!
           await query(
             `UPDATE users SET organization = $1, storage_id = COALESCE(users.storage_id, $2), last_login = NOW() WHERE LOWER(email) = $3`,
             [companyName || 'My Organization', effectiveStorageId, normEmail]
@@ -7351,6 +7552,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
 
           try {
             const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+            // ONLY send the bill PDF and congratulations message, NO password!
             await sendInvoiceAndCredentialsEmail({
               toEmail: normEmail,
               customerName: customerName || companyName || 'Customer',
@@ -7362,8 +7564,10 @@ app.post('/api/payment/verify', async (req, res, next) => {
               billingCycle,
               planName,
               selectedApps,
-              password: '• • • • • • • • (Existing Password)',
-              loginUrl: `${origin}/login`
+              password: '',
+              loginUrl: `${origin}/customer`,
+              includeCredentials: false,
+              isRenewalOrAdditional: true
             });
           } catch (emailErr) {
             console.error('Error sending invoice email to existing customer:', emailErr.message);

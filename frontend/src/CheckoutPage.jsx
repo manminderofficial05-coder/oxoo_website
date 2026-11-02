@@ -135,7 +135,10 @@ export default function CheckoutPage() {
       city: '',
       zipCode: '',
       country: defaultCountry,
-      stateProvince: ''
+      stateProvince: '',
+      password: '',
+      confirmPassword: '',
+      showPassword: false
     };
   });
 
@@ -525,6 +528,18 @@ export default function CheckoutPage() {
       errs.phone = 'Mobile number must be exactly 10 digits';
     }
 
+    if (!loggedInUser) {
+      const cleanPwd = (formData.password || '').trim();
+      if (!cleanPwd) {
+        errs.password = 'Password is required to create your account';
+      } else if (cleanPwd.length < 10) {
+        errs.password = 'Password must be at least 10 digits or characters';
+      }
+      if (cleanPwd !== (formData.confirmPassword || '').trim()) {
+        errs.confirmPassword = 'Passwords do not match';
+      }
+    }
+
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -594,6 +609,7 @@ export default function CheckoutPage() {
           companyName: formData.companyName || formData.yourName,
           customerName: formData.yourName,
           customerEmail: formData.email,
+          password: formData.password ? formData.password.trim() : undefined,
           selectedApps: selectedAppsNames,
           planName: planNameFormatted,
           billingCycle: isYearly ? 'yearly' : 'monthly',
@@ -706,6 +722,9 @@ export default function CheckoutPage() {
           ...verifyRes
         });
 
+        if (formData.password && formData.password.trim().length >= 10) {
+          setPasswordSavedSuccess(true);
+        }
         setIsProcessing(false);
         setCurrentStep(5);
       };
@@ -1430,6 +1449,114 @@ export default function CheckoutPage() {
                       <span style={{ color: '#ef4444', fontSize: '12px' }}>{formErrors.stateProvince}</span>
                     )}
                   </div>
+
+                  {/* Create Account Password (First-Time Buyer) */}
+                  {!loggedInUser && (
+                    <div
+                      style={{
+                        gridColumn: '1 / -1',
+                        marginTop: '10px',
+                        background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
+                        border: '1.5px solid #7dd3fc',
+                        borderRadius: '14px',
+                        padding: '18px 20px',
+                        boxShadow: '0 2px 8px rgba(2, 132, 199, 0.08)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                        <div
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '10px',
+                            background: '#0284c7',
+                            color: '#ffffff',
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0
+                          }}
+                        >
+                          <KeyRound size={20} />
+                        </div>
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '14.5px', color: '#0f172a' }}>
+                            Create Your Customer Dashboard Password (10+ Digits / Characters) *
+                          </strong>
+                          <span style={{ fontSize: '12px', color: '#475569' }}>
+                            This password will be used to log in to your account. Your User ID (email) and Password will be sent to your email along with your Tax Invoice PDF.
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                        <div>
+                          <label className="form-field-label" style={{ color: '#0f172a', fontWeight: 700 }}>
+                            Create Password (min. 10 chars) *
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type={formData.showPassword ? 'text' : 'password'}
+                              className="form-field-input"
+                              required
+                              placeholder="Enter 10+ digits or characters"
+                              value={formData.password}
+                              onChange={(e) => {
+                                setFormData({ ...formData, password: e.target.value });
+                                if (formErrors.password) setFormErrors({ ...formErrors, password: '' });
+                              }}
+                              style={{ paddingRight: '42px', background: '#ffffff' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, showPassword: !formData.showPassword })}
+                              style={{
+                                position: 'absolute',
+                                right: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                color: '#64748b',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              {formData.showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                          {formErrors.password && (
+                            <span style={{ color: '#ef4444', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                              {formErrors.password}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="form-field-label" style={{ color: '#0f172a', fontWeight: 700 }}>
+                            Confirm Password *
+                          </label>
+                          <input
+                            type={formData.showPassword ? 'text' : 'password'}
+                            className="form-field-input"
+                            required
+                            placeholder="Re-type your password"
+                            value={formData.confirmPassword}
+                            onChange={(e) => {
+                              setFormData({ ...formData, confirmPassword: e.target.value });
+                              if (formErrors.confirmPassword) setFormErrors({ ...formErrors, confirmPassword: '' });
+                            }}
+                            style={{ background: '#ffffff' }}
+                          />
+                          {formErrors.confirmPassword && (
+                            <span style={{ color: '#ef4444', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                              {formErrors.confirmPassword}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -1854,10 +1981,13 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#15803d' }}>
-                        Payment Verified — Software Activated!
+                        🎉 Congratulations, {formData.yourName}! Software & Account Activated!
                       </h3>
                       <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#334155' }}>
-                        Your purchase has been associated with your existing OXOO account (<strong>{formData.email}</strong>). Your tax invoice has been emailed to you.
+                        {passwordSavedSuccess
+                          ? <>Your OXOO account has been created with User ID (<strong>{formData.email}</strong>). Your login credentials and official Tax Invoice PDF have been emailed to you.</>
+                          : <>Your purchase has been activated on your account (<strong>{formData.email}</strong>). Your official Tax Invoice PDF has been emailed to you.</>
+                        }
                       </p>
                     </div>
                   </div>
