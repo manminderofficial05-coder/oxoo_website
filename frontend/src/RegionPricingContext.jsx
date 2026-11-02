@@ -69,11 +69,6 @@ export function RegionPricingProvider({ children }) {
     if (urlCountry) return urlCountry;
 
     try {
-      const sessionManual = sessionStorage.getItem(SESSION_KEY_MANUAL) === 'true';
-      const savedManual = localStorage.getItem(STORAGE_KEY_COUNTRY);
-      if (sessionManual && savedManual) {
-        return savedManual;
-      }
       const detectedSession = sessionStorage.getItem(SESSION_KEY_DETECTED);
       if (detectedSession) return detectedSession;
       const tzGuess = inferCountryFromBrowserTimezone();
@@ -189,14 +184,11 @@ export function RegionPricingProvider({ children }) {
           sessionStorage.setItem(SESSION_KEY_DETECTED, code);
         } catch {}
 
-        // Automatically set location to client's detected country unless manually overridden in this session
-        const manualInSession = sessionStorage.getItem(SESSION_KEY_MANUAL) === 'true';
-        if (!manualInSession) {
-          setCurrentCountry(code);
-          try {
-            localStorage.setItem(STORAGE_KEY_COUNTRY, code);
-          } catch {}
-        }
+        // Automatically set location to client's detected country
+        setCurrentCountry(code);
+        try {
+          localStorage.setItem(STORAGE_KEY_COUNTRY, code);
+        } catch {}
       }
 
       if (isMounted) {

@@ -754,8 +754,6 @@ export function Header() {
 
         {/* Right Action Items: Country & Language Selectors, Sign in & Try it free OR Profile */}
         <div className="nav-actions">
-          <CountryCurrencySelector />
-          <LanguageSelector />
           {currentUser ? (
             <div className="nav-profile-dropdown">
               <button
@@ -1164,13 +1162,6 @@ export function Header() {
                 </button>
               </div>
             )}
-
-            <div className="mobile-country-select-row" style={{ padding: '12px 18px', borderBottom: '1px solid #f1f5f9' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
-                Region & Pricing
-              </div>
-              <CountryCurrencySelector isMobile={true} />
-            </div>
 
             <Link to="/" onClick={closeAll} className="mobile-link">
               <span>Home</span>
