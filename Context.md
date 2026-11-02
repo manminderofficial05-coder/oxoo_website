@@ -470,7 +470,7 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
 ## 13. OXOO.ai 5-Column Footer & Live Demo Request Flow
 
 1. **5-Column Footer (`frontend/src/components.jsx`, `frontend/src/styles.css`):**
-   - **Column 1 (Brand & Contact):** OXOO.ai logo, tagline (`"One Platform. Every Business Workflow."`), description, phone (`+91 79 4050 0100`), email (`hello@oxoo.ai`), location (`Bengaluru, India`), and 5 official SVG brand icons (`LinkedIn`, `Instagram`, `YouTube`, `Facebook`, `X`). Excludes GitHub and third-party build credits.
+   - **Column 1 (Brand & Contact):** OXOO.ai logo, tagline (`"One Platform. Every Business Workflow."`), description, phone (`+91 8888857588`), email (`hello@oxoo.ai`), location (`Bengaluru, India`), and 5 official SVG brand icons (`LinkedIn`, `Instagram`, `YouTube`, `Facebook`, `X`). Excludes GitHub and third-party build credits.
    - **Column 2 (Solutions):** Links to `/services`, `/apps/crm`, `/apps/accounting`, `/apps/hr`, `/apps/inventory`, `/services?category=Supply%20Chain`, `/apps/ai`, `/apps/website`.
    - **Column 3 (Live Demos):** 6 demo categories (`Productivity & AI`, `Sales & CRM`, `Human Resources`, `Finance & GST`, `Supply Chain & Operations`, `Website Builder`). Clicking any link stores the selected demo ID and navigates to `/request-demo`.
    - **Column 4 (Company & Plans):** Links to `/pricing`, `/help`, `/help-form`, `/request-demo`, `/contact`, `/about`, `/careers`, `/partners`.
@@ -521,7 +521,7 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
    - **Direct Team Contact & Change Notice:** Both customer emails include a dedicated callout banner explaining that if the customer wishes to make any updates, add details, or reschedule, they can:
      - Directly reply to the email
      - Email `hello@oxoo.ai`
-     - Call direct phone support at `+91 79 4050 0100` (Mon–Fri, 9 AM–7 PM IST).
+     - Call direct phone support at `+91 8888857588` (Mon–Fri, 9 AM–7 PM IST).
 2. **Sticky Scope Bar Auto-Clear on Submission & Option Card Order (`frontend/src/ProjectsPage.jsx`):**
    - Immediately clears `selectedServices` (`setSelectedServices([])`) and flushes `sessionStorage` upon successful submission of either a Project Request or a Consultation Call.
    - Explicitly hides the sticky upper scope bar when in confirmation view (`!submittedProjectResult && !submittedConsultResult`).
@@ -577,7 +577,7 @@ The platform features **OXOO Agent**, an AI-powered conversational assistant int
 
 1. **Configurable Office Data Repository (`frontend/src/globalOfficesConfig.js`):**
    - Stores header metadata (`eyebrow: "OUR GLOBAL OFFICES"`, `title: "Connecting Businesses Across Borders."`, `description`) and array of office records.
-   - **Card 1 (Bengaluru HQ):** India (`IN`), `OXOO.ai`, `Bengaluru, Karnataka, India`, `+91 79 4050 0100`, green `Head Office` badge, and departments `Global Operations` (blue), `Product Development` (teal), `Customer Support` (purple).
+   - **Card 1 (Bengaluru HQ):** India (`IN`), `OXOO.ai`, `Bengaluru, Karnataka, India`, `+91 8888857588`, green `Head Office` badge, and departments `Global Operations` (blue), `Product Development` (teal), `Customer Support` (purple).
    - **Card 2 (Hyderabad Office):** India (`IN`), `OXOO.ai`, `Hyderabad, Telangana, India`, `+91 80 4060 0100`, and departments `Engineering` (blue), `Technology` (amber), `Business Operations` (purple).
    - **Card 3 (United States Office):** United States (`US`), `OXOO.ai`, `United States`, `+1 415 800 0200`, and departments `International Business` (blue), `Sales` (teal), `Client Partnerships` (purple).
 2. **Component Architecture (`frontend/src/components/GlobalOffices.jsx`):**

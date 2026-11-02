@@ -1226,12 +1226,12 @@ export function Header() {
               ['Help', '/help'],
               ...(currentUser
                 ? [
-                    [currentUser.role === 'admin' ? 'Admin Console' : 'Customer Dashboard', currentUser.role === 'admin' ? '/admin' : '/dashboard']
-                  ]
+                  [currentUser.role === 'admin' ? 'Admin Console' : 'Customer Dashboard', currentUser.role === 'admin' ? '/admin' : '/dashboard']
+                ]
                 : [
-                    ['Sign in', '/login'],
-                    ['Try it free', '/choose-apps']
-                  ]),
+                  ['Sign in', '/login'],
+                  ['Try it free', '/choose-apps']
+                ]),
             ].map(([n, p]) => (
               <Link key={n} to={p} onClick={closeAll} className="mobile-link">
                 <span>{n}</span>
@@ -1344,7 +1344,7 @@ export function Footer() {
                 <span className="oxoo-footer-contact-icon" aria-hidden="true">
                   <Phone size={15} />
                 </span>
-                <span>+91 79 4050 0100</span>
+                <span>+91 8888857588</span>
               </a>
 
               <a href="mailto:hello@oxoo.ai" className="oxoo-footer-contact-item">

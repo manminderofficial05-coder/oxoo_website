@@ -1644,7 +1644,7 @@ export default function ProjectsPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px' }}>
                     <a href="tel:+917940500100" className="oxoo-projects-btn-primary">
                       <Phone size={16} />
-                      <span>Call Now: +91 79 4050 0100</span>
+                      <span>Call Now: +91 8888857588</span>
                     </a>
                     <button
                       type="button"
@@ -1681,7 +1681,7 @@ export default function ProjectsPage() {
                       style={{ padding: '10px 18px', fontSize: '13.5px', borderColor: '#0891b2', color: '#0891b2' }}
                     >
                       <Phone size={15} />
-                      <span>Call Now: +91 79 4050 0100</span>
+                      <span>Call Now: +91 8888857588</span>
                     </a>
                   </div>
 

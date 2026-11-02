@@ -18,7 +18,7 @@ export const GLOBAL_OFFICES = [
     countryName: "India",
     location: "Bengaluru, Karnataka, India",
     address: "Bengaluru, Karnataka, India",
-    phone: "+91 79 4050 0100",
+    phone: "+91 8888857588",
     phoneHref: "tel:+917940500100",
     officeDesignation: "Global Headquarters",
     badge: "Head Office",

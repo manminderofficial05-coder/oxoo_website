@@ -2,15 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, ShieldCheck, ArrowRight, CheckCircle2, Lock, Sparkles, Building2, KeyRound, Mail, X, Globe2, Eye, EyeOff } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
-import { loginUser, registerUser, forgotPassword } from './api';
+import { loginUser, forgotPassword } from './api';
 import { authStorage } from './authStorage';
 import { useRegionPricing } from './RegionPricingContext';
 
 export default function CustomerLoginPage() {
   const { currentRegion, isOutsideIndia } = useRegionPricing();
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [name, setName] = useState('');
-  const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,18 +38,6 @@ export default function CustomerLoginPage() {
     }
   }, [isOutsideIndia]);
 
-  const handleQuickFill = () => {
-    if (isOutsideIndia) {
-      setErrorMsg(
-        `Access Restricted: Indian accounts (INR ₹) cannot be used outside India (${currentRegion.countryName} — USD $). Please sign in or create an International account.`
-      );
-      return;
-    }
-    setErrorMsg('');
-    setEmail('priya@retailmart.in');
-    setPassword('oxoo123');
-  };
-
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!forgotInput) {
@@ -78,55 +63,6 @@ export default function CustomerLoginPage() {
     setSuccessMsg('');
 
     const cleanEmail = email.trim().toLowerCase();
-
-    if (isSignUp) {
-      if (!name || !cleanEmail || !password) {
-        setErrorMsg('Please enter your full name, email address, and password.');
-        return;
-      }
-      const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!EMAIL_REGEX.test(cleanEmail)) {
-        setErrorMsg('Please enter a valid email address (e.g. name@company.com).');
-        return;
-      }
-      if (isOutsideIndia && cleanEmail.endsWith('.in')) {
-        setErrorMsg(
-          `Access Restricted: Indian (.in / INR) accounts cannot be used outside India (${currentRegion.countryName}). Please register with an international business email.`
-        );
-        return;
-      }
-      setLoading(true);
-      try {
-        const res = await registerUser({
-          name: name.trim(),
-          email: cleanEmail,
-          password,
-          organization: companyName.trim() || `${name.trim()} Enterprise`,
-          country: currentRegion.countryName,
-          regionCode: currentRegion.regionCode,
-          currency: currentRegion.currency
-        });
-        if (res && res.token) {
-          const sessionUser = {
-            ...(res.user || {}),
-            country: res.user?.country || currentRegion.countryName,
-            currency: res.user?.currency || currentRegion.currency,
-            isIndianAccount: !isOutsideIndia
-          };
-          authStorage.setCustomerSession(res.token, sessionUser);
-          window.dispatchEvent(new Event('oxoo_auth_change'));
-          setSuccessMsg(`Welcome, ${res.user?.name}! Your customer account has been created.`);
-          setTimeout(() => {
-            navigate('/customer');
-          }, 600);
-        }
-      } catch (err) {
-        setErrorMsg(err.message || 'Registration failed. Please check your details.');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
 
     if (!cleanEmail || !password) {
       setErrorMsg('Please enter both email and password.');
@@ -210,63 +146,14 @@ export default function CustomerLoginPage() {
               margin: '12px 0 6px',
               fontFamily: 'Manrope, sans-serif'
             }}>
-              {isSignUp ? 'Create Customer Account' : 'Customer Sign In'}
+              Customer Sign In
             </h1>
             <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-              {isSignUp ? 'Start your 14-day free trial with full access to the OXOO platform.' : 'Access your active multi-app subscriptions, billing history, invoices, and support tickets.'}
+              Access your active multi-app subscriptions, billing history, invoices, and support tickets.
             </p>
           </div>
 
-          {/* Mode Switch Tabs (Sign In / Create Account) */}
-          <div style={{
-            display: 'flex',
-            background: '#f1f5f9',
-            borderRadius: '10px',
-            padding: '4px',
-            marginBottom: '18px',
-            border: '1px solid #e2e8f0'
-          }}>
-            <button
-              type="button"
-              onClick={() => { setIsSignUp(false); setErrorMsg(''); setSuccessMsg(''); }}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                border: 'none',
-                borderRadius: '8px',
-                background: !isSignUp ? '#ffffff' : 'transparent',
-                color: !isSignUp ? '#0284c7' : '#64748b',
-                fontWeight: !isSignUp ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                boxShadow: !isSignUp ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => { setIsSignUp(true); setErrorMsg(''); setSuccessMsg(''); }}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                border: 'none',
-                borderRadius: '8px',
-                background: isSignUp ? '#ffffff' : 'transparent',
-                color: isSignUp ? '#0284c7' : '#64748b',
-                fontWeight: isSignUp ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                boxShadow: isSignUp ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              Create Account
-            </button>
-          </div>
-
-          {/* 1-Click Demo Shortcut (Only shown in India Sign In mode) or International Access Notice */}
+                    {/* 1-Click Demo Shortcut (Only shown in India Sign In mode) or International Access Notice */}
           
 
           {isOutsideIndia && (
@@ -321,51 +208,8 @@ export default function CustomerLoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit}>
-            {isSignUp && (
-              <>
-                <label style={{ display: 'block', marginBottom: '14px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                  Your Full Name
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Rahul Sharma"
-                    style={{
-                      width: '100%',
-                      marginTop: '5px',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '13.5px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </label>
-
-                <label style={{ display: 'block', marginBottom: '14px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                  Company or Business Name
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Nexus Global Infotech"
-                    style={{
-                      width: '100%',
-                      marginTop: '5px',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '13.5px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </label>
-              </>
-            )}
-
             <label style={{ display: 'block', marginBottom: '14px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-              {isSignUp ? 'Work Email Address' : 'Customer Email Address or Storage ID'}
+              Customer Email Address or Storage ID
               <input
                 type="text"
                 required
@@ -387,7 +231,7 @@ export default function CustomerLoginPage() {
             <div style={{ marginBottom: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Password</span>
-                {!isSignUp && (
+                
                   <button
                     type="button"
                     onClick={() => {
@@ -409,7 +253,6 @@ export default function CustomerLoginPage() {
                   >
                     Forgot password?
                   </button>
-                )}
               </div>
               <div style={{ position: 'relative' }}>
                 <input
@@ -469,37 +312,21 @@ export default function CustomerLoginPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              {loading
-                ? (isSignUp ? 'Creating Account...' : 'Signing in...')
-                : (isSignUp ? 'Create Account & Start 14-Day Free Trial ➔' : 'Sign In to Customer Portal ➔')}
+              {loading ? 'Signing in...' : 'Sign In to Customer Portal ➔'}
             </button>
           </form>
 
-          {/* Toggle bottom link */}
-          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#64748b' }}>
-            {isSignUp ? (
-              <span>
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setIsSignUp(false); setErrorMsg(''); setSuccessMsg(''); }}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#0284c7', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Sign In
-                </button>
-              </span>
-            ) : (
-              <span>
-                Don't have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setIsSignUp(true); setErrorMsg(''); setSuccessMsg(''); }}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#0284c7', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Create an account
-                </button>
-              </span>
-            )}
+          {/* Bottom link: info that accounts are created after purchase */}
+          <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '13px', color: '#64748b' }}>
+            <span>
+              Don't have an account?{' '}
+              <Link
+                to="/pricing"
+                style={{ color: '#0284c7', fontWeight: 700, textDecoration: 'none' }}
+              >
+                Choose a plan to get started ➔
+              </Link>
+            </span>
           </div>
 
           {/* FORGOT PASSWORD MODAL */}

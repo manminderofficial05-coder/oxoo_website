@@ -13,7 +13,7 @@ try {
     const b64 = fs_module.readFileSync(logoP).toString('base64');
     OXOO_EMAIL_LOGO_SRC = `data:image/png;base64,${b64}`;
   }
-} catch (e) {}
+} catch (e) { }
 
 function getEmailHeaderLogo(subtitle = 'One Platform. Infinite Possibilities.') {
   return `
@@ -526,9 +526,9 @@ async function sendInvoiceAndCredentialsEmail({
 
   const appsListHtml = Array.isArray(selectedApps) && selectedApps.length > 0
     ? selectedApps.map(a => {
-        const name = typeof a === 'string' ? a : (a.name || a.id);
-        return `<li style="padding: 4px 0; font-weight: 600; color: #0f172a;">${name}</li>`;
-      }).join('')
+      const name = typeof a === 'string' ? a : (a.name || a.id);
+      return `<li style="padding: 4px 0; font-weight: 600; color: #0f172a;">${name}</li>`;
+    }).join('')
     : '<li style="padding: 4px 0; font-weight: 600; color: #0f172a;">Business Application Suite</li>';
 
   const isFirstTime = Boolean(includeCredentials);
@@ -853,10 +853,10 @@ async function sendAdminStaffCredentialsEmail({ to, name, role, email, employeeI
   const userName = name || 'Administrator';
   const userRole = role || 'Software Admin';
   const userPwd = password || 'Welcome@2026';
-  const scope = Array.isArray(assignedSoftware) && assignedSoftware.length > 0 
-    ? assignedSoftware.join(', ') 
+  const scope = Array.isArray(assignedSoftware) && assignedSoftware.length > 0
+    ? assignedSoftware.join(', ')
     : 'All Platform Software & Websites';
-  
+
   const portalUrl = loginUrl || process.env.ADMIN_LOGIN_URL || 'http://localhost:5173/admin/login';
   const subject = `Your OXOO Admin & Staff Account Credentials (${userRole})`;
 
@@ -1015,8 +1015,8 @@ async function sendAdminSubscriptionDueEmail({
               </h2>
               <p style="font-size: 13.5px; line-height: 1.6; color: #475569; margin-bottom: 20px;">
                 ${isRenewal
-                  ? `<strong>${customerName}</strong> from <strong>${companyName}</strong> has completed their renewal payment.`
-                  : `A customer subscription is approaching its due date or is overdue. Please review details below:`}
+      ? `<strong>${customerName}</strong> from <strong>${companyName}</strong> has completed their renewal payment.`
+      : `A customer subscription is approaching its due date or is overdue. Please review details below:`}
               </p>
 
               <table width="100%" cellpadding="8" cellspacing="0" style="background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 13.5px; margin-bottom: 24px;">
@@ -1444,7 +1444,7 @@ async function sendProjectRequestNotificationEmail({
           <table width="100%" style="font-size: 13px; color: #166534;">
             <tr><td style="padding: 3px 0; width: 140px; font-weight: 700;">• Direct Reply:</td><td>Simply reply directly to this email with your updates.</td></tr>
             <tr><td style="padding: 3px 0; font-weight: 700;">• Email Us:</td><td><a href="mailto:hello@oxoo.ai" style="color: #0284c7; font-weight: 600; text-decoration: underline;">hello@oxoo.ai</a></td></tr>
-            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 79 4050 0100</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
+            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 8888857588</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
           </table>
         </div>
 
@@ -1598,7 +1598,7 @@ async function sendConsultationRequestNotificationEmail({
           <table width="100%" style="font-size: 13px; color: #166534;">
             <tr><td style="padding: 3px 0; width: 140px; font-weight: 700;">• Direct Reply:</td><td>Simply reply directly to this email with your preferred new date/time or notes.</td></tr>
             <tr><td style="padding: 3px 0; font-weight: 700;">• Email Us:</td><td><a href="mailto:hello@oxoo.ai" style="color: #0284c7; font-weight: 600; text-decoration: underline;">hello@oxoo.ai</a></td></tr>
-            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 79 4050 0100</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
+            <tr><td style="padding: 3px 0; font-weight: 700;">• Phone Support:</td><td><a href="tel:+917940500100" style="color: #0284c7; font-weight: 600; text-decoration: underline;">+91 8888857588</a> (Mon – Fri, 9 AM – 7 PM IST)</td></tr>
           </table>
         </div>
 
@@ -1680,21 +1680,19 @@ async function sendProjectStatusUpdateEmail({
       <td style="padding: 26px 30px; font-size: 14px; line-height: 1.6; color: #334155;">
         <p style="margin-top: 0;">Hi <strong>${safeName}</strong>,</p>
         <p>Your OXOO.ai request <strong>${safeRef}</strong> has been updated to: <strong>${newStatus}</strong>.</p>
-        ${
-          confirmedDate
-            ? `<div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px; margin: 14px 0;">
+        ${confirmedDate
+      ? `<div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px; margin: 14px 0;">
                 <p style="margin: 0 0 4px 0;"><strong>Confirmed Consultation Date:</strong> ${confirmedDate} ${confirmedTime || ''}</p>
                 ${meetingLink ? `<p style="margin: 0;"><strong>Meeting Link:</strong> <a href="${meetingLink}" style="color: #0284c7;">${meetingLink}</a></p>` : ''}
               </div>`
-            : ''
-        }
-        ${
-          messageToCustomer
-            ? `<div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 16px; margin: 16px 0;">
+      : ''
+    }
+        ${messageToCustomer
+      ? `<div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 16px; margin: 16px 0;">
                 <p style="margin: 0; font-size: 13px; color: #0f172a;"><strong>Message from OXOO.ai Team:</strong><br/>${messageToCustomer}</p>
               </div>`
-            : ''
-        }
+      : ''
+    }
         <p style="margin-bottom: 0;">If you have any questions or additional details to share, simply reply to this email or contact us at <a href="mailto:hello@oxoo.ai" style="color: #0284c7;">hello@oxoo.ai</a>.</p>
       </td>
     </tr>
@@ -1726,10 +1724,10 @@ async function sendTeamMemberCredentialsEmail({ to, name, role, email, password,
   const userRole = role || 'Member';
   const userPwd = password || 'Welcome@2026';
   const company = companyName || 'OXOO Workspace';
-  const assigned = Array.isArray(appsAccess) && appsAccess.length > 0 
+  const assigned = Array.isArray(appsAccess) && appsAccess.length > 0
     ? appsAccess.map(a => typeof a === 'string' ? (a.charAt(0).toUpperCase() + a.slice(1).replace('-', ' ')) : a.name).join(', ')
     : 'Assigned Business Applications';
-  
+
   const portalUrl = loginUrl || process.env.CUSTOMER_LOGIN_URL || 'http://localhost:5173/customer/login';
   const subject = `You have been added to ${company} on OXOO - Your Login Credentials`;
 

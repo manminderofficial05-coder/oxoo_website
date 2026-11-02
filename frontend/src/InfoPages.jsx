@@ -708,13 +708,13 @@ function buildLegalDocuments(cfg) {
             { label: 'Certification status', value: cert.statusSummary },
             ...(cert.isCertified && cert.certificationBody
               ? [
-                  { label: 'Certification body', value: cert.certificationBody },
-                  { label: 'Certificate number', value: cert.certificateNumber || '—' },
-                  { label: 'Covered legal entity', value: cert.coveredLegalEntity || cfg.legalEntity },
-                  { label: 'ISMS scope', value: cert.ismsScope || '—' },
-                  { label: 'Issue date', value: cert.issueDate || '—' },
-                  { label: 'Expiry date', value: cert.expiryDate || '—' },
-                ]
+                { label: 'Certification body', value: cert.certificationBody },
+                { label: 'Certificate number', value: cert.certificateNumber || '—' },
+                { label: 'Covered legal entity', value: cert.coveredLegalEntity || cfg.legalEntity },
+                { label: 'ISMS scope', value: cert.ismsScope || '—' },
+                { label: 'Issue date', value: cert.issueDate || '—' },
+                { label: 'Expiry date', value: cert.expiryDate || '—' },
+              ]
               : []),
           ],
           afterParagraphs: [
@@ -980,7 +980,7 @@ export function InfoPageView({ pageKey }) {
               <div>
                 <h3>Need more information from our Bengaluru team?</h3>
                 <p>
-                  Reach us at <strong>+91 79 4050 0100</strong> or <strong>hello@oxoo.ai</strong>.
+                  Reach us at <strong>+91 8888857588</strong> or <strong>hello@oxoo.ai</strong>.
                 </p>
               </div>
               <Link to={content.ctaTo} className="legal-cta-primary-btn">

@@ -2,7 +2,7 @@
 // OXOO.ai – Unified Projects Hub & Service Catalogue Configuration
 // ============================================================================
 
-export const VERIFIED_BUSINESS_PHONE = '+91 79 4050 0100';
+export const VERIFIED_BUSINESS_PHONE = '+91 8888857588';
 export const VERIFIED_BUSINESS_PHONE_TEL = 'tel:+917940500100';
 
 export const PROJECT_CATEGORIES = [

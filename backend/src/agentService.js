@@ -4,7 +4,7 @@ try {
   if (typeof dns.setDefaultResultOrder === 'function') {
     dns.setDefaultResultOrder('ipv4first');
   }
-} catch (e) {}
+} catch (e) { }
 
 const { query } = require('./db');
 
@@ -221,7 +221,7 @@ async function callExternalAI(userMessage, conversationHistory, knowledge, custo
 
   // If user asks about a specific application, extract and provide its specific record
   const lowMsg = userMessage.toLowerCase();
-  const relevantApp = (knowledge.applications || []).find(a => 
+  const relevantApp = (knowledge.applications || []).find(a =>
     lowMsg.includes(a.name.toLowerCase()) || lowMsg.includes(a.slug.toLowerCase())
   );
   let relevantAppText = '';
@@ -315,7 +315,7 @@ AUTHORITATIVE OXOO WEBSITE KNOWLEDGE:
 6. CUSTOMER SUPPORT & CONTACT:
 - Help & Support Ticket Center: [Help & Support Center](/help)
 - Email: hello@oxoo.ai / support@oxoo.ai
-- Phone: +91 79 4050 0100 (Mon - Fri, 9:00 AM - 6:00 PM IST)
+- Phone: +91 8888857588 (Mon - Fri, 9:00 AM - 6:00 PM IST)
 
 7. GLOBAL OFFICES:
 - Head Office (Bengaluru HQ): PrimePro AI / OXOO Tech Campus, Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103, India.
@@ -547,7 +547,7 @@ All plans include full cloud hosting, automatic updates, and a **14-day free tri
 * **Hyderabad Office:** Mindspace IT Park, Building 12D, HITEC City, Hyderabad, Telangana 500081, India.
 * **United States Office:** 8 The Green, Suite A, Dover, Delaware 19901, USA.
 
-📞 **Phone:** +91 79 4050 0100 (Mon - Fri, 9:00 AM - 6:00 PM IST)
+📞 **Phone:** +91 8888857588 (Mon - Fri, 9:00 AM - 6:00 PM IST)
 📧 **Email:** hello@oxoo.ai / support@oxoo.ai`;
 
     links.push({ label: 'Help & Support Center', url: '/help' });
@@ -670,7 +670,7 @@ To view your active subscription, upcoming renewal dates, invoices, and authoriz
       reply = `### OXOO Customer Support
 You can open a support ticket or contact our team directly:
 - **Email:** support@oxoo.ai / hello@oxoo.ai
-- **Phone:** +91 79 4050 0100 (Mon - Fri, 9:00 AM - 6:00 PM IST)
+- **Phone:** +91 8888857588 (Mon - Fri, 9:00 AM - 6:00 PM IST)
 - **Direct Link:** [Visit Help & Support Center](/help)`;
     }
 

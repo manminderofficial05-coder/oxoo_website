@@ -526,8 +526,8 @@ function Home() {
             </h2>
 
             <HomepageVideoPlayer
-  srcMp4="https://res.cloudinary.com/lh93grce/video/upload/v1793431161/oxoo_hoome.mp4"
-/>
+              srcMp4="https://res.cloudinary.com/lh93grce/video/upload/v1793431161/oxoo_hoome.mp4"
+            />
           </div>
 
           {/* Part 2: Optimized for productivity + Layered Tasks & Ask AI collage */}
@@ -1457,7 +1457,7 @@ function ContactPage() {
               <b>Or Contact Us Directly</b>
               <div className="direct-links-list">
                 <a href="tel:+917940500100" className="direct-link">
-                  <Phone size={16} /> +91 79 4050 0100
+                  <Phone size={16} /> +91 8888857588
                 </a>
                 <a href="mailto:hello@oxoo.ai" className="direct-link">
                   <Mail size={16} /> hello@oxoo.ai
