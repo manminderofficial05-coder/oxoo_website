@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, ShieldCheck, ArrowRight, CheckCircle2, Lock, Sparkles, Building2, KeyRound, Mail, X, Globe2 } from 'lucide-react';
+import { User, ShieldCheck, ArrowRight, CheckCircle2, Lock, Sparkles, Building2, KeyRound, Mail, X, Globe2, Eye, EyeOff } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { loginUser, registerUser, forgotPassword } from './api';
 import { authStorage } from './authStorage';
@@ -11,8 +11,9 @@ export default function CustomerLoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [email, setEmail] = useState(() => (isOutsideIndia ? '' : 'priya@retailmart.in'));
-  const [password, setPassword] = useState(() => (isOutsideIndia ? '' : 'oxoo123'));
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -266,45 +267,7 @@ export default function CustomerLoginPage() {
           </div>
 
           {/* 1-Click Demo Shortcut (Only shown in India Sign In mode) or International Access Notice */}
-          {!isSignUp && !isOutsideIndia && (
-            <div style={{
-              background: '#f8fafc',
-              border: '1px dashed #93c5fd',
-              borderRadius: '12px',
-              padding: '12px 14px',
-              marginBottom: '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '10px'
-            }}>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>
-                  ⚡ Demo Customer Account
-                </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  Priya Sharma (RetailMart Solutions)
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleQuickFill}
-                style={{
-                  background: '#0284c7',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                  padding: '6px 11px',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Auto-Fill
-              </button>
-            </div>
-          )}
+          
 
           {isOutsideIndia && (
             <div style={{
@@ -448,21 +411,45 @@ export default function CustomerLoginPage() {
                   </button>
                 )}
               </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13.5px',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  style={{
+                    width: '100%',
+                    padding: '10px 42px 10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <button

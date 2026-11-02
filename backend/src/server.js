@@ -356,6 +356,47 @@ app.post('/api/auth/register', async (req, res, next) => {
       console.warn('Could not auto-insert into customers table on register:', custErr.message);
     }
 
+    // Create welcome invoice & subscription records for 14-Day Free Trial
+    const trialInvoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
+    try {
+      await query(
+        `INSERT INTO invoices (invoice_number, company_name, plan, amount, currency, status, invoice_date, items)
+         VALUES ($1, $2, 'Standard Pack (14-Day Free Trial)', 0, $3, 'Paid', NOW(), '["Accounting", "Invoicing", "CRM"]'::jsonb)
+         ON CONFLICT (invoice_number) DO NOTHING`,
+        [trialInvoiceNumber, user.organization || (user.name + ' Enterprise'), outsideIndia ? 'USD' : 'INR']
+      );
+      await query(
+        `INSERT INTO subscriptions (company_name, plan, amount, currency, billing_cycle, status, start_date, renewal_date, active_apps, pricing_region)
+         VALUES ($1, 'Standard Pack (14-Day Free Trial)', 0, $2, '14-Day Free Trial', 'Active', NOW(), NOW() + INTERVAL '14 days', '["Accounting", "Invoicing", "CRM"]'::jsonb, $3)`,
+        [user.organization || (user.name + ' Enterprise'), outsideIndia ? 'USD' : 'INR', clientCountryCode]
+      );
+    } catch (invErr) {
+      console.warn('[Register] Could not create trial invoice:', invErr.message);
+    }
+
+    // Send welcome email with login credentials (User ID & Password) and attached Tax Invoice / Bill PDF!
+    try {
+      const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+      await sendInvoiceAndCredentialsEmail({
+        toEmail: emailNorm,
+        customerName: user.name,
+        companyName: user.organization || (user.name + ' Enterprise'),
+        invoiceNumber: trialInvoiceNumber,
+        orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+        storageId: `STG-${Date.now().toString().slice(-8)}`,
+        amount: 0,
+        billingCycle: '14-Day Free Trial',
+        planName: 'Standard Pack (14-Day Free Trial)',
+        selectedApps: ['Accounting', 'Invoicing', 'CRM'],
+        password: String(password).trim(),
+        loginUrl: `${origin}/customer/login`,
+        includeCredentials: true
+      });
+      console.log(`[Register] Welcome email with credentials and Tax Invoice PDF dispatched to ${emailNorm}`);
+    } catch (eErr) {
+      console.error('[Register] Error dispatching credentials & invoice email:', eErr.message);
+    }
+
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
     await logAudit('User Registered', emailNorm, user.name, req.ip, { organization: user.organization, country: resolvedCountryName });
@@ -7503,7 +7544,7 @@ app.post('/api/payment/verify', async (req, res, next) => {
     if (customerEmail) {
       try {
         if (!userAlreadyRegistered) {
-          if (clientProvidedPassword && clientProvidedPassword.length >= 10) {
+          if (clientProvidedPassword && clientProvidedPassword.length >= 6) {
             // First time purchase: Create customer user account with password directly!
             const passwordHash = await bcrypt.hash(clientProvidedPassword, 10);
             await query(
@@ -7541,7 +7582,28 @@ app.post('/api/payment/verify', async (req, res, next) => {
               console.error('Error sending first-time credentials & invoice email:', emailErr.message);
             }
           } else {
-            console.log(`[Payment Verify] New customer purchase verified for ${normEmail}. Awaiting customer password creation.`);
+            console.log(`[Payment Verify] New customer purchase verified for ${normEmail}. Dispatching invoice PDF notification.`);
+            try {
+              const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5173');
+              await sendInvoiceAndCredentialsEmail({
+                toEmail: normEmail,
+                customerName: customerName || companyName || 'Customer',
+                companyName: companyName || 'My Organization',
+                invoiceNumber,
+                orderNumber,
+                storageId: effectiveStorageId,
+                amount: safeTotalAmount,
+                billingCycle,
+                planName,
+                selectedApps,
+                password: '',
+                loginUrl: `${origin}/customer/login`,
+                includeCredentials: false,
+                isRenewalOrAdditional: false
+              });
+            } catch (emailErr) {
+              console.error('Error sending invoice email:', emailErr.message);
+            }
           }
         } else {
           // Existing customer: Renewing or buying another software!

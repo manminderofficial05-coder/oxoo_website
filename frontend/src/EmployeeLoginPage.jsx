@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Header, Logo } from './components';
 import {
   Users, Key, ShieldCheck, AlertCircle, CheckCircle2, ArrowRight,
-  ExternalLink, Building, Lock, Mail, BadgeCheck, Sparkles
+  ExternalLink, Building, Lock, Mail, BadgeCheck, Sparkles, Eye, EyeOff
 } from 'lucide-react';
 
 const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
@@ -11,6 +11,7 @@ const OXOO_FINANCE_SERVICE_KEY = "OXOO-FIN-2026-SECURE-KEY";
 export default function EmployeeLoginPage() {
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');

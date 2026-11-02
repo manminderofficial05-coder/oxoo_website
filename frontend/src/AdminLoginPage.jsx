@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, User, ArrowRight, CheckCircle2, Lock, KeyRound, Cpu, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, User, ArrowRight, CheckCircle2, Lock, KeyRound, Cpu, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { Header, Footer, Logo } from './components';
 import { loginAdminUser } from './api';
 import { authStorage } from './authStorage';
 
 export default function AdminLoginPage({ onLoginSuccess }) {
-  const [email, setEmail] = useState('manminder.singh@primepro.ai');
-  const [password, setPassword] = useState('oxoo123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -101,44 +102,7 @@ export default function AdminLoginPage({ onLoginSuccess }) {
             </p>
           </div>
 
-          {/* 1-Click Demo Shortcut */}
-          <div style={{
-            background: '#faf5ff',
-            border: '1px dashed #d8b4fe',
-            borderRadius: '12px',
-            padding: '12px 14px',
-            marginBottom: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '10px'
-          }}>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#714b67' }}>
-                🛡️ Demo Admin Account
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>
-                Root Administrator (Oxoo Core)
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleQuickFill}
-              style={{
-                background: '#714b67',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: 600,
-                padding: '6px 11px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Auto-Fill
-            </button>
-          </div>
+          
 
           {/* Feedback messages */}
           {errorMsg && (
@@ -196,22 +160,45 @@ export default function AdminLoginPage({ onLoginSuccess }) {
 
             <label style={{ display: 'block', marginBottom: '18px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
               Master Security Key / Password
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                style={{
-                  width: '100%',
-                  marginTop: '5px',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13.5px',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <div style={{ position: 'relative', marginTop: '5px' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  style={{
+                    width: '100%',
+                    padding: '10px 42px 10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </label>
 
             <button
