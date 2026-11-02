@@ -467,7 +467,17 @@ export default function PricingPage() {
                 <ul className="pricing-cat-apps-list">
                   {cat.apps.map((app) => (
                     <li key={app.slug} className="pricing-app-item">
-                      <img src={app.icon} alt={app.name} className="pricing-app-icon" />
+                      <img
+                        src={app.icon}
+                        alt={app.name}
+                        className="pricing-app-icon"
+                        width={32}
+                        height={32}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.src = '/oxoo-icon.png';
+                        }}
+                      />
                       <span className="pricing-app-title">{app.name}</span>
                     </li>
                   ))}

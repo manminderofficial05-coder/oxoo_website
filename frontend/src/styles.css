@@ -1321,47 +1321,61 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .mega-list a {
-  font-size: 13px;
+  font-size: 13.5px;
   color: #475569;
   transition: color 0.15s, transform 0.15s;
   display: inline-block;
 }
 
 .mega-list a:hover {
-  color: var(--emerald);
+  color: var(--navy);
   transform: translateX(4px);
 }
 
 .mega-app-link {
   display: inline-flex !important;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #475569;
+  gap: 12px;
+  font-size: 13.5px;
+  color: #334155;
   text-decoration: none;
-  transition: color 0.15s, transform 0.15s;
+  padding: 5px 8px;
+  border-radius: 8px;
+  transition: color 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+  width: 100%;
 }
 
 .mega-app-link:hover {
-  color: var(--emerald);
-  transform: translateX(3px);
+  color: #0f172a;
+  background-color: #f1f5f9;
+  transform: translateX(4px);
 }
 
 .mega-app-icon {
-  width: 18px;
-  height: 18px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: 8px;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+}
+
+.mega-app-link:hover .mega-app-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.14));
 }
 
 .mega-app-name {
   font-weight: 500;
   color: inherit;
+  letter-spacing: -0.01em;
 }
 
 .mega-results {

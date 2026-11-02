@@ -948,7 +948,7 @@ export function Header() {
                             src={meta.icon}
                             alt={s.name}
                             className="mega-app-icon-result"
-                            style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 4 }}
+                            style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 8 }}
                           />
                           <div>
                             <b>{s.name}</b>
@@ -981,7 +981,17 @@ export function Header() {
                           return (
                             <li key={name}>
                               <Link to={`/apps/${s.slug || meta.slug}`} onClick={closeAll} className="mega-app-link">
-                                <img src={meta.icon} alt={name} className="mega-app-icon" />
+                                <img
+                                  src={meta.icon}
+                                  alt={name}
+                                  className="mega-app-icon"
+                                  width={32}
+                                  height={32}
+                                  loading="eager"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/oxoo-icon.png';
+                                  }}
+                                />
                                 <span className="mega-app-name">{name}</span>
                               </Link>
                             </li>
