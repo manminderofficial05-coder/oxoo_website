@@ -12,216 +12,58 @@ import './help.css';
 // Authoritative global office data matching Oxoo reference specifications
 const OFFICE_REGIONS = [
   {
-    region: 'Europe, Middle East and Africa',
+    region: 'USA',
     offices: [
       {
-        country: 'Belgium - FR',
-        flag: '🇧🇪',
+        country: 'DELAWARE, USA',
+        flag: '🇺🇸',
         tags: [
           { label: 'Finance', type: 'finance' },
           { label: 'Sales', type: 'sales' },
           { label: 'Services', type: 'services' }
         ],
-        address: 'Rue du Laid Burniat 5, 1348 Louvain-la-Neuve',
-        phone: '+32 2 290 34 90'
-      },
-      {
-        country: 'Belgium - NL',
-        flag: '🇧🇪',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Roderikveldlaan 3, 2600 Antwerpen',
-        phone: '+32 3 361 54 20'
-      },
-      {
-        country: 'Belgium',
-        flag: '🇧🇪',
-        tags: [
-          { label: 'HR', type: 'hr' },
-          { label: 'R&D', type: 'rd' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Farm 1: Chaussée de Namur 40, Farm 2: Rue des Bourlottes 9, Farm 3: Rue de Ramiellies 1, 1367 Grand-Rosière',
-        phone: '+32 2 616 8002'
-      },
-      {
-        country: 'Germany',
-        flag: '🇩🇪',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Mühlenstraße 15, 10243 Berlin, Germany',
-        phone: '+49 30 138 830 190'
-      },
-      {
-        country: 'Italy',
-        flag: '🇮🇹',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Via Benigno Crespi 23, 20159 Milano, Italy',
-        phone: '+39 029 994 4400'
-      },
-      {
-        country: 'Kenya',
-        flag: '🇰🇪',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Standard Chartered Head Office, 3rd Floor, Westlands Road 48, Nairobi, Kenya',
-        phone: '+254 20 7640404'
-      },
-      {
-        country: 'Luxembourg',
-        flag: '🇱🇺',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: "13 Rue de l'Industrie, 8399 Koerich",
-        phone: '+352 20 21 14 52'
-      },
-      {
-        country: 'Spain',
-        flag: '🇪🇸',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Avda Cortes Valencianas, s/n portal 58, 46015 Valencia, Spain',
-        phone: '+34 911870700'
-      },
-      {
-        country: 'United Arab Emirates',
-        flag: '🇦🇪',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: '5th Floor A1 building, Dubai South, United Arab Emirates',
-        phone: '+971 4 498 7800'
-      },
-      {
-        country: 'France',
-        flag: '🇫🇷',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: '107/109 Boulevard Vivier Merle, Atrium Part Dieu, 69003 Lyon, France',
-        phone: '+33 4 28 77 01 02'
+        address: '8 The Green, Suite B, Dover, Delaware 19901, LLC · Delaware, USA',
+        phone: '+1 67 837 88493'
       }
     ]
   },
   {
-    region: 'Americas',
+    region: 'INDIA',
     offices: [
       {
-        country: 'Argentina',
-        flag: '🇦🇷',
-        tags: [{ label: 'Sales', type: 'sales' }],
-        address: 'Buenos Aires, Argentina',
-        phone: '+54 11 5077 1930'
-      },
-      {
-        country: 'Brazil',
-        flag: '🇧🇷',
-        tags: [
-          { label: 'Sales', type: 'sales' },
+        country: 'INDIA',
+        flag: '🇮🇳',
+        tags: [{ label: 'Sales', type: 'sales' },
           { label: 'Services', type: 'services' }
         ],
-        address: 'Rua Marechal Deodoro 630 Edifício Centro Comercial Itália 24o Andar, Curitiba-PR, 80010-010',
-        phone: '+55 41 3542-4471'
+        address: 'B3rd Floor, Thanks Court, Opp SBI Bank, Banaswadi, Bangalore',
+        phone: '+91 88 888 57588'
       },
       {
-        country: 'Chile',
-        flag: '🇨🇱',
-        tags: [{ label: 'Sales', type: 'sales' }],
-        address: 'Santiago, Chile',
-        phone: '+56 2 3278 3816'
-      },
-      {
-        country: 'Colombia',
-        flag: '🇨🇴',
-        tags: [{ label: 'Sales', type: 'sales' }],
-        address: 'Bogotá, Colombia',
-        phone: '+57 1 508 7840'
-      },
-      {
-        country: 'Mexico',
-        flag: '🇲🇽',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Blvd. Miguel de Cervantes Saavedra, Granada, 11520 Ciudad de México',
-        phone: '+52 55 9602 4871'
-      },
-      {
-        country: 'Peru',
-        flag: '🇵🇪',
-        tags: [{ label: 'Sales', type: 'sales' }],
-        address: 'Lima, Peru',
-        phone: '+51 1 708 6740'
-      },
-      {
-        country: 'United States',
-        flag: '🇺🇸',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' },
-          { label: 'R&D', type: 'rd' }
-        ],
-        address: '250 Executive Park Blvd, Suite 3400, San Francisco, CA 94134',
-        phone: '+1 (650) 870 2051'
-      }
-    ]
-  },
-  {
-    region: 'Asia Pacific',
-    offices: [
-      {
-        country: 'India',
+        country: 'INDIA',
         flag: '🇮🇳',
         tags: [
           { label: 'Sales', type: 'sales' },
+          { label: 'Services', type: 'services' }
+        ],
+        address: 'Team Space Yard, No. 314, 3rd Floor, Axis Proxima, Kasarwadi, Old Pune–Mumbai Highway, Pune 411034',
+        phone: '+91 88 888 57588'
+      }
+    ]
+  },
+  {
+    region: 'CENTRAL EUROPE',
+    offices: [
+      {
+        country: 'POLAND',
+        flag: '🇵🇱',
+        tags: [
+          { label: 'Sales', type: 'sales' },
           { label: 'Services', type: 'services' },
           { label: 'R&D', type: 'rd' }
         ],
-        address: 'A-901, Signature 1, SG Highway, Ahmedabad, Gujarat 380051',
-        phone: '+91 79 40 500 100'
-      },
-      {
-        country: 'Australia',
-        flag: '🇦🇺',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Level 14, 380 St Kilda Road, Melbourne VIC 3004',
-        phone: '+61 3 8658 9200'
-      },
-      {
-        country: 'Hong Kong',
-        flag: '🇭🇰',
-        tags: [{ label: 'Sales', type: 'sales' }],
-        address: 'Two International Finance Centre, 8 Finance Street, Central, Hong Kong',
-        phone: '+852 3008 5800'
-      },
-      {
-        country: 'Indonesia',
-        flag: '🇮🇩',
-        tags: [
-          { label: 'Sales', type: 'sales' },
-          { label: 'Services', type: 'services' }
-        ],
-        address: 'Jakarta Cyber Tower, Rasuna Said, South Jakarta',
-        phone: '+62 21 5086 8500'
+        address: 'ul. Malomicka 55/36, 59-300 Lubin, Poland',
+        phone: '+48 72 109 2485'
       }
     ]
   }
