@@ -12,11 +12,11 @@ export const ALL_APPS_CATEGORIES = [
     titleColor: '#2563eb',
     apps: [
       { name: 'Accounting', desc: 'Manage your finances and books.', icon: '/apps/logo-accounting.png?v=clean', slug: 'accounting', bgColor: '#eff6ff' },
-      { name: 'Invoicing', desc: 'Create and send professional invoices.', icon: '/apps/logo-accounting.png?v=clean', slug: 'invoicing', bgColor: '#ecfdf5' },
+      { name: 'Invoicing', desc: 'Create and send professional invoices.', icon: '/apps/logo-invoicing.png?v=clean', slug: 'invoicing', bgColor: '#ecfdf5' },
       { name: 'Expenses', desc: 'Track employee expenses and approvals.', icon: '/apps/logo-purchase.png?v=clean', slug: 'expenses', bgColor: '#fff7ed' },
       { name: 'Sign', desc: 'Send and sign documents online securely.', icon: '/apps/logo-sign.png?v=clean', slug: 'sign', bgColor: '#f0f9ff' },
       { name: 'Spreadsheet', desc: 'Collaborative live data spreadsheets.', icon: '/apps/logo-documents.png?v=clean', slug: 'spreadsheet', bgColor: '#fff1f2' },
-      { name: 'ESG', desc: 'Track sustainability and ESG compliance.', icon: '/apps/logo-sign.png?v=clean', slug: 'esg', bgColor: '#ecfdf5' }
+      { name: 'ESG', desc: 'Track sustainability and ESG compliance.', icon: '/apps/logo-esg.png?v=clean', slug: 'esg', bgColor: '#ecfdf5' }
     ]
   },
   {
@@ -59,7 +59,7 @@ export const ALL_APPS_CATEGORIES = [
       { name: 'Inventory', desc: 'Real-time stock and warehouse tracking.', icon: '/apps/logo-inventory.png?v=clean', slug: 'inventory', bgColor: '#fffbeb' },
       { name: 'Manufacturing', desc: 'MRP, work orders and shop floor bills.', icon: '/apps/logo-manufacturing.png?v=clean', slug: 'manufacturing', bgColor: '#ecfdf5' },
       { name: 'Maintenance', desc: 'Equipment maintenance and work tickets.', icon: '/apps/logo-field-service.png?v=clean', slug: 'maintenance', bgColor: '#fdf2f8' },
-      { name: 'PLM', desc: 'Product lifecycle and engineering change.', icon: '/apps/logo-manufacturing.png?v=clean', slug: 'plm', bgColor: '#f5f3ff' },
+      { name: 'PLM', desc: 'Product lifecycle and engineering change.', icon: '/apps/logo-plm.png?v=clean', slug: 'plm', bgColor: '#f5f3ff' },
       { name: 'Quality', desc: 'Define inspection points and quality checks.', icon: '/apps/logo-planning.png?v=clean', slug: 'quality', bgColor: '#fff7ed' },
       { name: 'Purchase', desc: 'Automate POs, vendor RFQs and deliveries.', icon: '/apps/logo-purchase.png?v=clean', slug: 'purchase', bgColor: '#eff6ff' }
     ]

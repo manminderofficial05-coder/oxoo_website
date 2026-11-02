@@ -1340,40 +1340,59 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex !important;
   align-items: center;
   gap: 12px;
-  font-size: 13.5px;
+  font-size: 14px;
+  font-weight: 500;
   color: #334155;
   text-decoration: none;
-  padding: 5px 8px;
-  border-radius: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
   transition: color 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
   width: 100%;
 }
 
 .mega-app-link:hover {
-  color: #0f172a;
-  background-color: #f1f5f9;
+  color: #0284c7;
+  background-color: #f0f9ff;
   transform: translateX(4px);
 }
 
 .mega-app-icon {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
   object-fit: contain;
   flex-shrink: 0;
-  border-radius: 8px;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+  border-radius: 9px;
+  background: #ffffff;
+  padding: 3px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.mega-app-icon-result {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: #ffffff;
+  padding: 3px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
 }
 
 .mega-app-link:hover .mega-app-icon {
-  transform: scale(1.1);
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.14));
+  transform: scale(1.12);
+  border-color: #38bdf8;
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.22);
 }
 
 .mega-app-name {
-  font-weight: 500;
+  font-weight: 600;
   color: inherit;
   letter-spacing: -0.01em;
 }

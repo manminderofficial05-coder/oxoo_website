@@ -656,12 +656,12 @@ export const APPS_DATA = [
 
 export const SERVICE_ALIASES = {
   // Finance
-  'invoicing': { base: 'accounting', name: 'Invoicing', category: 'Finance', iconSrc: '/apps/logo-accounting.png?v=clean', tagline: 'Automated professional invoicing, recurring billing, and instant payments.' },
+  'invoicing': { base: 'accounting', name: 'Invoicing', category: 'Finance', iconSrc: '/apps/logo-invoicing.png?v=clean', tagline: 'Automated professional invoicing, recurring billing, and instant payments.' },
   'expenses': { base: 'purchase', name: 'Expenses', category: 'Finance', iconSrc: '/apps/logo-purchase.png?v=clean', tagline: 'Real-time expense tracking, employee expense reports, and automatic matching.' },
   'expense-management': { base: 'purchase', name: 'Expenses', category: 'Finance', iconSrc: '/apps/logo-purchase.png?v=clean', tagline: 'Real-time expense tracking, employee expense reports, and automatic matching.' },
   'spreadsheet': { base: 'documents', name: 'Spreadsheet', category: 'Finance', iconSrc: '/apps/logo-documents.png?v=clean', tagline: 'Collaborative spreadsheets, live formula recalculations, and BI dashboards.' },
   'spreadsheets': { base: 'documents', name: 'Spreadsheet', category: 'Finance', iconSrc: '/apps/logo-documents.png?v=clean', tagline: 'Collaborative spreadsheets, live formula recalculations, and BI dashboards.' },
-  'esg': { base: 'sign', name: 'ESG', category: 'Finance', iconSrc: '/apps/logo-sign.png?v=clean', tagline: 'Environmental, social, and governance reporting and carbon footprint tracking.' },
+  'esg': { base: 'sign', name: 'ESG', category: 'Finance', iconSrc: '/apps/logo-esg.png?v=clean', tagline: 'Environmental, social, and governance reporting and carbon footprint tracking.' },
 
   // Sales
   'subscriptions': { base: 'subscriptions', name: 'Subscriptions', category: 'Sales', iconSrc: '/apps/logo-subscriptions.png?v=clean', tagline: 'Recurring billing engine, automated renewals, upgrades, and MRR intelligence.' },

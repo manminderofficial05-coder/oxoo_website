@@ -946,7 +946,8 @@ export function Header() {
                             src={meta.icon}
                             alt={s.name}
                             className="mega-app-icon-result"
-                            style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 8 }}
+                            width={42}
+                            height={42}
                           />
                           <div>
                             <b>{s.name}</b>
@@ -983,8 +984,8 @@ export function Header() {
                                   src={meta.icon}
                                   alt={name}
                                   className="mega-app-icon"
-                                  width={32}
-                                  height={32}
+                                  width={42}
+                                  height={42}
                                   loading="eager"
                                   onError={(e) => {
                                     e.currentTarget.src = '/oxoo-icon.png';
