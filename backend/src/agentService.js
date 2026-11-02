@@ -1,3 +1,4 @@
+require('dotenv').config();
 const dns = require('dns');
 try {
   if (typeof dns.setDefaultResultOrder === 'function') {
@@ -183,7 +184,6 @@ async function getAgentSettings() {
     const res = await query(`SELECT settings FROM platform_settings WHERE category = 'agent' LIMIT 1`);
     if (res.rows.length > 0 && res.rows[0].settings) {
       settings = { ...settings, ...res.rows[0].settings };
-      // Always allow server env vars to override or supplement if settings didn't provide key
       if (!settings.aiApiKey && (process.env.AI_API_KEY || process.env.GEMINI_API_KEY)) {
         settings.aiApiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
       }
@@ -192,9 +192,14 @@ async function getAgentSettings() {
     console.warn('Could not load agent platform_settings from DB:', err.message);
   }
 
-  // Auto-detect Groq keys starting with gsk_
-  if (settings.aiApiKey && settings.aiApiKey.startsWith('gsk_')) {
+  // Priority auto-detection for Groq keys starting with gsk_
+  const effectiveKey = (process.env.AI_API_KEY && process.env.AI_API_KEY.startsWith('gsk_'))
+    ? process.env.AI_API_KEY
+    : settings.aiApiKey;
+
+  if (effectiveKey && effectiveKey.startsWith('gsk_')) {
     settings.aiProvider = 'groq';
+    settings.aiApiKey = effectiveKey;
     if (!settings.aiModel || settings.aiModel.includes('gemini') || settings.aiModel.includes('gpt-4o')) {
       settings.aiModel = 'qwen/qwen3.8-27b';
     }
@@ -204,7 +209,7 @@ async function getAgentSettings() {
 }
 
 /**
- * Call External LLM (Groq / Gemini / OpenAI API) grounded ONLY on live database website catalog
+ * Call External LLM (Groq / Gemini / OpenAI API) grounded ONLY on authoritative website catalog
  */
 async function callExternalAI(userMessage, conversationHistory, knowledge, customerContext, settings) {
   const apiKey = settings.aiApiKey;
@@ -214,45 +219,110 @@ async function callExternalAI(userMessage, conversationHistory, knowledge, custo
 
   const provider = (settings.aiProvider || 'groq').toLowerCase();
 
-  // Format real applications list from DB
-  const appsCatalogText = (knowledge.applications || []).map(a => {
-    const feats = Array.isArray(a.features) ? a.features.slice(0, 4).join(', ') : '';
-    return `- ${a.name} (Slug: ${a.slug}, Category: ${a.category}): ${a.tagline || a.description || ''}${feats ? ` | Features: ${feats}` : ''}`;
-  }).join('\n');
+  // If user asks about a specific application, extract and provide its specific record
+  const lowMsg = userMessage.toLowerCase();
+  const relevantApp = (knowledge.applications || []).find(a => 
+    lowMsg.includes(a.name.toLowerCase()) || lowMsg.includes(a.slug.toLowerCase())
+  );
+  let relevantAppText = '';
+  if (relevantApp) {
+    const feats = Array.isArray(relevantApp.features) ? relevantApp.features.join(', ') : '';
+    relevantAppText = `SPECIFIC APPLICATION IN USER QUERY:
+Name: ${relevantApp.name} (Slug: ${relevantApp.slug}, Category: ${relevantApp.category})
+Tagline: ${relevantApp.tagline || ''}
+Description: ${relevantApp.description || ''}
+Features: ${feats}
+Direct URL: /apps/${relevantApp.slug}`;
+  }
 
-  // Format real plans list from DB
-  const plansCatalogText = (knowledge.plans || []).map(p => {
-    const disc = p.discount_percent ? ` (${p.discount_percent}% annual discount)` : '';
-    const appsList = Array.isArray(p.included_apps) ? p.included_apps.join(', ') : 'Core Apps';
-    return `- ${p.name} (${p.plan_code}): ₹${Number(p.monthly_price).toLocaleString('en-IN')}/month | ₹${Number(p.yearly_price).toLocaleString('en-IN')}/year${disc} | Trial: ${p.trial_days} days | Apps: ${appsList}`;
-  }).join('\n');
+  // Authoritative, concise system prompt (~1000 tokens) to stay well within Groq rate limits
+  const systemPrompt = `You are "OXOO Agent", the official AI assistant for the OXOO cloud enterprise platform (https://oxoo.ai).
+Answer questions with 100% accuracy using ONLY what is on the official OXOO website.
 
-  // Format real services list from DB
-  const servicesCatalogText = (knowledge.services || []).map(s => {
-    return `- ${s.name} (${s.category}): ${s.description || ''}`;
-  }).join('\n');
+================================================================================
+CRITICAL OPERATING RULES:
+================================================================================
+1. ANSWER EXACTLY WHAT IS IN THE OXOO WEBSITE. Use the facts below.
+2. NEVER HALLUCINATE OR INVENT features, prices, external software, or policies.
+3. If an application or feature is not in the standard suite, state:
+   "That is not currently part of our standard SaaS suite, but our team can build it as a custom project via our [Projects & Consultation Hub](/projects) or you can reach us at [Help & Support Center](/help)."
+4. Keep replies clear, well-structured, and helpful with Markdown bold headers and bullet points.
+5. ALWAYS PROVIDE RELEVANT CLICKABLE MARKDOWN LINKS:
+   - [Browse All Applications](/all-apps)
+   - [View Pricing Plans](/pricing)
+   - [Start 14-Day Free Trial](/checkout)
+   - [Explore Live Demos](/demo)
+   - [Projects & Consultation Hub](/projects)
+   - [Request a Demo](/request-demo)
+   - [Help & Support Center](/help)
+   - [Sign in to Customer Portal](/login)
+   - [Employee Login](/employee/login)
 
-  // Format real categories from DB
-  const categoriesText = (knowledge.categories || []).map(c => `- ${c.name} (${c.slug}): ${c.description || ''}`).join('\n');
+================================================================================
+AUTHORITATIVE OXOO WEBSITE KNOWLEDGE:
+================================================================================
 
-  // Prepare system prompt with STRICT live website database grounding
-  const systemPrompt = `You are "OXOO Agent", the official AI assistant for the OXOO cloud business platform (https://oxoo.ai).
-You assist users using ONLY the live official website database provided below.
+1. PLATFORM OVERVIEW:
+- Brand Name: OXOO (https://oxoo.ai)
+- Concept: Enterprise All-in-One Cloud Operating System (Odoo-style application launcher) replacing multiple fragmented SaaS subscriptions.
+- Scope: 24+ core business applications across 8 integrated software suites (48 apps total).
+- Live interactive demos online without signup at [Explore Live Demos](/demo).
 
-CRITICAL RULES:
-1. ONLY USE REAL DATA FROM THE DATABASE CATALOG BELOW.
-2. NEVER INVENT fake features, prices, packages, or policies.
-3. If an application, service, or plan is not in the database below, state that it is currently not published and recommend contacting support or submitting an inquiry.
-4. Format replies with clean Markdown bullet points and bold key terms.
-5. Always provide clickable internal links where helpful:
-   * View all apps: [Browse All Applications](/all-apps)
-   * Specific app: [Open App Name](/apps/{slug})
-   * Pricing plans: [View Pricing Plans](/pricing)
-   * Subscribe / Trial: [Start 14-Day Free Trial](/checkout)
-   * Custom services: [Explore Services](/services)
-   * Help & tickets: [Help & Support Center](/help)
-   * Customer Login: [Sign in to Customer Portal](/login)
+2. THE 8 OFFICIAL SOFTWARE SUITES (48 Apps Total):
+- 1. Finance Suite: Accounting, Invoicing, Expenses, Sign, Spreadsheets, ESG. (Double-entry accounting, GST invoices, OCR receipt scanner, legal e-signatures, live finance sheets). Demo: [Finance Demo](/demo/finance)
+- 2. Sales Suite: CRM, Sales Order Management, Point of Sale (POS), Subscriptions, Rental Management, Amazon Connector. (Lead pipelines, touch-screen POS, recurring billing, Amazon sync). Demo: [Sales Demo](/demo/sales)
+- 3. Supply Chain Suite: Inventory, Manufacturing (MRP), Purchase Orders, Quality Control, Barcode Scanner, PLM. (Multi-warehouse stock, BOMs, vendor POs, pick-pack-ship barcode, ECOs). Demo: [Supply Chain Demo](/demo/supply-chain)
+- 4. HRMS Suite: Employees, Recruitment, Time Off & Leaves, Appraisals, Payroll, Attendance. (Staff directory, ATS, automated salary slips, biometric/geo-clock-in). Demo: [HRMS Demo](/demo/hrms). Dedicated portal: [Employee Login](/employee/login)
+- 5. Marketing Suite: Social Marketing, Email Marketing, SMS Marketing, Events & Ticketing, Marketing Automation, Surveys. (Omnichannel campaigns, automated nurture drip, multi-network social scheduler, CSAT surveys).
+- 6. Services & Operations Suite: Project, Timesheets, Field Service, Helpdesk, Planning, Appointments. (Kanban/Gantt tasks, billable client timesheets, field technician dispatch, SLA ticket queues).
+- 7. Productivity Suite: Discuss (Team Chat), Documents, To-Do, Knowledge (Wiki), VoIP Telephony, Approvals. (Team channels, OCR cloud documents, corporate wikis, in-browser calling). Demo: [Productivity Demo](/demo/productivity)
+- 8. Website & E-Commerce Suite: Website Builder, eCommerce Store, Company Blog, Live Chat, Customer Portal, Forum. (Drag-and-drop website builder, responsive store with online payments, client portal). Demo: [Website Demo](/demo/website)
 
+3. OFFICIAL PRICING PLANS & FREE TRIAL:
+- 14-Day Free Trial: Available on all plans, full access to all applications, instant setup, no credit card required.
+- India Pricing (INR ₹):
+  * Standard Pack: ₹560 / month (billed annually at ₹6,720 + 18% GST) or ₹740 / month (billed monthly). Includes all core applications for 1 user.
+  * Custom Pack: ₹980 / month base (billed annually at ₹11,760 + GST) or ₹1,280 / month (billed monthly). Built for growing businesses with Multi-Company, OXOO Studio custom field builder, external REST API access, and additional applications at ₹560/mo yearly or ₹740/mo monthly.
+- International / Global Pricing (USD $) (Every country outside India):
+  * Standard Pack: $20 / month (billed annually at $240/yr) or $25 / month (billed monthly). Includes all core applications for 1 user.
+  * Custom Pack: $40 / month base (billed annually at $480/yr) or $50 / month (billed monthly). Includes Multi-Company, OXOO Studio, REST API access, and additional applications at $20/mo yearly or $25/mo monthly.
+- Purchasing & Password Workflow:
+  * Users purchase at [Start Free Trial / Subscribe](/checkout).
+  * First-time buyers set their password directly at checkout, make payment, and receive an instant email with login credentials (User ID and Password) and their official Tax Invoice / Bill PDF attached.
+  * Existing customers renewing or adding software receive congratulations and their updated Tax Invoice PDF (no password sent).
+
+4. PROJECTS HUB & CUSTOM ENGINEERING SERVICES:
+- URL: [Projects & Consultation Hub](/projects)
+- For custom bespoke software beyond SaaS:
+  * Custom Websites & Web Applications (React, Next.js, Node.js, enterprise portals, SaaS platforms).
+  * Mobile Applications (iOS and Android native & cross-platform apps using React Native and Flutter).
+  * WhatsApp Chat AI & Enterprise Automations (Official WhatsApp Business API integration, autonomous AI chatbots, CRM & ERP automated sync).
+  * Performance Digital Marketing (SEO, Google Ads, Meta Ads).
+- Engagement Options:
+  * Option A: Request a Consultation Call — 30-minute discovery call with our solutions architects.
+  * Option B: Submit a Project Request — 4-step wizard to outline requirements, choose budget, and attach briefs/wireframes (PDF, PNG, JPG, DOCX up to 5MB).
+
+5. LIVE INTERACTIVE DEMOS:
+- Test online without signup at [Explore Live Demos](/demo):
+  * Finance Demo: [Finance Demo](/demo/finance)
+  * Sales Demo: [Sales Demo](/demo/sales)
+  * HRMS Demo: [HRMS Demo](/demo/hrms)
+  * Supply Chain Demo: [Supply Chain Demo](/demo/supply-chain)
+  * Website Builder Demo: [Website Builder Demo](/demo/website)
+  * AI Demo: [AI Demo](/demo/ai)
+- Guided demo booking: [Request a Guided Demo](/request-demo).
+
+6. CUSTOMER SUPPORT & CONTACT:
+- Help & Support Ticket Center: [Help & Support Center](/help)
+- Email: hello@oxoo.ai / support@oxoo.ai
+- Phone: +91 79 4050 0100 (Mon - Fri, 9:00 AM - 6:00 PM IST)
+
+7. GLOBAL OFFICES:
+- Head Office (Bengaluru HQ): PrimePro AI / OXOO Tech Campus, Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103, India.
+- Hyderabad Office: Mindspace IT Park, Building 12D, HITEC City, Hyderabad, Telangana 500081, India.
+- United States Office: 8 The Green, Suite A, Dover, Delaware 19901, USA.
+
+${relevantAppText ? `\n\n${relevantAppText}\n` : ''}
 AUTHENTICATION STATE:
 ${customerContext && customerContext.authenticated ? `
 USER IS LOGGED IN with email: ${customerContext.email}.
@@ -260,36 +330,19 @@ Customer Record: ${JSON.stringify(customerContext.customer || {})}
 Subscriptions: ${JSON.stringify(customerContext.subscriptions || [])}
 Invoices: ${JSON.stringify(customerContext.invoices || [])}
 Support Tickets: ${JSON.stringify(customerContext.tickets || [])}
-You may assist them with their specific active plans, upcoming renewal date, and invoices.
 ` : `
-USER IS ANONYMOUS (Not logged in).
-If they ask for their private subscription, invoices, or renewal date, politely provide [Sign In](/login).
-`}
-
-LIVE DATABASE CATALOG (UPDATED IN REAL-TIME):
-
---- PUBLISHED PRICING PLANS (${knowledge.plans.length} Plans) ---
-${plansCatalogText}
-
---- APPLICATIONS CATALOG (${knowledge.applications.length} Applications) ---
-${appsCatalogText}
-
---- CUSTOM DEVELOPMENT SERVICES (${knowledge.services.length} Services) ---
-${servicesCatalogText}
-
---- CATEGORIES (${knowledge.categories.length} Categories) ---
-${categoriesText}
-`;
+USER IS ANONYMOUS (Not logged in). Provide [Sign In](/login) if asking for personal subscription or invoices.
+`}`;
 
   try {
-    // 1. GROQ HIGH-SPEED INFERENCE (~400-800ms)
+    // 1. GROQ HIGH-SPEED INFERENCE (~300-600ms)
     if (provider === 'groq' || apiKey.startsWith('gsk_')) {
       const model = settings.aiModel && !settings.aiModel.includes('gemini') ? settings.aiModel : 'qwen/qwen3.8-27b';
       const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...conversationHistory.slice(-6).map(m => ({
+        ...conversationHistory.slice(-4).map(m => ({
           role: m.sender === 'user' ? 'user' : 'assistant',
           content: m.content
         })),
@@ -309,7 +362,7 @@ ${categoriesText}
           model,
           messages,
           temperature: 0.2,
-          max_tokens: 1000
+          max_tokens: 450
         }),
         signal: controller.signal
       });
@@ -350,7 +403,7 @@ ${categoriesText}
           contents,
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 1000
+            maxOutputTokens: 800
           }
         }),
         signal: controller.signal
@@ -377,7 +430,7 @@ ${categoriesText}
 
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...conversationHistory.slice(-6).map(m => ({
+        ...conversationHistory.slice(-4).map(m => ({
           role: m.sender === 'user' ? 'user' : 'assistant',
           content: m.content
         })),
@@ -397,7 +450,7 @@ ${categoriesText}
           model,
           messages,
           temperature: 0.2,
-          max_tokens: 1000
+          max_tokens: 800
         }),
         signal: controller.signal
       });
@@ -427,8 +480,8 @@ ${categoriesText}
 
 /**
  * Intelligent Database Knowledge RAG Engine
- * Executes dynamically when external AI is unreachable.
- * STRICTLY uses database records — ZERO predefined text!
+ * Executes dynamically when external AI is unreachable or rate-limited.
+ * STRICTLY uses official website records and facts!
  */
 function generateDatabaseGroundedResponse(userQuery, knowledge, customerContext, aiConfigured) {
   const query = userQuery.toLowerCase().trim();
@@ -436,59 +489,112 @@ function generateDatabaseGroundedResponse(userQuery, knowledge, customerContext,
   let action = null;
   let reply = '';
 
-  // 1. GREETING & PLATFORM OVERVIEW (Live DB Counts)
+  // 1. GREETING & PLATFORM OVERVIEW
   if (/^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|who are you|what is oxoo)/i.test(query)) {
-    const appCount = knowledge.applications ? knowledge.applications.length : 55;
-    const planCount = knowledge.plans ? knowledge.plans.length : 24;
-    const servCount = knowledge.services ? knowledge.services.length : 87;
+    reply = `Hello! I'm **OXOO Agent**, your official assistant for the **OXOO** business operating system (https://oxoo.ai).
 
-    reply = `Hello! I'm **OXOO Agent**, your official assistant for the **OXOO** business operating system.
+We offer **24+ core business applications across 8 integrated software suites**:
+- **Finance Suite:** Accounting, Invoicing, Expenses, Sign, Spreadsheets, ESG.
+- **Sales Suite:** CRM, Sales, Point of Sale (POS), Subscriptions, Rental, Amazon Connector.
+- **Supply Chain Suite:** Inventory, Manufacturing (MRP), Purchase, Quality, Barcode, PLM.
+- **HRMS Suite:** Employees, Recruitment, Time Off, Appraisals, Payroll, Attendance.
+- **Marketing Suite:** Social Marketing, Email Marketing, SMS Marketing, Events, Automation, Surveys.
+- **Services Suite:** Project Management, Timesheets, Field Service, Helpdesk, Planning, Appointments.
+- **Productivity Suite:** Discuss (Team Chat), Documents, To-Do, Knowledge Wiki, VoIP, Approvals.
+- **Website Suite:** Website Builder, eCommerce Store, Blog, Live Chat, Customer Portal, Forum.
 
-I source all information live from our official catalog:
-- **Applications:** We currently offer **${appCount} enterprise cloud applications** (Accounting, CRM, HRMS, Invoicing, POS, Website Builder, and more).
-- **Pricing:** We have **${planCount} published pricing plans** with 14-day free trials.
-- **Custom Services:** **${servCount} custom engineering services** (Web development, Mobile iOS/Android apps, AI automation).
-- **Customer Account:** Check active subscriptions, renewal dates, invoices, or raise support tickets.
+All plans come with a **14-day free trial** with zero credit card required.`;
 
-How can I help you today?`;
-
-    links.push({ label: `Explore All ${appCount} Apps`, url: '/all-apps' });
+    links.push({ label: 'Explore All Applications', url: '/all-apps' });
     links.push({ label: 'View Pricing Plans', url: '/pricing' });
+    links.push({ label: 'Explore Live Demos', url: '/demo' });
     return { reply, links, action };
   }
 
-  // 2. PRICING & PLANS (Pure Live Database Data)
-  if (/(pricing|price|cost|plan|subscription rate|how much|package|compare|monthly|yearly|annual)/i.test(query)) {
-    const plans = knowledge.plans || [];
-    if (plans.length > 0) {
-      reply = `### OXOO Official Pricing Plans (Live Catalog)\n\nAll plans include cloud hosting, SSL, and a **14-day free trial**:\n\n`;
-      plans.slice(0, 8).forEach(p => {
-        const disc = p.discount_percent ? ` (${p.discount_percent}% off yearly)` : '';
-        const included = Array.isArray(p.included_apps) && p.included_apps.length > 0 ? p.included_apps.join(', ') : 'Core Suite Apps';
-        reply += `* **${p.name}** (${p.plan_code}): **₹${Number(p.monthly_price).toLocaleString('en-IN')}/mo** (Annual: ₹${Number(p.yearly_price).toLocaleString('en-IN')}/yr${disc})\n`;
-        reply += `  - *Included Apps:* ${included}\n`;
-        reply += `  - *Trial:* ${p.trial_days || 14} Days Free Trial\n\n`;
-      });
-      reply += `> View our full interactive pricing matrix for all ${plans.length} tiers and custom options.`;
+  // 2. PRICING & PLANS
+  if (/(pricing|price|cost|plan|subscription rate|how much|package|compare|monthly|yearly|annual|rate)/i.test(query)) {
+    reply = `### 💰 Official OXOO Pricing Plans
 
-      links.push({ label: 'Compare All Pricing Plans', url: '/pricing' });
-      links.push({ label: 'Start 14-Day Free Trial', url: '/checkout' });
+All plans include full cloud hosting, automatic updates, and a **14-day free trial** (no credit card required):
 
-      action = {
-        type: 'compare_plans',
-        title: 'Compare Official Plans',
-        plans: plans.slice(0, 6).map(p => ({
-          name: p.name,
-          monthly: `₹${Number(p.monthly_price).toLocaleString('en-IN')}/mo`,
-          yearly: `₹${Number(p.yearly_price).toLocaleString('en-IN')}/yr`,
-          code: p.plan_code
-        }))
-      };
-      return { reply, links, action };
-    }
+#### 🇮🇳 Inside India (INR ₹):
+* **Standard Pack:** **₹560 / month** (billed annually at ₹6,720 + 18% GST) or **₹740 / month** (monthly billing). Includes all core applications for 1 user.
+* **Custom Pack:** **₹980 / month base** (billed annually at ₹11,760 + GST) or **₹1,280 / month** (monthly billing). Includes Multi-Company, OXOO Studio custom field builder, external REST API access, and additional applications at ₹560/mo yearly or ₹740/mo monthly.
+
+#### 🌍 International / Global (USD $):
+* **Standard Pack:** **$20 / month** (billed annually at $240/yr) or **$25 / month** (monthly billing).
+* **Custom Pack:** **$40 / month base** (billed annually at $480/yr) or **$50 / month** (monthly billing). Additional applications at $20/mo yearly or $25/mo monthly.`;
+
+    links.push({ label: 'Compare All Pricing Plans', url: '/pricing' });
+    links.push({ label: 'Start 14-Day Free Trial', url: '/checkout' });
+
+    action = {
+      type: 'compare_plans',
+      title: 'Compare Official Plans',
+      plans: [
+        { name: 'Standard Pack', monthly: '₹740/mo', yearly: '₹560/mo (billed ₹6,720/yr)', code: 'STANDARD_PACK' },
+        { name: 'Custom Pack', monthly: '₹1,280/mo', yearly: '₹980/mo (billed ₹11,760/yr)', code: 'CUSTOM_PACK' }
+      ]
+    };
+    return { reply, links, action };
   }
 
-  // 3. SPECIFIC APPLICATION MATCH (Search all live applications in DB)
+  // 3. GLOBAL OFFICES & LOCATIONS
+  if (/(office|location|address|headquarters|hq|where are you|contact number|phone)/i.test(query)) {
+    reply = `### 🏢 OXOO Global Offices & Contact Information
+
+* **Head Office (Bengaluru HQ):** PrimePro AI / OXOO Tech Campus, Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103, India.
+* **Hyderabad Office:** Mindspace IT Park, Building 12D, HITEC City, Hyderabad, Telangana 500081, India.
+* **United States Office:** 8 The Green, Suite A, Dover, Delaware 19901, USA.
+
+📞 **Phone:** +91 79 4050 0100 (Mon - Fri, 9:00 AM - 6:00 PM IST)
+📧 **Email:** hello@oxoo.ai / support@oxoo.ai`;
+
+    links.push({ label: 'Help & Support Center', url: '/help' });
+    links.push({ label: 'Projects & Consultation Hub', url: '/projects' });
+    return { reply, links, action };
+  }
+
+  // 4. LIVE DEMOS & TRIAL
+  if (/(demo|trial|free trial|test software|try before|preview|sample)/i.test(query)) {
+    reply = `### 🚀 Test OXOO Live (No Signup Required)
+
+You can explore full interactive live simulators and demo environments right now:
+* **Finance & Accounting:** [Launch Finance Demo](/demo/finance)
+* **Sales, CRM & POS:** [Launch Sales Demo](/demo/sales)
+* **HRMS & Payroll:** [Launch HRMS Demo](/demo/hrms)
+* **Supply Chain & Inventory:** [Launch Supply Chain Demo](/demo/supply-chain)
+* **Website Builder:** [Launch Website Demo](/demo/website)
+* **AI Chat Assistant:** [Launch AI Demo](/demo/ai)
+
+Ready to start your own dedicated workspace? Get started with our **14-day free trial** (no credit card required).`;
+
+    links.push({ label: 'Explore Live Demos', url: '/demo' });
+    links.push({ label: 'Start 14-Day Free Trial', url: '/checkout' });
+    links.push({ label: 'Request a Guided Demo', url: '/request-demo' });
+    return { reply, links, action };
+  }
+
+  // 5. PROJECTS HUB & BESPOKE DEVELOPMENT
+  if (/(custom|bespoke|build|project|development|mobile app|ios|android|whatsapp|marketing|agency)/i.test(query)) {
+    reply = `### 🛠️ OXOO Projects & Custom Engineering Hub
+
+For requirements beyond standard SaaS, our engineering team provides custom product development:
+* **Websites & Web Apps:** Custom React, Next.js, Node.js portals, SaaS platforms, and enterprise e-commerce.
+* **Mobile Applications:** Native & cross-platform iOS and Android apps with React Native & Flutter.
+* **WhatsApp Chat AI & Automation:** Official WhatsApp Business API integrations and autonomous customer support bots.
+* **Performance Marketing & SEO:** Search engine optimization, PPC advertising, and brand growth.
+
+#### How to Start:
+1. **Option A: Request a Consultation Call** — 30-minute discovery call with our solutions architects.
+2. **Option B: Submit a Project Request** — 4-step wizard to outline requirements and attach briefs (up to 5MB).`;
+
+    links.push({ label: 'Projects & Consultation Hub', url: '/projects' });
+    links.push({ label: 'Request a Consultation Call', url: '/projects' });
+    return { reply, links, action };
+  }
+
+  // 6. SPECIFIC APPLICATION MATCH (Search all live applications in DB)
   const matchedApp = (knowledge.applications || []).find(app => {
     const appName = app.name.toLowerCase();
     const appSlug = app.slug.toLowerCase();
@@ -503,7 +609,7 @@ How can I help you today?`;
     reply = `### **OXOO ${matchedApp.name}**\n\n`;
     if (matchedApp.tagline) reply += `*${matchedApp.tagline}*\n\n`;
     reply += `${matchedApp.description || 'Enterprise module built into the OXOO cloud operating system.'}\n\n`;
-    reply += `**Key Capabilities (from Database):**\n${featuresList}\n\n`;
+    reply += `**Key Capabilities:**\n${featuresList}\n\n`;
     reply += `**Category:** ${matchedApp.category || 'Business Productivity'}\n`;
 
     links.push({ label: `Open ${matchedApp.name} Overview`, url: `/apps/${matchedApp.slug}` });
@@ -518,31 +624,7 @@ How can I help you today?`;
     return { reply, links, action };
   }
 
-  // 4. CUSTOM SERVICES MATCH (Website, Mobile Apps, Marketing, etc. matched directly from DB services)
-  const matchedServices = (knowledge.services || []).filter(s => {
-    const sName = s.name.toLowerCase();
-    const sCat = (s.category || '').toLowerCase();
-    const words = query.split(/\s+/).filter(w => w.length > 3);
-    return words.some(w => sName.includes(w) || sCat.includes(w));
-  });
-
-  if (matchedServices.length > 0) {
-    reply = `### OXOO Custom Development & Services (Live Database)\n\nHere are matching services from our published catalog:\n\n`;
-    matchedServices.slice(0, 4).forEach(s => {
-      reply += `* **${s.name}** (*Category: ${s.category}*)\n`;
-      if (s.description) reply += `  - ${s.description}\n`;
-      if (Array.isArray(s.features) && s.features.length > 0) {
-        reply += `  - *Key Highlights:* ${s.features.slice(0, 3).join(', ')}\n`;
-      }
-      reply += `\n`;
-    });
-
-    links.push({ label: 'Explore All Custom Services', url: '/services' });
-    links.push({ label: 'Request Quotation / Contact Team', url: '/contact' });
-    return { reply, links, action };
-  }
-
-  // 5. CUSTOMER PRIVATE ACCOUNT LOOKUP (Strictly from verified DB records)
+  // 7. CUSTOMER PRIVATE ACCOUNT LOOKUP (Strictly from verified DB records)
   if (/(my subscription|my plan|renewal|my invoice|billing history|my account|my payment)/i.test(query)) {
     if (!customerContext || !customerContext.authenticated) {
       reply = `### Customer Account Records
@@ -552,7 +634,6 @@ To view your active subscription, upcoming renewal dates, invoices, and authoriz
     }
 
     const cust = customerContext.customer;
-    const subs = customerContext.subscriptions || [];
     const invs = customerContext.invoices || [];
 
     reply = `### Your Account Summary (${customerContext.email})\n\n`;
@@ -578,7 +659,7 @@ To view your active subscription, upcoming renewal dates, invoices, and authoriz
     return { reply, links, action };
   }
 
-  // 6. SUPPORT TICKETS
+  // 8. SUPPORT TICKETS
   if (/(support|ticket|issue|bug|problem|help|complaint|troubleshoot)/i.test(query)) {
     if (customerContext && customerContext.authenticated && customerContext.tickets && customerContext.tickets.length > 0) {
       reply = `### Your Support Tickets (${customerContext.email})\n\n`;
@@ -588,8 +669,9 @@ To view your active subscription, upcoming renewal dates, invoices, and authoriz
     } else {
       reply = `### OXOO Customer Support
 You can open a support ticket or contact our team directly:
-- **Email:** support@oxoo.ai
-- **Direct Link:** [Visit Help Center](/help) or [Submit an Inquiry](/contact)`;
+- **Email:** support@oxoo.ai / hello@oxoo.ai
+- **Phone:** +91 79 4050 0100 (Mon - Fri, 9:00 AM - 6:00 PM IST)
+- **Direct Link:** [Visit Help & Support Center](/help)`;
     }
 
     links.push({ label: 'Help & Support Center', url: '/help' });
@@ -604,19 +686,19 @@ You can open a support ticket or contact our team directly:
     return { reply, links, action };
   }
 
-  // 7. GENERAL QUERY (Live DB grounded suggestions)
-  const topApps = (knowledge.applications || []).slice(0, 8).map(a => a.name).join(', ');
-  reply = `I understand you're asking about **"${userQuery.slice(0, 80)}"**.
+  // 9. GENERAL QUERY
+  reply = `I'm here to help with all questions about **OXOO**:
+- **8 Software Suites:** Finance, Sales, Supply Chain, HRMS, Marketing, Services, Productivity, and Website & eCommerce.
+- **Pricing:** Standard Pack (₹560/mo yearly or ₹740/mo monthly; $20/mo yearly or $25/mo monthly) and Custom Pack (₹980/mo yearly or ₹1,280/mo monthly; $40/mo yearly or $50/mo monthly) with a **14-day free trial**.
+- **Live Demos:** Test any suite online without signup at [Explore Live Demos](/demo).
+- **Custom Projects:** Custom web and mobile apps, WhatsApp Chat AI at [Projects Hub](/projects).
+- **Offices:** Bengaluru HQ, Hyderabad Office, and Delaware US Office.
 
-Here is what is currently available on our platform:
-- **Applications (${knowledge.applications.length} Total):** ${topApps}, and more.
-- **Plans (${knowledge.plans.length} Total):** Flexible monthly and annual plans starting from ₹560/month.
-- **Custom Development (${knowledge.services.length} Services):** Websites, Android & iOS mobile apps, and enterprise AI bots.
-
-Would you like to explore any specific application, compare pricing, or speak with support?`;
+What would you like to explore?`;
 
   links.push({ label: 'Browse All Applications', url: '/all-apps' });
   links.push({ label: 'View Pricing Plans', url: '/pricing' });
+  links.push({ label: 'Explore Live Demos', url: '/demo' });
   links.push({ label: 'Help Center', url: '/help' });
 
   return { reply, links, action };
@@ -657,7 +739,7 @@ async function processAgentChat({ message, conversationId, userEmail, userAuthTo
         FROM agent_messages
         WHERE conversation_id = $1
         ORDER BY id ASC
-        LIMIT 10
+        LIMIT 6
       `, [conversationId]);
       conversationHistory = histRes.rows || [];
     } catch (e) {
@@ -681,10 +763,16 @@ async function processAgentChat({ message, conversationId, userEmail, userAuthTo
       links.push({ label: 'View Pricing Plans', url: '/pricing' });
     }
     if (lowReply.includes('checkout') || lowReply.includes('trial') || lowReply.includes('/checkout')) {
-      links.push({ label: 'Start Free Trial', url: '/checkout' });
+      links.push({ label: 'Start 14-Day Free Trial', url: '/checkout' });
     }
     if (lowReply.includes('application') || lowReply.includes('/all-apps')) {
       links.push({ label: 'Browse All Applications', url: '/all-apps' });
+    }
+    if (lowReply.includes('/demo') || lowReply.includes('live demo')) {
+      links.push({ label: 'Explore Live Demos', url: '/demo' });
+    }
+    if (lowReply.includes('project') || lowReply.includes('/projects')) {
+      links.push({ label: 'Projects & Consultation Hub', url: '/projects' });
     }
     if (lowReply.includes('support') || lowReply.includes('ticket') || lowReply.includes('/help')) {
       links.push({ label: 'Help Center', url: '/help' });
